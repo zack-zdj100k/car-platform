@@ -133,6 +133,9 @@ hard-coded anywhere in the repository. Change them before any shared deployment.
 | [docs/API.md](docs/API.md) | Every endpoint, with access rules and error shapes |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Technical decisions and specification conflict resolutions |
 | [docs/PROGRESS.md](docs/PROGRESS.md) | Phase-by-phase implementation status |
+| [docs/AUDITS.md](docs/AUDITS.md) | Security and accessibility audit results |
+| [docs/PERFORMANCE.md](docs/PERFORMANCE.md) | Measured performance and index coverage |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment and operational notes |
 | [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) | Every environment variable explained |
 | `docs/spec/` | The original owner specification documents |
 

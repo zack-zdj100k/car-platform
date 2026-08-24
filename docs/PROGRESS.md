@@ -19,7 +19,7 @@ error-handled, accessible, responsive, security-checked and verified (§77).
 | 10 — Security audit | ✅ Complete |
 | 11 — Accessibility audit | ✅ Complete |
 | 12 — Performance audit | ✅ Complete |
-| 13 — Final audit | ⬜ Not started |
+| 13 — Final audit | ✅ Complete |
 
 ---
 
@@ -295,3 +295,64 @@ would not exercise the planner. One scaling limit was measured and documented
 rather than papered over: ranking most-viewed vehicles costs 157 ms at 200,000
 view rows and grows with the table. Forcing an index path was tested and is
 slower, so the fix at real volume is a rollup table, not an index.
+
+## Phase 13 — Final audit ✅
+
+Everything below was executed, not reviewed.
+
+### Build, types and lint
+
+| Check | Result |
+| ----- | ------ |
+| `npm run build` (both workspaces) | Succeeds |
+| `npm run typecheck` | 0 errors |
+| `npm run lint` (`--max-warnings 0`) | Clean in both workspaces |
+
+### Tests — 178 total, all passing
+
+| Suite | Count |
+| ----- | ----- |
+| Backend unit | 24 |
+| Backend integration | 121 |
+| End-to-end (browser) | 33 |
+
+### Database reproducible from empty (spec §74)
+
+A brand-new database was created, migrated and seeded from scratch: 25 tables,
+17 vehicles, 14 brands, 5 orders. The scratch database was then dropped.
+
+### Routes
+
+All seven public routes return 200. All six master-prompt URL variants redirect
+to the route map's canonical paths, so links from either document work:
+
+| From | To |
+| ---- | -- |
+| `/sign-in` → `/login` | 308 |
+| `/sign-up` → `/signup` | 308 |
+| `/cars/:id` → `/car/:id` | 308 |
+| `/dashboard/recently-viewed` → `/dashboard/recent` | 308 |
+| `/admin/cars/new` → `/admin/cars/add` | 308 |
+| `/admin` → `/admin/dashboard` | 307 |
+
+An unknown route returns 404.
+
+### Data integrity
+
+The development database holds exactly what the seed created — 17 cars, 6 users,
+5 orders, 22 favourites. Artifacts from end-to-end and audit runs were removed,
+and the 50,000-row performance fixture was truncated from the test database.
+
+### Definition of done (spec §77)
+
+| Requirement | Evidence |
+| ----------- | -------- |
+| Implemented | 69 API endpoints, 22 frontend routes |
+| Connected | End-to-end tests drive a browser through to PostgreSQL, nothing mocked |
+| Validated | DTO validation server-side, Zod client-side, unknown properties rejected |
+| Tested | 178 automated tests |
+| Error-handled | Loading, empty, error and success states throughout; structured API errors |
+| Accessible | 18 checks passing, WCAG 2.2 AA rules, 4 violations found and fixed |
+| Responsive | No horizontal overflow at 375, 768 or 1440 px |
+| Security-checked | 42 live probes, 0 dependency vulnerabilities |
+| Verified | Every claim above traces to a command that was run |
