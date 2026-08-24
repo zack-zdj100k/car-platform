@@ -23,6 +23,12 @@ export interface ElegantDarkPatternProps {
   gridSize?: number;
   /** Adds a vignette so foreground text keeps its contrast. */
   vignette?: boolean;
+  /**
+   * Renders without the opaque base gradient, so whatever sits behind — a hero
+   * video, an image — stays visible and only the glow, grid and vignette are
+   * layered over it.
+   */
+  overlay?: boolean;
 }
 
 export function ElegantDarkPattern({
@@ -30,15 +36,16 @@ export function ElegantDarkPattern({
   variant = 'hero',
   gridSize = 56,
   vignette = true,
+  overlay = false,
 }: ElegantDarkPatternProps) {
   const isHero = variant === 'hero';
 
   return (
     <div aria-hidden="true" className={cn('pointer-events-none absolute inset-0 overflow-hidden', className)}>
-      {/* Base gradient */}
-      <div
-        className={cn('absolute inset-0', isHero ? 'hero-environment' : 'bg-surface-dark')}
-      />
+      {/* Base gradient — omitted in overlay mode so the layer beneath shows. */}
+      {!overlay && (
+        <div className={cn('absolute inset-0', isHero ? 'hero-environment' : 'bg-surface-dark')} />
+      )}
 
       {/* Radial brand glow, offset so it never sits behind the headline */}
       <div

@@ -110,7 +110,9 @@ now, because the platform has no such volume and the table would be dead weight.
 - **Selective payloads.** The listing selects only the fields a card shows; the
   full specification tree loads only on the detail page.
 - **Lazy hero video.** Playback is attached through an `IntersectionObserver`
-  and paused off screen, and is not downloaded at all under reduced motion.
+  and paused off screen, and is not downloaded at all under reduced motion. The
+  clip is the owner-supplied 1920×1080 footage, remuxed to MP4 (4.5 MB) with its
+  poster frame extracted from the film itself.
 
 ## How to reproduce
 
