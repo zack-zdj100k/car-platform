@@ -7,8 +7,8 @@ Chinese automotive brands — built as a full-stack monorepo.
 **Backend** NestJS · TypeScript · REST API
 **Database** PostgreSQL · Prisma ORM
 
-> Status: **Phase 1 complete** (architecture + database). See [docs/PROGRESS.md](docs/PROGRESS.md)
-> for what is implemented and what remains.
+> Status: **Phase 2 complete** — database and a fully verified REST API (69 endpoints,
+> 126 passing checks). See [docs/PROGRESS.md](docs/PROGRESS.md) for detail.
 
 ---
 
@@ -129,6 +129,7 @@ hard-coded anywhere in the repository. Change them before any shared deployment.
 | -------- | -------- |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design and request flow |
 | [docs/DATABASE.md](docs/DATABASE.md) | Every table, relation and constraint |
+| [docs/API.md](docs/API.md) | Every endpoint, with access rules and error shapes |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Technical decisions and specification conflict resolutions |
 | [docs/PROGRESS.md](docs/PROGRESS.md) | Phase-by-phase implementation status |
 | [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md) | Every environment variable explained |
