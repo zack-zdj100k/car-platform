@@ -1,0 +1,43 @@
+{
+  "name": "car-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Premium automotive platform \u2014 Next.js + NestJS + Prisma + PostgreSQL",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:backend dev:frontend",
+    "dev:frontend": "npm run dev --workspace frontend",
+    "dev:backend": "npm run start:dev --workspace backend",
+    "build": "npm run build --workspace backend && npm run build --workspace frontend",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "prisma:format": "prisma format",
+    "prisma:validate": "prisma validate",
+    "db:seed": "prisma db seed",
+    "db:reset": "prisma migrate reset",
+    "typecheck": "npm run typecheck --workspace backend && npm run typecheck --workspace frontend",
+    "lint": "npm run lint --workspace backend && npm run lint --workspace frontend",
+    "test": "npm run test --workspace backend && npm run test --workspace frontend",
+    "test:e2e": "npm run test:e2e --workspace frontend"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "dotenv": "^17.4.2",
+    "npm-run-all": "^4.1.5",
+    "prisma": "6.19.3",
+    "tsx": "^4.20.6",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "argon2": "^0.44.0"
+  }
+}
