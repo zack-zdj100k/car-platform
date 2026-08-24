@@ -7,8 +7,9 @@ Chinese automotive brands — built as a full-stack monorepo.
 **Backend** NestJS · TypeScript · REST API
 **Database** PostgreSQL · Prisma ORM
 
-> Status: **Phase 2 complete** — database and a fully verified REST API (69 endpoints,
-> 126 passing checks). See [docs/PROGRESS.md](docs/PROGRESS.md) for detail.
+> Status: **Phases 0–8 complete** — database, a verified REST API (69 endpoints,
+> 126 passing checks) and the full frontend (22 routes: public site, customer
+> dashboard and admin panel). See [docs/PROGRESS.md](docs/PROGRESS.md) for detail.
 
 ---
 

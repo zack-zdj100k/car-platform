@@ -10,11 +10,11 @@ error-handled, accessible, responsive, security-checked and verified (§77).
 | 1 — Architecture + Database | ✅ Complete |
 | 2 — Backend + REST API | ✅ Complete |
 | 3 — Authentication | 🟡 Implemented in Phase 2; Google OAuth awaits credentials |
-| 4 — Cars system | ⬜ Not started |
-| 5 — Customer dashboard | ⬜ Not started |
-| 6 — Admin dashboard | ⬜ Not started |
-| 7 — Frontend / design | ⬜ Not started |
-| 8 — Full integration | ⬜ Not started |
+| 4 — Cars system | ✅ Complete |
+| 5 — Customer dashboard | ✅ Complete |
+| 6 — Admin dashboard | ✅ Complete |
+| 7 — Frontend / design | ✅ Complete |
+| 8 — Full integration | ✅ Complete |
 | 9 — Testing | ⬜ Not started |
 | 10 — Security audit | ⬜ Not started |
 | 11 — Accessibility audit | ⬜ Not started |
@@ -152,3 +152,80 @@ which clears all of them.
 - Image upload endpoints arrive with the admin car form in Phase 6
 - Jest unit and e2e suites are Phase 9; the 126 checks above ran against the
   live API
+
+## Phases 4–8 — Frontend, dashboards and full integration ✅
+
+**Implemented — 22 routes, all server-rendered on demand**
+
+| Group | Routes |
+| ----- | ------ |
+| Public | `/`, `/cars`, `/car/[id]`, `/car/[id]/order`, `/about` |
+| Auth | `/login`, `/signup` |
+| Customer 🔒 | `/dashboard`, `/favorites`, `/recent`, `/compare`, `/orders`, `/profile` |
+| Admin 🔐 | `/admin/dashboard`, `/cars`, `/cars/add`, `/cars/[id]/edit`, `/users`, `/orders`, `/analytics`, `/settings` |
+
+Every master-prompt URL variant redirects to the route map's canonical path, so
+links from both specification documents work.
+
+**Foundation**
+
+- Next.js 16, React 19, Tailwind 4, shadcn/ui (23 primitives)
+- One design system platform-wide (spec §59): light and dark tokens, dark green
+  hero environment, consistent radius, shadow and type scale
+- FR / AR / EN with right-to-left Arabic. Locale lives in a cookie and is read
+  server-side, so the first paint is already in the right language and direction
+- Typed service layer — no component calls `fetch` directly (spec §58)
+- Loading, empty, error and success states everywhere (spec §72)
+
+**Feature coverage**
+
+- Home: video hero with poster fallback, six-part features showcase, featured
+  vehicles, §33 statistics labelled as marketing content
+- Cars: search, brand/model/year/price/body-type/fuel filters, seven sort
+  orders, pagination — all held in the URL so a filtered view is shareable
+- Car detail: gallery, clickable colour swatches, and all eight specification
+  groups rendered only from stored data (spec §14)
+- Order: Zod-validated form, colour carried from the detail page, success state
+  with the reference, and an explicit "no payment is taken" notice
+- Customer dashboard: overview with four live counts, favourites, view history,
+  comparison table across 27 attributes, orders, profile with password change
+- Admin: overview with real aggregates and daily charts, car table with
+  publish/unpublish/delete, the full §47 car form, user management, order
+  management with only the legal status transitions offered, analytics
+  including email-delivery health, and the settings editor
+
+**Verified in the running application**
+
+| Check | Result |
+| ----- | ------ |
+| `tsc --noEmit` | 0 errors |
+| `eslint --max-warnings 0` | Clean |
+| `next build` | 22 routes compiled |
+| Home page | Hero video plays, 12 images, 0 broken |
+| Cars listing | 17 vehicles, filters and pagination against real data |
+| Car detail | 8 spec sections, 6 gallery images, 4 colour swatches |
+| Customer sign-in | Redirects to `/dashboard`, shows 3/3/1/1 real counts |
+| Admin sign-in | Redirects to `/admin/dashboard`, shows 17/5/22/5 |
+| Customer visiting `/admin` | Redirected away |
+| Admin cars table | 17 rows, every one flagged as demo data |
+| Admin orders | 5 orders across all 5 statuses, guest order marked |
+| Admin settings | 6 groups; social URLs empty, never invented |
+
+**Defects found and fixed**
+
+- Delayed `motion` animations were cancelled when `useReducedMotion` resolved,
+  leaving the hero headline at `opacity: 0`. The hero entrance is now pure CSS,
+  so it renders even if JavaScript never runs
+- The hero video played but stayed invisible when served from cache, because
+  `canplay` had fired before React attached the handler
+- Four hooks violated React 19's cascading-render rules; scroll, client
+  detection and localStorage now use `useSyncExternalStore`, and `useAsync`
+  derives its loading state instead of setting it from an effect
+- Helper components were being defined inside render in the admin dashboard and
+  the car form, which remounted their subtrees — and would have dropped focus
+  mid-typing in the form. Both are hoisted to module scope
+
+**Deferred**
+
+- Image upload endpoints: the car form takes asset paths for now
+- Jest and Playwright suites are Phase 9
