@@ -28,7 +28,9 @@
   --secondary: oklch(0.965 0.004 106);
   --secondary-foreground: oklch(0.23 0.012 250);
   --muted: oklch(0.965 0.004 106);
-  --muted-foreground: oklch(0.5 0.012 250);
+  /* Darkened from 0.5: at 0.5 this failed the 4.5:1 minimum against
+     white cards in the accessibility audit (spec §65). */
+  --muted-foreground: oklch(0.44 0.012 250);
 
   /* Premium metallic accent, used sparingly for emphasis */
   --accent: oklch(0.955 0.018 90);
@@ -275,5 +277,16 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /*
+   * Remove the entrance animation entirely rather than running it instantly.
+   * A near-zero duration still leaves a frame where the element is at
+   * opacity 0, and the audit caught exactly that.
+   */
+  .rise {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }

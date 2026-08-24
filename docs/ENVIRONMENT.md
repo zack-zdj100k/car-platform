@@ -13,7 +13,7 @@ Copy `.env.example` to `.env`. Never commit `.env` (§67, §70).
 
 | Variable | Default | Description |
 | -------- | ------- | ----------- |
-| `NODE_ENV` | `development` | Runtime mode |
+| `NODE_ENV` | `development` | **Do not set this in `.env`.** The runtime supplies it: `next dev` and `next build` set it themselves, and a deployment sets it for the API. Exporting it from `.env` and then running a production build makes Next resolve a development React runtime and the build fails while prerendering. |
 | `BACKEND_PORT` | `4000` | NestJS listen port |
 | `API_PREFIX` | `api` | Global route prefix |
 | `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated allowed origins |

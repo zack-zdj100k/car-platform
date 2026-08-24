@@ -23,12 +23,11 @@ export function StatsStrip({ stats }: { stats: MarketingStat[] }) {
       <ElegantDarkPattern variant="section" gridSize={64} vignette={false} />
 
       <dl className="relative grid grid-cols-2 gap-8 lg:grid-cols-4">
+        {/* One div between <dl> and its <dt>/<dd> — more nesting is invalid. */}
         {stats.map((stat, index) => (
-          <Reveal key={stat.caption} delay={index * 0.06}>
-            <div className="text-center lg:text-start">
-              <dt className="text-xs font-medium tracking-widest text-white/50 uppercase">{stat.caption}</dt>
-              <dd className="font-display mt-2 text-3xl font-semibold sm:text-4xl">{stat.label}</dd>
-            </div>
+          <Reveal key={stat.caption} delay={index * 0.06} className="text-center lg:text-start">
+            <dt className="text-xs font-medium tracking-widest text-white/50 uppercase">{stat.caption}</dt>
+            <dd className="font-display mt-2 text-3xl font-semibold sm:text-4xl">{stat.label}</dd>
           </Reveal>
         ))}
       </dl>

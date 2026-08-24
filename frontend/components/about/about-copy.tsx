@@ -108,14 +108,17 @@ export function AboutCopy({
         <SectionHeading eyebrow={t.about.missionTitle} title={mission} align="center" />
         <ol className="mt-12 grid grid-cols-2 gap-4 lg:grid-cols-4">
           {missionSteps.map((step, index) => (
-            <Reveal key={step.label} delay={index * 0.07}>
-              <li className="border-border bg-card flex flex-col items-center gap-3 rounded-xl border p-6 text-center shadow-[var(--shadow-card)]">
+            <li key={step.label}>
+              <Reveal
+                delay={index * 0.07}
+                className="border-border bg-card flex h-full flex-col items-center gap-3 rounded-xl border p-6 text-center shadow-[var(--shadow-card)]"
+              >
                 <span className="bg-primary/10 text-primary grid size-11 place-items-center rounded-full">
                   <step.icon className="size-5" aria-hidden="true" />
                 </span>
                 <span className="font-display font-semibold">{step.label}</span>
-              </li>
-            </Reveal>
+              </Reveal>
+            </li>
           ))}
         </ol>
       </Section>
@@ -147,14 +150,14 @@ export function AboutCopy({
           <h2 className="text-center text-3xl font-semibold sm:text-4xl">{t.about.valuesTitle}</h2>
           <ul className="mt-12 grid grid-cols-2 gap-6 lg:grid-cols-4">
             {values.map((value, index) => (
-              <Reveal key={value.label} delay={index * 0.06}>
-                <li className="flex flex-col items-center gap-3 text-center">
+              <li key={value.label}>
+                <Reveal delay={index * 0.06} className="flex flex-col items-center gap-3 text-center">
                   <span className="grid size-12 place-items-center rounded-full bg-white/8 ring-1 ring-inset ring-white/12">
                     <value.icon className="text-primary size-5" aria-hidden="true" />
                   </span>
                   <span className="font-display font-semibold">{value.label}</span>
-                </li>
-              </Reveal>
+                </Reveal>
+              </li>
             ))}
           </ul>
         </div>
@@ -164,14 +167,13 @@ export function AboutCopy({
       {stats.length > 0 && (
         <Section tone="muted" className="py-14 sm:py-16">
           <dl className="grid grid-cols-2 gap-8 lg:grid-cols-4">
+            {/* dt precedes dd, and only one div may sit between dl and them. */}
             {stats.map((stat, index) => (
-              <Reveal key={stat.caption} delay={index * 0.06}>
-                <div className="text-center">
-                  <dd className="font-display text-3xl font-semibold sm:text-4xl">{stat.label}</dd>
-                  <dt className="text-muted-foreground mt-2 text-xs font-medium tracking-widest uppercase">
-                    {stat.caption}
-                  </dt>
-                </div>
+              <Reveal key={stat.caption} delay={index * 0.06} className="text-center">
+                <dt className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
+                  {stat.caption}
+                </dt>
+                <dd className="font-display mt-2 text-3xl font-semibold sm:text-4xl">{stat.label}</dd>
               </Reveal>
             ))}
           </dl>
