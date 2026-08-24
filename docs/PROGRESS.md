@@ -15,7 +15,7 @@ error-handled, accessible, responsive, security-checked and verified (§77).
 | 6 — Admin dashboard | ✅ Complete |
 | 7 — Frontend / design | ✅ Complete |
 | 8 — Full integration | ✅ Complete |
-| 9 — Testing | ⬜ Not started |
+| 9 — Testing | ✅ Complete |
 | 10 — Security audit | ⬜ Not started |
 | 11 — Accessibility audit | ⬜ Not started |
 | 12 — Performance audit | ⬜ Not started |
@@ -229,3 +229,53 @@ links from both specification documents work.
 
 - Image upload endpoints: the car form takes asset paths for now
 - Jest and Playwright suites are Phase 9
+
+## Phase 9 — Testing ✅
+
+**160 automated tests, all passing**
+
+| Suite | Tests | Covers |
+| ----- | ----- | ------ |
+| `backend/src/**/*.spec.ts` | 24 | Slug generation, durations, token hashing, order references, Argon2id hashing |
+| `test/auth.e2e-spec.ts` | 22 | Registration rules, login, session rotation, replay handling, password reset |
+| `test/authorization.e2e-spec.ts` | 26 | Six admin routes × anonymous/customer/admin, ownership checks, self-lockout guards |
+| `test/cars.e2e-spec.ts` | 20 | Listing, filters, search, sort, facets, CRUD, publish cycle, archive-on-delete |
+| `test/customer-features.e2e-spec.ts` | 18 | Favorites, view history, comparisons, dashboard, profile |
+| `test/orders.e2e-spec.ts` | 19 | Submission, snapshots, guest path, every legal and illegal transition |
+| `test/journey.e2e-spec.ts` | 16 | The complete §71 journey as one continuous sequence |
+| `frontend/e2e/journey.spec.ts` | 15 | Browser flows: home, cars, filters, detail, i18n, guards, order, admin |
+
+Integration tests run against a dedicated `car_platform_test` database and
+truncate between suites, so no test depends on another. Playwright drives the
+real browser against the real API — nothing is mocked, so a passing run proves
+the whole chain from browser to PostgreSQL.
+
+**Defect found and fixed: concurrent refresh logged users out**
+
+The end-to-end run surfaced a real bug the manual checks had missed. Refresh
+tokens rotate on every use, and any replay revoked the entire token family. But
+two refreshes legitimately fire at once — React StrictMode double-mounts in
+development, a user opens a second tab, or a navigation overlaps an in-flight
+request. The second call presented an already-rotated token, was read as theft,
+and signed the user out of every session.
+
+Fixed on both sides:
+
+- The client now makes refresh **single-flight**, so concurrent callers share
+  one request rather than racing.
+- The server distinguishes a race from theft: a token replayed within 30 seconds
+  of rotation is refused without touching the family, while replay after that
+  window still burns every session. Both paths are covered by tests.
+
+**Commands**
+
+```bash
+npm test                    # unit tests, both workspaces
+npm run test:e2e            # Playwright, needs both servers running
+npm run test --workspace backend
+npx jest --config ./test/jest-e2e.json --workspace backend
+```
+
+Rate limiting is skipped under `NODE_ENV=test`, since every request in a suite
+comes from one address; the limiter is verified against the running server in
+the security audit instead.

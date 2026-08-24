@@ -53,3 +53,8 @@ Thumbs.db
 .turbo/
 .cache/
 .eslintcache
+
+# Playwright
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/

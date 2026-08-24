@@ -23,6 +23,18 @@ export interface IssuedTokens {
 const REMEMBER_ME_TTL = '90d';
 
 /**
+ * How long after rotation a replayed token is treated as a client race rather
+ * than theft.
+ *
+ * Two refreshes can legitimately fire at once — React StrictMode double-mounts
+ * in development, a user opens two tabs, or a navigation overlaps an in-flight
+ * request. Revoking every session for that would sign an honest user out.
+ * Replay long after rotation has no benign explanation and still burns the
+ * family.
+ */
+const REUSE_GRACE_MS = 30_000;
+
+/**
  * Access and refresh token lifecycle (spec §37).
  *
  * Access tokens are short-lived JWTs. Refresh tokens are opaque random strings
@@ -100,6 +112,14 @@ export class TokenService {
     }
 
     if (existing.revokedAt) {
+      const sinceRevoked = Date.now() - existing.revokedAt.getTime();
+
+      if (sinceRevoked <= REUSE_GRACE_MS) {
+        // Almost certainly two refreshes racing. Refuse this one so the client
+        // retries, but leave the freshly issued session alone.
+        throw new UnauthorizedException('This session was just refreshed. Please retry.');
+      }
+
       await this.revokeAllForUser(existing.userId);
       throw new UnauthorizedException('Session reuse detected. Please sign in again.');
     }

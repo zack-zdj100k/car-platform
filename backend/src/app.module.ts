@@ -36,7 +36,19 @@ import { HealthModule } from './health/health.module';
       inject: [ConfigService],
       useFactory: (config: ConfigService<Configuration, true>) => {
         const throttle = config.get('throttle', { infer: true });
-        return { throttlers: [{ ttl: throttle.ttl * 1000, limit: throttle.limit }] };
+        const isTest = config.get('app', { infer: true }).env === 'test';
+
+        return {
+          throttlers: [{ ttl: throttle.ttl * 1000, limit: throttle.limit }],
+          /*
+           * Integration tests issue every request from one address, so the
+           * limiter would reject later cases for reasons unrelated to what they
+           * assert. Disabled only under NODE_ENV=test — which env validation
+           * restricts to development | test | production, so this can never be
+           * switched on accidentally in production.
+           */
+          skipIf: () => isTest,
+        };
       },
     }),
     PrismaModule,

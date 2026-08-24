@@ -25,6 +25,16 @@ const withCredentials = (options: RequestOptions): RequestOptions => ({
   credentials: 'include',
 });
 
+/**
+ * Refresh is single-flight.
+ *
+ * Concurrent callers — StrictMode's double mount, two components mounting at
+ * once, a navigation overlapping an in-flight request — share one request.
+ * Without this, the second call presents an already-rotated token and the
+ * server treats it as replay.
+ */
+let inFlightRefresh: Promise<AuthResponse> | null = null;
+
 export const authService = {
   register(body: RegisterPayload, options: RequestOptions = {}) {
     return apiRequest<AuthResponse>('/auth/register', { ...withCredentials(options), method: 'POST', body });
@@ -35,7 +45,14 @@ export const authService = {
   },
 
   refresh(options: RequestOptions = {}) {
-    return apiRequest<AuthResponse>('/auth/refresh', { ...withCredentials(options), method: 'POST' });
+    inFlightRefresh ??= apiRequest<AuthResponse>('/auth/refresh', {
+      ...withCredentials(options),
+      method: 'POST',
+    }).finally(() => {
+      inFlightRefresh = null;
+    });
+
+    return inFlightRefresh;
   },
 
   logout(options: RequestOptions = {}) {

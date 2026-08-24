@@ -25,4 +25,19 @@ export default tseslint.config(
       '@typescript-eslint/require-await': 'error',
     },
   },
+  {
+    /*
+     * Integration tests assert against supertest responses, whose `body` is
+     * typed `any` by the library. Asserting on it is the point of the test, so
+     * these two rules are relaxed for test files only — application code keeps
+     * them enforced.
+     */
+    files: ['test/**/*.ts', 'src/**/*.spec.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+    },
+  },
 );
