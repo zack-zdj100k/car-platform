@@ -60,13 +60,37 @@ product behaviour. Confirm the default if guest ordering is wanted.**
 | Item | Current state | Needed from owner |
 | ---- | ------------- | ----------------- |
 | Google authentication (§3, §36, §37) | Provider will be built but stays **disabled** while `GOOGLE_CLIENT_ID` is empty | Google Cloud OAuth client ID + secret |
-| `components/ui/footer-section.tsx` (§10, §62) | Referenced as "provided" but not supplied | Paste the component, or confirm a compatible placeholder |
-| `components/ui/elegant-dark-pattern.tsx` (§61) | Referenced as "provided" but not supplied | Paste the component, or confirm a placeholder |
+| `components/ui/footer-section.tsx` (§10, §62) | **Written in-house** — see D-2.2 | Optional: paste the original to replace it |
+| `components/ui/elegant-dark-pattern.tsx` (§61) | **Written in-house** — see D-2.2 | Optional: paste the original to replace it |
 | Logo (§7) | Placeholder | Final logo asset |
 | Hero video (§8) | Three `kling_*.mov` clips exist in the project folder | Confirm which clip is the hero video |
 | Social URLs (§27) | Settings seeded **empty** — never invented | Real TikTok / Instagram / Facebook URLs |
 | Team & owner facts (§29, §34) | Placeholder text | Real content |
 | Price currency | `USD`, stored per car | Confirm the intended market currency |
+
+### D-2.2 — The two "provided" components were authored in-house, with approval
+
+Spec §10, §61 and §62 refer to two components as "the provided" and "the
+supplied" component, but neither was ever included with the specification
+documents. §61 in particular says "Do not replace it. Do not redesign it without
+approval."
+
+The owner was asked directly, presented with three options, and answered that
+they had **no preference**, under a standing instruction to "do the best always".
+That is recorded here as the approval §61 requires.
+
+**Decision:** both components are written in-house in the project's own premium
+automotive style, and both are kept deliberately swap-ready:
+
+- Each lives at exactly the path the specification names, so replacing one is a
+  single-file overwrite.
+- Neither exports anything beyond what the specification implies, so no other
+  file needs to change when the original arrives.
+- `footer-section.tsx` follows §10's link requirements: Cars, About Us, Privacy
+  Policy, Terms, plus TikTok / Instagram / Facebook / GitHub read from settings.
+  The SaaS links §10 rejects — Pricing, Changelog, Integration — are absent.
+
+If the original components are supplied later, paste them over these files.
 
 ### D-2.1 — The §33 statistics are marketing content, not analytics
 

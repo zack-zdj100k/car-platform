@@ -1,0 +1,279 @@
+@import "tailwindcss";
+
+/* Class-based dark mode, driven by next-themes (spec §60). */
+@custom-variant dark (&:is(.dark *));
+
+/* ==========================================================================
+   DESIGN SYSTEM (spec §59)
+   One palette for the entire platform — light surfaces, dark premium sections,
+   a dark green automotive hero environment and a single premium accent.
+   Never a per-page colour scheme.
+   ========================================================================== */
+
+:root {
+  --radius: 0.75rem;
+
+  /* Light surfaces */
+  --background: oklch(0.994 0.002 106);
+  --foreground: oklch(0.17 0.008 250);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.17 0.008 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.17 0.008 250);
+
+  /* Deep automotive green — the brand primary */
+  --primary: oklch(0.33 0.055 166);
+  --primary-foreground: oklch(0.985 0.004 106);
+
+  --secondary: oklch(0.965 0.004 106);
+  --secondary-foreground: oklch(0.23 0.012 250);
+  --muted: oklch(0.965 0.004 106);
+  --muted-foreground: oklch(0.5 0.012 250);
+
+  /* Premium metallic accent, used sparingly for emphasis */
+  --accent: oklch(0.955 0.018 90);
+  --accent-foreground: oklch(0.28 0.035 80);
+  --brand-accent: oklch(0.72 0.105 78);
+
+  --destructive: oklch(0.55 0.19 27);
+  --destructive-foreground: oklch(0.985 0.004 106);
+  --success: oklch(0.55 0.13 155);
+  --warning: oklch(0.72 0.14 75);
+
+  --border: oklch(0.915 0.004 106);
+  --input: oklch(0.915 0.004 106);
+  --ring: oklch(0.33 0.055 166);
+
+  /* Dark green hero environment (spec §8, §59) */
+  --hero-from: oklch(0.19 0.032 168);
+  --hero-via: oklch(0.245 0.045 165);
+  --hero-to: oklch(0.135 0.022 172);
+  --hero-foreground: oklch(0.98 0.005 106);
+
+  /* Dark premium section, used on light pages */
+  --surface-dark: oklch(0.185 0.012 250);
+  --surface-dark-foreground: oklch(0.97 0.004 106);
+
+  /* Data visualisation (admin analytics) */
+  --chart-1: oklch(0.45 0.075 166);
+  --chart-2: oklch(0.62 0.1 78);
+  --chart-3: oklch(0.5 0.09 235);
+  --chart-4: oklch(0.6 0.1 25);
+  --chart-5: oklch(0.55 0.06 300);
+
+  --sidebar: oklch(0.985 0.003 106);
+  --sidebar-foreground: oklch(0.17 0.008 250);
+  --sidebar-primary: oklch(0.33 0.055 166);
+  --sidebar-primary-foreground: oklch(0.985 0.004 106);
+  --sidebar-accent: oklch(0.955 0.004 106);
+  --sidebar-accent-foreground: oklch(0.23 0.012 250);
+  --sidebar-border: oklch(0.915 0.004 106);
+  --sidebar-ring: oklch(0.33 0.055 166);
+}
+
+.dark {
+  --background: oklch(0.155 0.008 250);
+  --foreground: oklch(0.965 0.004 106);
+  --card: oklch(0.195 0.01 250);
+  --card-foreground: oklch(0.965 0.004 106);
+  --popover: oklch(0.195 0.01 250);
+  --popover-foreground: oklch(0.965 0.004 106);
+
+  /* Lifted so contrast holds on dark surfaces (spec §60) */
+  --primary: oklch(0.74 0.115 165);
+  --primary-foreground: oklch(0.15 0.02 168);
+
+  --secondary: oklch(0.245 0.011 250);
+  --secondary-foreground: oklch(0.965 0.004 106);
+  --muted: oklch(0.245 0.011 250);
+  --muted-foreground: oklch(0.7 0.012 250);
+
+  --accent: oklch(0.27 0.02 90);
+  --accent-foreground: oklch(0.95 0.02 90);
+  --brand-accent: oklch(0.79 0.1 80);
+
+  --destructive: oklch(0.68 0.17 25);
+  --destructive-foreground: oklch(0.15 0.01 250);
+  --success: oklch(0.72 0.13 155);
+  --warning: oklch(0.8 0.13 75);
+
+  --border: oklch(0.28 0.011 250);
+  --input: oklch(0.3 0.011 250);
+  --ring: oklch(0.74 0.115 165);
+
+  --hero-from: oklch(0.155 0.028 168);
+  --hero-via: oklch(0.2 0.04 165);
+  --hero-to: oklch(0.11 0.018 172);
+  --hero-foreground: oklch(0.98 0.005 106);
+
+  --surface-dark: oklch(0.125 0.008 250);
+  --surface-dark-foreground: oklch(0.965 0.004 106);
+
+  --chart-1: oklch(0.72 0.11 166);
+  --chart-2: oklch(0.78 0.11 78);
+  --chart-3: oklch(0.66 0.11 235);
+  --chart-4: oklch(0.7 0.12 25);
+  --chart-5: oklch(0.68 0.08 300);
+
+  --sidebar: oklch(0.175 0.009 250);
+  --sidebar-foreground: oklch(0.965 0.004 106);
+  --sidebar-primary: oklch(0.74 0.115 165);
+  --sidebar-primary-foreground: oklch(0.15 0.02 168);
+  --sidebar-accent: oklch(0.245 0.011 250);
+  --sidebar-accent-foreground: oklch(0.965 0.004 106);
+  --sidebar-border: oklch(0.28 0.011 250);
+  --sidebar-ring: oklch(0.74 0.115 165);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-brand-accent: var(--brand-accent);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-hero-from: var(--hero-from);
+  --color-hero-via: var(--hero-via);
+  --color-hero-to: var(--hero-to);
+  --color-hero-foreground: var(--hero-foreground);
+  --color-surface-dark: var(--surface-dark);
+  --color-surface-dark-foreground: var(--surface-dark-foreground);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), var(--font-body), ui-sans-serif, sans-serif;
+  --font-arabic: var(--font-arabic), var(--font-body), ui-sans-serif, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 12px);
+
+  /* Consistent elevation across the platform (spec §59) */
+  --shadow-card: 0 1px 2px oklch(0.17 0.008 250 / 4%), 0 8px 24px -12px oklch(0.17 0.008 250 / 12%);
+  --shadow-lifted: 0 2px 4px oklch(0.17 0.008 250 / 5%), 0 20px 40px -20px oklch(0.17 0.008 250 / 22%);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Arabic renders right-to-left with a dedicated face (spec §7, §65). */
+  [dir='rtl'] body {
+    @apply font-arabic;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display tracking-tight;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Visible focus for every interactive element (spec §65, WCAG 2.2 AA). */
+  :focus-visible {
+    @apply outline-ring outline-2 outline-offset-2;
+  }
+
+  /* Skip-link target and in-page anchors clear the sticky header. */
+  :where(main, section, [id]) {
+    scroll-margin-top: 5.5rem;
+  }
+}
+
+@layer utilities {
+  /*
+   * Entrance animation.
+   *
+   * Deliberately CSS rather than JS: content animated by a library is invisible
+   * until that library runs, so a hydration hiccup or a failed chunk would leave
+   * the hero blank. `backwards` fill keeps the offset before the delay elapses,
+   * and the reduced-motion block below neutralises the whole thing.
+   */
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(var(--rise-from, 1.25rem));
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .rise {
+    animation: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: var(--rise-delay, 0s);
+  }
+
+  .hero-environment {
+    background-image: linear-gradient(
+      160deg,
+      var(--hero-from) 0%,
+      var(--hero-via) 48%,
+      var(--hero-to) 100%
+    );
+  }
+
+  .text-balance-tight {
+    text-wrap: balance;
+  }
+
+  /* Fades long scrollable filter columns instead of cutting them off. */
+  .mask-fade-b {
+    mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
+  }
+}
+
+/* Spec §8, §65 — honour reduced-motion for every animation and the hero video. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
