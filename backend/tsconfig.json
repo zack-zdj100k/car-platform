@@ -23,8 +23,20 @@
     "noUnusedParameters": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
-    "paths": { "src/*": ["src/*"] }
+    "paths": {
+      "src/*": [
+        "src/*"
+      ]
+    }
   },
-  "include": ["src/**/*", "test/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*",
+    "test/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/* 2.ts",
+    "**/*.d 2.ts"
+  ]
 }

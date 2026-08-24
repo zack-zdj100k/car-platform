@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -132,7 +132,7 @@ export default function AdminCarsPage() {
                     <TableCell>
                       <div className="bg-secondary relative size-10 overflow-hidden rounded-md">
                         {car.images[0] && (
-                          <Image src={car.images[0].url} alt="" fill sizes="40px" className="object-cover" />
+                          <MediaImage src={car.images[0].url} alt="" fill sizes="40px" className="object-cover" />
                         )}
                       </div>
                     </TableCell>

@@ -61,7 +61,8 @@ Only `NEXT_PUBLIC_*` variables reach the browser. Nothing secret may use that pr
 | Variable | Description |
 | -------- | ----------- |
 | `REQUIRE_AUTH_FOR_ORDERS` | Seeds the `orders.requireAuth` setting. `true` follows the system graph; `false` permits guest orders. See DECISIONS D-1.2 |
-| `UPLOAD_DIR` / `MAX_UPLOAD_MB` | Image upload storage and size limit |
+| `UPLOAD_DIR` | Where uploaded car photographs are written, relative to the API's working directory. Must be writable and should be on persistent storage — a container's filesystem is not. |
+| `MAX_UPLOAD_MB` | Largest accepted image, in megabytes (default 8) |
 | `THROTTLE_TTL` / `THROTTLE_LIMIT` | Rate-limit window and request cap (§57, §67) |
 
 ## Seed credentials (development only)

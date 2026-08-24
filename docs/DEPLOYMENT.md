@@ -122,6 +122,22 @@ UPDATE users SET role = 'ADMIN' WHERE email = 'you@example.com';
 After that, admins are managed from `/admin/users`. The API refuses to remove
 the last active administrator, and an admin cannot demote or suspend themselves.
 
+## Uploaded photography
+
+Car photographs are written to `UPLOAD_DIR` on the API host and served from
+`/uploads`. Two consequences for deployment:
+
+- **Use persistent storage.** A container filesystem is discarded on redeploy,
+  which would take every uploaded photograph with it. Mount a volume, or point
+  `UPLOAD_DIR` at one.
+- **Back it up with the database.** The database stores paths, not pixels; the
+  two only make sense together.
+
+The frontend optimises these images through Next, which requires the API host to
+be listed in `images.remotePatterns` — that is derived automatically from
+`NEXT_PUBLIC_API_URL` at build time, so it just needs to be correct when you
+build.
+
 ## Operational notes
 
 - **Rate limits** default to 120 requests/minute per IP, with stricter limits on

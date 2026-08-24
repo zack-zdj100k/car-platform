@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { GitCompare, Plus, Trash2, X } from 'lucide-react';
@@ -137,7 +137,7 @@ export default function ComparePage() {
                   <th key={car.id} scope="col" className="min-w-56 p-4 text-start align-bottom">
                     <div className="bg-secondary relative mb-3 aspect-16/10 overflow-hidden rounded-lg">
                       {car.images[0] && (
-                        <Image
+                        <MediaImage
                           src={car.images[0].url}
                           alt={car.images[0].alt ?? car.model}
                           fill

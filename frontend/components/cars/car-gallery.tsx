@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { MediaImage } from '@/components/shared/media-image';
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ export function CarGallery({ images, alt }: { images: CarImage[]; alt: string })
   return (
     <div className="space-y-3">
       <div className="bg-secondary relative aspect-16/10 overflow-hidden rounded-xl">
-        <Image
+        <MediaImage
           key={current.url}
           src={current.url}
           alt={current.alt ?? alt}
@@ -84,7 +84,7 @@ export function CarGallery({ images, alt }: { images: CarImage[]; alt: string })
                   : 'opacity-70 hover:opacity-100',
               )}
             >
-              <Image
+              <MediaImage
                 src={image.url}
                 alt=""
                 fill

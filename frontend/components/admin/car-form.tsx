@@ -23,6 +23,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { useLocale } from '@/providers/locale-provider';
 import { carsService } from '@/services/cars.service';
 import { ApiError } from '@/services/api-client';
+import { ImageUploader, type CarImageDraft } from './image-uploader';
 import type { Brand, CarDetail } from '@/types/api';
 
 /**
@@ -335,10 +336,14 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
     ],
   );
 
-  const [images, setImages] = useState(
-    car?.images.map((image) => ({ kind: image.kind, url: image.url, alt: image.alt ?? '' })) ?? [
-      { kind: 'MAIN' as const, url: '', alt: '' },
-    ],
+  const [images, setImages] = useState<CarImageDraft[]>(
+    car?.images.map((image) => ({
+      kind: image.kind,
+      url: image.url,
+      alt: image.alt ?? '',
+      // Existing uploads can be deleted from disk; bundled placeholders cannot.
+      filename: image.url.startsWith('/uploads/') ? image.url.replace('/uploads/', '') : undefined,
+    })) ?? [],
   );
 
   const [saving, setSaving] = useState(false);
@@ -738,7 +743,7 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
         </AccordionItem>
 
         <AccordionItem value="media" className="border-border rounded-xl border px-4">
-          <AccordionTrigger className="text-base font-medium">Media & colours</AccordionTrigger>
+          <AccordionTrigger className="text-base font-medium">Photos & colours</AccordionTrigger>
           <AccordionContent className="space-y-6 pb-4">
             <div className="space-y-3">
               <h3 className="text-sm font-medium">{t.car.exteriorColours}</h3>
@@ -801,74 +806,12 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
             <Separator />
 
             <div className="space-y-3">
-              <h3 className="text-sm font-medium">Images</h3>
-              {images.map((image, index) => (
-                <div key={index} className="flex flex-wrap items-end gap-3">
-                  <div className="w-32 space-y-2">
-                    <Label htmlFor={`image-kind-${index}`}>Kind</Label>
-                    <Select
-                      value={image.kind}
-                      onValueChange={(value) =>
-                        setImages(
-                          images.map((entry, i) =>
-                            i === index ? { ...entry, kind: value as typeof entry.kind } : entry,
-                          ),
-                        )
-                      }
-                    >
-                      <SelectTrigger id={`image-kind-${index}`} className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {['MAIN', 'GALLERY', 'EXTERIOR', 'INTERIOR', 'WHEEL'].map((kind) => (
-                          <SelectItem key={kind} value={kind}>
-                            {kind}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <Label htmlFor={`image-url-${index}`}>URL</Label>
-                    <Input
-                      id={`image-url-${index}`}
-                      value={image.url}
-                      placeholder="/images/cars/…"
-                      onChange={(event) =>
-                        setImages(images.map((entry, i) => (i === index ? { ...entry, url: event.target.value } : entry)))
-                      }
-                    />
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <Label htmlFor={`image-alt-${index}`}>Alt text</Label>
-                    <Input
-                      id={`image-alt-${index}`}
-                      value={image.alt}
-                      onChange={(event) =>
-                        setImages(images.map((entry, i) => (i === index ? { ...entry, alt: event.target.value } : entry)))
-                      }
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    aria-label={t.admin.delete}
-                    onClick={() => setImages(images.filter((_, i) => i !== index))}
-                  >
-                    <Trash2 className="size-4" aria-hidden="true" />
-                  </Button>
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setImages([...images, { kind: 'GALLERY', url: '', alt: '' }])}
-              >
-                <Plus className="size-4" aria-hidden="true" />
-                Add image
-              </Button>
+              <h3 className="text-sm font-medium">Photos</h3>
+              <p className="text-muted-foreground text-xs">
+                Upload real photographs of the vehicle. The main photo is what appears on the
+                listing card and in search results.
+              </p>
+              <ImageUploader images={images} onChange={setImages} />
             </div>
           </AccordionContent>
         </AccordionItem>

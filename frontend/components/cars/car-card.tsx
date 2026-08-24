@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Fuel, GaugeCircle, Heart, Scale } from 'lucide-react';
@@ -61,7 +61,7 @@ export function CarCard({
     >
       <div className="bg-secondary relative aspect-16/10 overflow-hidden">
         {image ? (
-          <Image
+          <MediaImage
             src={image.url}
             alt={image.alt ?? `${car.brand.name} ${car.model} ${car.year}`}
             fill

@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -321,7 +321,7 @@ export function OrderForm({ car, initialColorId }: { car: CarDetail; initialColo
           <div className="border-border bg-card sticky top-24 overflow-hidden rounded-xl border shadow-[var(--shadow-card)]">
             {image && (
               <div className="bg-secondary relative aspect-16/10">
-                <Image src={image.url} alt={image.alt ?? car.model} fill sizes="480px" className="object-cover" />
+                <MediaImage src={image.url} alt={image.alt ?? car.model} fill sizes="480px" className="object-cover" />
               </div>
             )}
             <div className="p-5">

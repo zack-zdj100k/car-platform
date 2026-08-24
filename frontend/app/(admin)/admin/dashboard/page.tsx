@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
 import { Car, Heart, Package, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -49,7 +49,7 @@ function RankedList({
                 <span className="text-muted-foreground w-4 text-sm font-medium tabular-nums">{index + 1}</span>
                 <div className="bg-secondary relative size-11 shrink-0 overflow-hidden rounded-md">
                   {row.car.images[0] && (
-                    <Image src={row.car.images[0].url} alt="" fill sizes="44px" className="object-cover" />
+                    <MediaImage src={row.car.images[0].url} alt="" fill sizes="44px" className="object-cover" />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">

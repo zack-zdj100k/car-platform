@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
 import { AlertTriangle, Car, Eye, Heart, Mail, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -170,7 +170,7 @@ export default function AdminAnalyticsPage() {
                   <span className="text-muted-foreground w-4 text-sm tabular-nums">{index + 1}</span>
                   <div className="bg-secondary relative size-11 shrink-0 overflow-hidden rounded-md">
                     {row.car.images[0] && (
-                      <Image src={row.car.images[0].url} alt="" fill sizes="44px" className="object-cover" />
+                      <MediaImage src={row.car.images[0].url} alt="" fill sizes="44px" className="object-cover" />
                     )}
                   </div>
                   <p className="min-w-0 flex-1 truncate text-sm font-medium">

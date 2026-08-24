@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
 import { Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -51,7 +51,7 @@ export default function MyOrdersPage() {
             >
               <div className="bg-secondary relative size-20 shrink-0 overflow-hidden rounded-lg">
                 {order.car.images[0] && (
-                  <Image
+                  <MediaImage
                     src={order.car.images[0].url}
                     alt={order.car.images[0].alt ?? order.car.model}
                     fill

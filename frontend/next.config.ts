@@ -7,6 +7,17 @@ import type { NextConfig } from 'next';
  * variant from the master prompt redirects to it — so both documents' links
  * work. See docs/DECISIONS.md Part 1.
  */
+/** The API the browser talks to, and whether it is on this machine. */
+const apiUrl = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api');
+  } catch {
+    return null;
+  }
+})();
+
+const apiIsLocal = ['localhost', '127.0.0.1', '::1', '0.0.0.0'].includes(apiUrl?.hostname ?? '');
+
 const nextConfig: NextConfig = {
   async redirects() {
     return [
@@ -21,12 +32,42 @@ const nextConfig: NextConfig = {
   },
 
   images: {
-    // Placeholder assets are local SVGs; real photography will be served from
-    // the same public paths or an uploads directory.
+    // Placeholder assets are local SVGs served from /public.
     dangerouslyAllowSVG: true,
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     formats: ['image/avif', 'image/webp'],
+
+    /*
+     * Uploaded car photography is served by the API, which is a different
+     * origin in production. Listing it here lets Next resize and re-encode
+     * those photographs to AVIF/WebP rather than shipping the original file.
+     *
+     * Only the configured API host is allowed — an open pattern would turn the
+     * optimiser into a proxy for arbitrary remote images.
+     */
+    /*
+     * Next refuses to optimise an image whose host resolves to a private IP,
+     * because an open optimiser is an SSRF vector.
+     *
+     * Keyed to the configured API host rather than NODE_ENV: `next start` runs
+     * as production even on a laptop, so NODE_ENV cannot tell the two apart.
+     * This is enabled only when the API is explicitly localhost — which is
+     * exactly when the guard gets in the way and never true for a real
+     * deployment.
+     */
+    dangerouslyAllowLocalIP: apiIsLocal,
+
+    remotePatterns: apiUrl
+      ? [
+          {
+            protocol: apiUrl.protocol.replace(':', '') as 'http' | 'https',
+            hostname: apiUrl.hostname,
+            port: apiUrl.port || undefined,
+            pathname: '/uploads/**',
+          },
+        ]
+      : [],
   },
 
   poweredByHeader: false,

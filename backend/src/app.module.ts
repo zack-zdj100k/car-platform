@@ -19,6 +19,7 @@ import { OrdersModule } from './orders/orders.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SettingsModule } from './settings/settings.module';
+import { UploadsModule } from './uploads/uploads.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HealthModule } from './health/health.module';
 
@@ -62,6 +63,7 @@ import { HealthModule } from './health/health.module';
     AnalyticsModule,
     NotificationsModule,
     SettingsModule,
+    UploadsModule,
     DashboardModule,
     HealthModule,
   ],

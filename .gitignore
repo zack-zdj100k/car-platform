@@ -58,3 +58,8 @@ Thumbs.db
 frontend/test-results/
 frontend/playwright-report/
 frontend/blob-report/
+
+# iCloud sync duplicates — this project lives under ~/Documents, and a build
+# that rewrites a file mid-sync leaves a "name 2.ext" copy behind.
+* 2.*
+*\ 2.*

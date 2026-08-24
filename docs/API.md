@@ -242,6 +242,33 @@ separate, editable settings — see [DECISIONS.md](DECISIONS.md) D-2.1.
 | PUT | `/settings` | ADMIN | Bulk update in a single transaction. |
 | PATCH | `/settings/:key` | ADMIN | Update one. Unknown keys return 404 — settings are seeded, not created ad hoc. |
 
+## Uploads — `/uploads` (ADMIN only)
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| POST | `/uploads/image` | Upload one car photograph. Multipart, field `file`. |
+| POST | `/uploads/images` | Upload up to 20 at once. Multipart, field `files`. |
+| DELETE | `/uploads/:filename` | Delete a stored file. |
+
+Returns `{ url, filename, width, height, sizeBytes, mimeType }`. Store the `url`
+on the car's image record; the file is served from `/uploads/…` on the API host.
+
+**What is accepted, and why.** JPG, PNG, WebP, AVIF and GIF, up to
+`MAX_UPLOAD_MB` (8 by default). The decision is made by reading the file's own
+bytes — the declared mime type and the extension are both supplied by the
+client and prove nothing. A file that is not a readable image returns 422.
+
+**SVG is refused.** It is a document format that can carry script, and it would
+be served from the API's own origin.
+
+**Stored names are random.** An uploaded filename never reaches the filesystem,
+so it cannot traverse directories or overwrite another file. Deletion accepts a
+bare filename only, and the resolved path is checked to be inside the upload
+directory.
+
+Files are held in memory during validation, so anything rejected is never
+written to disk at all.
+
 ## Health — `/health`
 
 | Method | Path | Access | Description |

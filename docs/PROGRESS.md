@@ -227,8 +227,9 @@ links from both specification documents work.
 
 **Deferred**
 
-- Image upload endpoints: the car form takes asset paths for now
 - Jest and Playwright suites are Phase 9
+
+*(Image upload was later built — see below.)*
 
 ## Phase 9 — Testing ✅
 
@@ -356,3 +357,33 @@ and the 50,000-row performance fixture was truncated from the test database.
 | Responsive | No horizontal overflow at 375, 768 or 1440 px |
 | Security-checked | 42 live probes, 0 dependency vulnerabilities |
 | Verified | Every claim above traces to a command that was run |
+
+## Image upload ✅
+
+The admin car form accepts real photographs uploaded from the administrator's
+computer, rather than paths typed by hand.
+
+- Drag files in or pick them; several at once
+- Each becomes a row with its own type (main, gallery, exterior, interior,
+  wheels), alt text and position
+- Exactly one photo is the main one — promoting another demotes the previous
+- Removing a photo that was uploaded here also deletes the file from disk
+- The listing card, detail gallery, dashboards and admin tables all render
+  uploaded photography through one resolver, so no caller needs to know whether
+  an image is a bundled placeholder or an upload
+
+**Security** — 8 tests, all passing:
+
+| Case | Result |
+| ---- | ------ |
+| Real image | Stored, dimensions reported |
+| Text file named `.png` with an image mime type | 422 |
+| SVG (can carry script) | 422 |
+| Anonymous | 401 |
+| Customer | 403 |
+| `../../.env` as a filename | 400 |
+| Two uploads with the same name | Different stored names; the uploaded name never reaches disk |
+
+The declared mime type is deliberately not trusted — the file's own bytes decide.
+Rejected files are never written, because validation happens while the upload is
+still in memory.

@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/providers/locale-provider';
@@ -36,7 +36,7 @@ export function CarRow({
     <div className="border-border bg-card flex items-center gap-4 rounded-xl border p-3 shadow-[var(--shadow-card)]">
       <div className="bg-secondary relative size-20 shrink-0 overflow-hidden rounded-lg sm:size-24">
         {image && (
-          <Image
+          <MediaImage
             src={image.url}
             alt={image.alt ?? `${car.brand.name} ${car.model}`}
             fill
