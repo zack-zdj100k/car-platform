@@ -16,9 +16,9 @@ error-handled, accessible, responsive, security-checked and verified (§77).
 | 7 — Frontend / design | ✅ Complete |
 | 8 — Full integration | ✅ Complete |
 | 9 — Testing | ✅ Complete |
-| 10 — Security audit | ⬜ Not started |
-| 11 — Accessibility audit | ⬜ Not started |
-| 12 — Performance audit | ⬜ Not started |
+| 10 — Security audit | ✅ Complete |
+| 11 — Accessibility audit | ✅ Complete |
+| 12 — Performance audit | ✅ Complete |
 | 13 — Final audit | ⬜ Not started |
 
 ---
@@ -279,3 +279,19 @@ npx jest --config ./test/jest-e2e.json --workspace backend
 Rate limiting is skipped under `NODE_ENV=test`, since every request in a suite
 comes from one address; the limiter is verified against the running server in
 the security audit instead.
+
+## Phases 10–12 — Audits ✅
+
+Full results in [AUDITS.md](AUDITS.md) and [PERFORMANCE.md](PERFORMANCE.md).
+
+| Audit | Result |
+| ----- | ------ |
+| Security | 42 live probes passing; 0 dependency vulnerabilities |
+| Accessibility | 18 checks passing; 4 real violations found and fixed |
+| Performance | All budgets met — worst FCP 264 ms, CLS 0 on every page |
+
+Index coverage was verified against a 50,000-vehicle fixture, since seed volume
+would not exercise the planner. One scaling limit was measured and documented
+rather than papered over: ranking most-viewed vehicles costs 157 ms at 200,000
+view rows and grows with the table. Forcing an index path was tested and is
+slower, so the fix at real volume is a rollup table, not an index.
