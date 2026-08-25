@@ -54,20 +54,28 @@ export function SiteHeader() {
     .join('')
     .toUpperCase();
 
+  /*
+   * Once the page scrolls, content passes beneath the header. The logo and the
+   * account actions pick up their own translucent capsule then, so they stay
+   * readable without the header itself becoming a bar again.
+   */
+  const floatingSurface = 'border-border/60 bg-background/70 border shadow-sm backdrop-blur-lg';
+
   return (
-    <header
-      className={cn(
-        'sticky top-0 z-50 w-full transition-shadow duration-300',
-        scrolled
-          ? 'bg-background/85 border-border border-b shadow-sm backdrop-blur-lg'
-          : 'bg-background/60 border-transparent border-b backdrop-blur-sm',
-      )}
-    >
-      <div className="relative mx-auto flex h-16 w-full max-w-7xl items-center gap-3 px-5 sm:px-8">
+    <header className="sticky top-0 z-50 w-full">
+      {/*
+        No bar of its own: the header is a layout row over the page, and each
+        cluster inside it carries its own surface. A solid strip across the top
+        cut the hero in half.
+      */}
+      <div className="relative mx-auto flex h-16 w-full max-w-7xl items-center gap-3 px-5 sm:px-8 md:h-20">
         {/* Logo placeholder (spec §7 — do not invent the final logo) */}
         <Link
           href="/"
-          className="group/brand flex items-center gap-2.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4"
+          className={cn(
+            'group/brand flex items-center gap-2.5 rounded-full transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-4',
+            scrolled ? `${floatingSurface} ps-1.5 pe-4 py-1` : 'border border-transparent',
+          )}
           aria-label={t.nav.home}
         >
           <span className="bg-primary/10 ring-primary/20 grid size-9 place-items-center rounded-lg ring-1 ring-inset transition-transform duration-300 motion-safe:group-hover/brand:-translate-y-0.5">
@@ -84,10 +92,15 @@ export function SiteHeader() {
           actually reaches.
         */}
         <div className="absolute left-1/2 hidden -translate-x-1/2 md:block">
-          <NavBar items={navItems} variant="inline" indicator="pill" layoutGroup="header" />
+          <NavBar items={navItems} variant="inline" layoutGroup="header" />
         </div>
 
-        <div className="ms-auto flex items-center gap-1">
+        <div
+          className={cn(
+            'ms-auto flex items-center gap-1 rounded-full transition-colors duration-300',
+            scrolled ? `${floatingSurface} px-1.5 py-1` : 'border border-transparent',
+          )}
+        >
           <LanguageSwitcher />
           <ThemeToggle />
 

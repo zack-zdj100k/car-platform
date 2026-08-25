@@ -59,7 +59,13 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
   ];
 
   return (
-    <section className="relative isolate flex h-svh min-h-[40rem] items-center overflow-hidden bg-neutral-100 dark:bg-neutral-900">
+    /*
+     * Pulled up behind the transparent header and padded by the same amount,
+     * so the picture runs to the top of the window while the wording still
+     * clears the navigation. Without this the header sat on a strip of page
+     * background, which read as a solid bar across the top.
+     */
+    <section className="relative isolate -mt-16 flex h-svh min-h-[40rem] items-center overflow-hidden bg-neutral-100 pt-16 md:-mt-20 md:pt-20 dark:bg-neutral-900">
       {/* 1 — the footage */}
       {reducedMotion ? (
         <div

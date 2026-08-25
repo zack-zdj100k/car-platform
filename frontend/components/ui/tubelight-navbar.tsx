@@ -24,12 +24,6 @@ import { cn } from '@/lib/utils';
  *      URL, a link from elsewhere, the back button — leaves the lamp on the
  *      wrong item. `activeName` can still override it where the caller knows
  *      better.
- *
- *   3. The lamp is optional. It hangs above the pill, which only works where
- *      there is empty space above — the floating bar has it, a 64px header does
- *      not: there the bar lands on the header's own top edge and reads as a
- *      stray stripe. `indicator="pill"` marks the active item with a solid
- *      surface instead, and keeps the same sliding movement.
  */
 
 export interface NavItem {
@@ -51,12 +45,6 @@ export interface NavBarProps {
   variant?: 'floating' | 'inline';
   /** Distinguishes the shared layout animation when more than one is mounted. */
   layoutGroup?: string;
-  /**
-   * `lamp` is the reference treatment: a glowing bar above the active item,
-   * which needs clear space above the pill. `pill` marks the active item with
-   * a solid surface and no overhang, for tight rows like a header.
-   */
-  indicator?: 'lamp' | 'pill';
 }
 
 export function NavBar({
@@ -65,7 +53,6 @@ export function NavBar({
   activeName,
   variant = 'floating',
   layoutGroup = 'tubelight',
-  indicator = 'lamp',
 }: NavBarProps) {
   const pathname = usePathname();
   const reducedMotion = useReducedMotion();
@@ -93,14 +80,7 @@ export function NavBar({
     >
       <nav
         aria-label="Primary"
-        className={cn(
-          'flex items-center rounded-full border p-1 backdrop-blur-lg',
-          indicator === 'lamp'
-            ? 'border-border bg-background/5 gap-1 shadow-lg sm:gap-3'
-            : // A header row is already a surface: a heavy shadow and a wide
-              // gap only make the pill fight the rest of it.
-              'border-border/70 bg-background/40 gap-0.5 shadow-xs',
-        )}
+        className="border-border bg-background/5 flex items-center gap-1 rounded-full border p-1 shadow-lg backdrop-blur-lg sm:gap-3"
       >
         {items.map((item) => {
           const Icon = item.icon;
@@ -112,12 +92,9 @@ export function NavBar({
               href={item.url}
               aria-current={isActive ? 'page' : undefined}
               className={cn(
-                'relative cursor-pointer rounded-full text-sm font-semibold transition-colors',
-                indicator === 'lamp' ? 'px-4 py-2 sm:px-6' : 'px-4 py-1.5',
-                // Violet on the translucent header failed to read as a link at
-                // a glance, so the label carries full text colour and the
-                // surface behind it does the marking.
-                isActive ? 'text-foreground' : 'text-foreground/70 hover:text-foreground',
+                'relative cursor-pointer rounded-full px-4 py-2 text-sm font-semibold transition-colors sm:px-6',
+                'text-foreground/80 hover:text-primary',
+                isActive && 'bg-muted text-primary',
               )}
             >
               <span className="hidden md:inline">{item.name}</span>
@@ -130,12 +107,7 @@ export function NavBar({
               {isActive && (
                 <motion.div
                   layoutId={`${layoutGroup}-lamp`}
-                  className={cn(
-                    'absolute inset-0 -z-10 w-full rounded-full',
-                    indicator === 'lamp'
-                      ? 'bg-primary/5'
-                      : 'bg-secondary ring-border/60 ring-1 ring-inset',
-                  )}
+                  className="bg-primary/5 absolute inset-0 -z-10 w-full rounded-full"
                   initial={false}
                   transition={
                     reducedMotion
@@ -143,14 +115,12 @@ export function NavBar({
                       : { type: 'spring', stiffness: 300, damping: 30 }
                   }
                 >
-                  {indicator === 'lamp' && (
-                    /* The lamp: a bar above the pill, with its glow beneath. */
-                    <div className="bg-primary absolute -top-2 left-1/2 h-1 w-8 -translate-x-1/2 rounded-t-full">
-                      <div className="bg-primary/20 absolute -top-2 -left-2 h-6 w-12 rounded-full blur-md" />
-                      <div className="bg-primary/20 absolute -top-1 h-6 w-8 rounded-full blur-md" />
-                      <div className="bg-primary/20 absolute top-0 left-2 h-4 w-4 rounded-full blur-sm" />
-                    </div>
-                  )}
+                  {/* The lamp: a bar above the pill, with its glow beneath. */}
+                  <div className="bg-primary absolute -top-2 left-1/2 h-1 w-8 -translate-x-1/2 rounded-t-full">
+                    <div className="bg-primary/20 absolute -top-2 -left-2 h-6 w-12 rounded-full blur-md" />
+                    <div className="bg-primary/20 absolute -top-1 h-6 w-8 rounded-full blur-md" />
+                    <div className="bg-primary/20 absolute top-0 left-2 h-4 w-4 rounded-full blur-sm" />
+                  </div>
                 </motion.div>
               )}
             </Link>
