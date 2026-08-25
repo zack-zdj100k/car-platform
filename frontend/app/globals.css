@@ -267,6 +267,17 @@
     animation-delay: var(--rise-delay, 0s);
   }
 
+  /*
+   * Travelling dashes along the connectors of the orbital diagram, so a link
+   * between two nodes reads as a direction rather than a static line. Applied
+   * through `motion-safe:`, so reduced motion never starts it.
+   */
+  @keyframes orbit-dash {
+    to {
+      stroke-dashoffset: -22;
+    }
+  }
+
   .hero-environment {
     background-image: linear-gradient(
       160deg,

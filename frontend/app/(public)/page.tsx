@@ -1,5 +1,5 @@
 import { Hero } from '@/components/home/hero';
-import { CarDiagram } from '@/components/home/car-diagram';
+import { CarOrbit } from '@/components/home/car-orbit';
 import { VideoShowcase } from '@/components/home/video-showcase';
 import { FeaturedCars } from '@/components/home/featured-cars';
 import { StatsBento } from '@/components/ui/stats-bento';
@@ -29,7 +29,7 @@ export default async function HomePage() {
         }}
       />
       {showcaseSlug ? (
-        <CarDiagram
+        <CarOrbit
           slug={showcaseSlug}
           images={{
             safety: readSetting(settings, 'home-images', 'home.image.safety'),
