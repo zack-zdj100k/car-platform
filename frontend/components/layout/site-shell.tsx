@@ -1,7 +1,9 @@
 'use client';
 
+import { Car, Home, Info } from 'lucide-react';
 import { SiteHeader } from './site-header';
 import { FooterSection } from '@/components/ui/footer-section';
+import { NavBar, type NavItem } from '@/components/ui/tubelight-navbar';
 import { useLocale } from '@/providers/locale-provider';
 
 /**
@@ -10,6 +12,12 @@ import { useLocale } from '@/providers/locale-provider';
  */
 export function SiteShell({ children }: { children: React.ReactNode }) {
   const { t } = useLocale();
+
+  const navItems: NavItem[] = [
+    { name: t.nav.home, url: '/', icon: Home },
+    { name: t.nav.cars, url: '/cars', icon: Car },
+    { name: t.nav.about, url: '/about', icon: Info },
+  ];
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -20,10 +28,19 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
         {t.nav.skipToContent}
       </a>
       <SiteHeader />
-      <main id="main" className="flex-1">
+      {/*
+        The floating bar leaves room beneath it on small screens, so it never
+        covers the end of the page or the footer.
+      */}
+      <main id="main" className="flex-1 pb-24 md:pb-0">
         {children}
       </main>
-      <FooterSection />
+      <FooterSection className="pb-24 md:pb-12" />
+
+      {/* Thumb-reachable primary navigation, small screens only. */}
+      <div className="md:hidden">
+        <NavBar items={navItems} layoutGroup="mobile" />
+      </div>
     </div>
   );
 }

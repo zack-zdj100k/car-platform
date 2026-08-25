@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { Car, LayoutDashboard, LogOut, Menu, ShieldCheck, User } from 'lucide-react';
+import { Car, Home, Info, LayoutDashboard, LogOut, Menu, ShieldCheck, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
@@ -16,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { NavBar, type NavItem } from '@/components/ui/tubelight-navbar';
 import { LanguageSwitcher } from './language-switcher';
 import { ThemeToggle } from './theme-toggle';
 import { useLocale } from '@/providers/locale-provider';
@@ -28,19 +28,24 @@ import { cn } from '@/lib/utils';
  * The logo is a placeholder until the real asset is supplied.
  */
 export function SiteHeader() {
-  const pathname = usePathname();
   const { t, dir } = useLocale();
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const scrolled = useScrolledPast(8);
 
   const links = [
-    { href: '/', label: t.nav.home },
-    { href: '/cars', label: t.nav.cars },
-    { href: '/about', label: t.nav.about },
+    { href: '/', label: t.nav.home, icon: Home },
+    { href: '/cars', label: t.nav.cars, icon: Car },
+    { href: '/about', label: t.nav.about, icon: Info },
   ];
 
-  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
+  /** Shape the tubelight navigation expects. */
+  const navItems: NavItem[] = links.map((link) => ({
+    name: link.label,
+    url: link.href,
+    icon: link.icon,
+  }));
+
   const initials = (user?.fullName ?? '')
     .split(' ')
     .map((part) => part[0])
@@ -58,7 +63,7 @@ export function SiteHeader() {
           : 'bg-background/60 border-transparent border-b backdrop-blur-sm',
       )}
     >
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-3 px-5 sm:px-8">
+      <div className="relative mx-auto flex h-16 w-full max-w-7xl items-center gap-3 px-5 sm:px-8">
         {/* Logo placeholder (spec §7 — do not invent the final logo) */}
         <Link
           href="/"
@@ -73,33 +78,14 @@ export function SiteHeader() {
           </span>
         </Link>
 
-        <nav aria-label={t.nav.home} className="ms-4 hidden items-center gap-1 md:flex">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              aria-current={isActive(link.href) ? 'page' : undefined}
-              className={cn(
-                'group relative rounded-md px-3 py-2 text-sm font-medium transition-colors duration-300',
-                isActive(link.href) ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {link.label}
-              {/*
-                Underline grows from the centre. Animating a transform rather
-                than width keeps it off the layout path.
-              */}
-              <span
-                aria-hidden="true"
-                className={cn(
-                  'bg-primary absolute inset-x-3 -bottom-0.5 h-0.5 origin-center rounded-full',
-                  'transition-transform duration-300 ease-out',
-                  isActive(link.href) ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100',
-                )}
-              />
-            </Link>
-          ))}
-        </nav>
+        {/*
+          Primary navigation. The pill is centred on wide screens and becomes a
+          floating bar at the bottom on small ones, which is where a thumb
+          actually reaches.
+        */}
+        <div className="absolute left-1/2 hidden -translate-x-1/2 md:block">
+          <NavBar items={navItems} variant="inline" layoutGroup="header" />
+        </div>
 
         <div className="ms-auto flex items-center gap-1">
           <LanguageSwitcher />
@@ -174,26 +160,11 @@ export function SiteHeader() {
               <SheetHeader>
                 <SheetTitle className="font-display">Car Platform</SheetTitle>
               </SheetHeader>
-              <nav aria-label={t.nav.home} className="mt-2 flex flex-col gap-1 px-4">
-                {links.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileOpen(false)}
-                    aria-current={isActive(link.href) ? 'page' : undefined}
-                    className={cn(
-                      'rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
-                      isActive(link.href)
-                        ? 'bg-secondary text-foreground'
-                        : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
-                    )}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-
-                <Separator className="my-3" />
-
+              <nav aria-label={t.nav.dashboard} className="mt-2 flex flex-col gap-1 px-4">
+                {/*
+                  Account actions only: the floating bar below already carries
+                  Home, Cars and About, and repeating them here would be noise.
+                */}
                 {isAuthenticated ? (
                   <>
                     <Link
@@ -202,6 +173,13 @@ export function SiteHeader() {
                       className="text-muted-foreground hover:bg-secondary/60 hover:text-foreground rounded-md px-3 py-2.5 text-sm font-medium"
                     >
                       {t.nav.dashboard}
+                    </Link>
+                    <Link
+                      href="/dashboard/profile"
+                      onClick={() => setMobileOpen(false)}
+                      className="text-muted-foreground hover:bg-secondary/60 hover:text-foreground rounded-md px-3 py-2.5 text-sm font-medium"
+                    >
+                      {t.dashboard.profile}
                     </Link>
                     {isAdmin && (
                       <Link
@@ -212,9 +190,9 @@ export function SiteHeader() {
                         {t.nav.admin}
                       </Link>
                     )}
+                    <Separator className="my-3" />
                     <Button
                       variant="outline"
-                      className="mt-2"
                       onClick={() => {
                         setMobileOpen(false);
                         void logout();
@@ -225,7 +203,7 @@ export function SiteHeader() {
                     </Button>
                   </>
                 ) : (
-                  <div className="mt-1 grid gap-2">
+                  <div className="grid gap-2">
                     <Button asChild variant="outline">
                       <Link href="/login" onClick={() => setMobileOpen(false)}>
                         {t.nav.signIn}
