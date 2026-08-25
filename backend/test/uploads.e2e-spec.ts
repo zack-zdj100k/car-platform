@@ -145,3 +145,70 @@ describe('Uploads', () => {
       .expect(404);
   });
 });
+
+/**
+ * The upload endpoint must never hand ICNS, JXL or HEIF input to the image
+ * parser: those parsers carry an unfixed advisory where malformed input spins
+ * forever and hangs the process. The signature gate should reject them first.
+ */
+describe('Uploads — formats that must never reach the parser', () => {
+  let context: TestContext;
+  let adminToken: string;
+
+  beforeAll(async () => {
+    context = await createTestApp();
+  });
+
+  beforeEach(async () => {
+    await resetDatabase(context.prisma);
+    adminToken = (await createAdmin(context)).token;
+  });
+
+  afterAll(async () => {
+    await context.app.close();
+  });
+
+  const cases: [string, Buffer][] = [
+    // ICNS: "icns" followed by a length field.
+    ['ICNS', Buffer.concat([Buffer.from('icns'), Buffer.alloc(64)])],
+    // JXL codestream signature.
+    ['JXL codestream', Buffer.concat([Buffer.from([0xff, 0x0a]), Buffer.alloc(64)])],
+    // HEIF: same ISOBMFF container as AVIF, different brand.
+    [
+      'HEIF (heic brand)',
+      Buffer.concat([Buffer.alloc(4), Buffer.from('ftypheic'), Buffer.alloc(64)]),
+    ],
+    [
+      'HEIF (mif1 brand)',
+      Buffer.concat([Buffer.alloc(4), Buffer.from('ftypmif1'), Buffer.alloc(64)]),
+    ],
+    // A TIFF is a real image, but not one we accept.
+    ['TIFF', Buffer.concat([Buffer.from([0x49, 0x49, 0x2a, 0x00]), Buffer.alloc(64)])],
+  ];
+
+  it.each(cases)('rejects %s before parsing it', async (_label, payload) => {
+    await context
+      .http()
+      .post('/api/uploads/image')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .attach('file', payload, { filename: 'payload.png', contentType: 'image/png' })
+      .expect(422);
+  });
+
+  it('still accepts an AVIF-branded container', async () => {
+    // A real AVIF is more than a header, so the parser rejects it as corrupt —
+    // but the signature gate must let it through rather than refusing the brand.
+    const response = await context
+      .http()
+      .post('/api/uploads/image')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .attach('file', Buffer.concat([Buffer.alloc(4), Buffer.from('ftypavif'), Buffer.alloc(64)]), {
+        filename: 'photo.avif',
+        contentType: 'image/avif',
+      });
+
+    // Rejected for being unreadable, not for its format.
+    expect(response.status).toBe(422);
+    expect(String(response.body.message)).toMatch(/could not be read|corrupt/i);
+  });
+});

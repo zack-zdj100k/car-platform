@@ -1,6 +1,6 @@
 'use client';
 
-import Image from 'next/image';
+import { MediaImage } from '@/components/shared/media-image';
 import { Gauge, Palette, Shield, Sofa, Wrench } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Section, SectionHeading } from '@/components/shared/section';
@@ -13,7 +13,14 @@ import { cn } from '@/lib/utils';
  * tyres (14" + 16"), exterior and interior — each with an image and a
  * professional description.
  */
-export function FeaturesShowcase({ slug }: { slug: string }) {
+export function FeaturesShowcase({
+  slug,
+  images,
+}: {
+  slug: string;
+  /** Uploaded photography, keyed by block. Empty values fall back below. */
+  images: Partial<Record<'safety' | 'engine' | 'wheels' | 'tyres' | 'exterior' | 'interior', string>>;
+}) {
   const { t } = useLocale();
 
   const blocks = [
@@ -22,7 +29,7 @@ export function FeaturesShowcase({ slug }: { slug: string }) {
       icon: Shield,
       title: t.features.safetyTitle,
       body: t.features.safetyBody,
-      image: `/images/cars/${slug}/main.svg`,
+      image: images.safety || `/images/cars/${slug}/main.svg`,
       tags: [] as string[],
     },
     {
@@ -30,7 +37,7 @@ export function FeaturesShowcase({ slug }: { slug: string }) {
       icon: Gauge,
       title: t.features.engineTitle,
       body: t.features.engineBody,
-      image: `/images/cars/${slug}/gallery-2.svg`,
+      image: images.engine || `/images/cars/${slug}/gallery-2.svg`,
       tags: [],
     },
     {
@@ -38,7 +45,7 @@ export function FeaturesShowcase({ slug }: { slug: string }) {
       icon: Wrench,
       title: t.features.wheelsTitle,
       body: t.features.wheelsBody,
-      image: `/images/wheels/${slug}/wheel.svg`,
+      image: images.wheels || `/images/wheels/${slug}/wheel.svg`,
       tags: [t.features.wheelsStandard, t.features.wheelsSport],
     },
     {
@@ -46,7 +53,7 @@ export function FeaturesShowcase({ slug }: { slug: string }) {
       icon: Wrench,
       title: t.features.tyresTitle,
       body: t.features.tyresBody,
-      image: `/images/wheels/${slug}/wheel.svg`,
+      image: images.tyres || `/images/wheels/${slug}/wheel.svg`,
       tags: [t.features.tyres14, t.features.tyres16],
     },
     {
@@ -54,7 +61,7 @@ export function FeaturesShowcase({ slug }: { slug: string }) {
       icon: Palette,
       title: t.features.exteriorTitle,
       body: t.features.exteriorBody,
-      image: `/images/cars/${slug}/gallery-1.svg`,
+      image: images.exterior || `/images/cars/${slug}/gallery-1.svg`,
       tags: [],
     },
     {
@@ -62,7 +69,7 @@ export function FeaturesShowcase({ slug }: { slug: string }) {
       icon: Sofa,
       title: t.features.interiorTitle,
       body: t.features.interiorBody,
-      image: `/images/interior/${slug}/dashboard.svg`,
+      image: images.interior || `/images/interior/${slug}/dashboard.svg`,
       tags: [],
     },
   ];
@@ -88,7 +95,7 @@ export function FeaturesShowcase({ slug }: { slug: string }) {
             >
               <div className={cn('grid', index === 0 ? 'lg:grid-cols-2' : 'grid-cols-1')}>
                 <div className="bg-secondary relative aspect-16/10 overflow-hidden">
-                  <Image
+                  <MediaImage
                     src={block.image}
                     alt=""
                     fill

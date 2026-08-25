@@ -349,6 +349,23 @@ export interface OrderSummary {
   car: Pick<CarListItem, 'id' | 'slug' | 'model' | 'year' | 'price' | 'currency' | 'brand' | 'images'>;
 }
 
+/**
+ * A row from the admin order list.
+ *
+ * Deliberately separate from OrderDetail: the list query does not load status
+ * history, and typing it as the fuller shape caused a crash when the dialog
+ * read `statusHistory.length` on a value that was never sent.
+ */
+export interface AdminOrderRow extends OrderSummary {
+  buyerName: string;
+  buyerEmail: string;
+  buyerPhone: string;
+  message: string | null;
+  adminNote: string | null;
+  userId: string | null;
+  user: { id: string; fullName: string; email: string } | null;
+}
+
 export interface OrderDetail extends OrderSummary {
   buyerName: string;
   buyerEmail: string;

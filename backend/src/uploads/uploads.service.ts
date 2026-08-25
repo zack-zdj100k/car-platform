@@ -48,6 +48,50 @@ export class UploadsService {
     ['gif', '.gif'],
   ]);
 
+  /**
+   * Recognises the five accepted formats from their own leading bytes.
+   *
+   * This runs *before* the image parser, and exists for a specific reason:
+   * `image-size` carries an unfixed advisory where malformed ICNS, JXL and HEIF
+   * input drives its parsers into an infinite loop, hanging the process. None
+   * of those three are formats we accept, so refusing anything whose signature
+   * we do not recognise means the vulnerable code paths are never entered.
+   *
+   * HEIF is the awkward case: it shares the ISOBMFF `ftyp` container with AVIF,
+   * so the brand is checked rather than the container.
+   */
+  private static detectSignature(buffer: Buffer): string | null {
+    if (buffer.length < 16) return null;
+
+    // JPEG — FF D8 FF
+    if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return 'jpg';
+
+    // PNG — 89 50 4E 47 0D 0A 1A 0A
+    if (buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+      return 'png';
+    }
+
+    // GIF — "GIF87a" or "GIF89a"
+    if (buffer.subarray(0, 6).toString('ascii').match(/^GIF8[79]a$/)) return 'gif';
+
+    // WebP — "RIFF" .... "WEBP"
+    if (
+      buffer.subarray(0, 4).toString('ascii') === 'RIFF' &&
+      buffer.subarray(8, 12).toString('ascii') === 'WEBP'
+    ) {
+      return 'webp';
+    }
+
+    // AVIF — ISOBMFF with an AVIF brand. Deliberately narrow: `heic` and `mif1`
+    // share this container and route into the vulnerable HEIF parser.
+    if (buffer.subarray(4, 8).toString('ascii') === 'ftyp') {
+      const brand = buffer.subarray(8, 12).toString('ascii');
+      if (brand === 'avif' || brand === 'avis') return 'avif';
+    }
+
+    return null;
+  }
+
   constructor(private readonly config: ConfigService<Configuration, true>) {}
 
   private get settings() {
@@ -76,21 +120,22 @@ export class UploadsService {
       throw new BadRequestException(`Image is too large. The limit is ${limitMb} MB.`);
     }
 
-    // The real format, read from the file's own bytes.
-    let dimensions: { width: number; height: number; type?: string };
+    // Identify the format from the file's own bytes before any parser runs.
+    const type = UploadsService.detectSignature(file.buffer);
+    const extension = type ? UploadsService.ALLOWED.get(type) : undefined;
+
+    if (!type || !extension) {
+      throw new UnprocessableEntityException(
+        'That file is not a supported image. Use JPG, PNG, WebP, AVIF or GIF.',
+      );
+    }
+
+    // Only now, on a format we recognise, read the dimensions.
+    let dimensions: { width: number; height: number };
     try {
       dimensions = imageSize(file.buffer);
     } catch {
-      throw new UnprocessableEntityException('That file is not a readable image.');
-    }
-
-    const type = (dimensions.type ?? '').toLowerCase();
-    const extension = UploadsService.ALLOWED.get(type === 'jpeg' ? 'jpg' : type);
-
-    if (!extension) {
-      throw new UnprocessableEntityException(
-        `Unsupported image format${type ? ` (${type})` : ''}. Use JPG, PNG, WebP, AVIF or GIF.`,
-      );
+      throw new UnprocessableEntityException('That image could not be read. It may be corrupt.');
     }
 
     await this.ensureDirectory();

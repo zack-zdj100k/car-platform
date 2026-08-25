@@ -23,18 +23,21 @@ test.describe('Public site', () => {
   test('home page shows the hero, features and featured vehicles', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Chinese cars');
-    // The hero headline must be visible without waiting on a JS animation.
+    // The headline is set as two overlapping lines inside one <h1>.
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Premium.');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Accessible.');
+    // It must be visible without waiting on a JS animation.
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
-    await expect(page.getByRole('link', { name: /EXPLORE NOW/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Explore Cars' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Discover' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Featured vehicles' })).toBeVisible();
     await expect(page.locator('article').first()).toBeVisible();
   });
 
   test('the explore call to action leads to the cars page', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('link', { name: /EXPLORE NOW/i }).click();
+    await page.getByRole('link', { name: 'Explore Cars' }).click();
 
     await expect(page).toHaveURL(/\/cars$/);
     await expect(page.getByRole('heading', { name: 'Cars', level: 1 })).toBeVisible();

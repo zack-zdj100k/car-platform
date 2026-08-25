@@ -1,5 +1,13 @@
 import { apiRequest, buildPath, type RequestOptions } from './api-client';
-import type { AdminUser, AnalyticsDashboard, OrderDetail, OrderStatus, Paginated, Setting } from '@/types/api';
+import type {
+  AdminOrderRow,
+  AdminUser,
+  AnalyticsDashboard,
+  OrderDetail,
+  OrderStatus,
+  Paginated,
+  Setting,
+} from '@/types/api';
 
 export const analyticsService = {
   dashboard(options: RequestOptions = {}) {
@@ -36,7 +44,8 @@ export const adminOrdersService = {
     query: { page?: number; pageSize?: number; search?: string; status?: string[]; carId?: string } = {},
     options: RequestOptions = {},
   ) {
-    return apiRequest<Paginated<OrderDetail>>(
+    // The list omits status history; fetch `detail` when that is needed.
+    return apiRequest<Paginated<AdminOrderRow>>(
       buildPath('/orders/admin/all', query as Record<string, unknown>),
       options,
     );

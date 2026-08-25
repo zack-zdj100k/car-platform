@@ -163,8 +163,29 @@ test.describe('Reduced motion (spec §8, §65)', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
 
-    const opacity = await page.getByRole('heading', { level: 1 }).evaluate((el) => getComputedStyle(el).opacity);
-    expect(Number(opacity)).toBe(1);
+    /*
+     * Wait for styles to actually be applied before measuring.
+     *
+     * `getComputedStyle` returns an empty string for a property when no
+     * stylesheet has attached yet, and `Number('')` is 0 — which read as a
+     * hidden headline when the page was merely still loading.
+     */
+    await page.waitForFunction(() => {
+      const heading = document.querySelector('h1');
+      return Boolean(heading) && getComputedStyle(heading!).opacity !== '';
+    });
+    await page.evaluate(() => document.fonts.ready);
+
+    // The two headline lines are what carry the entrance animation, so they are
+    // what must be fully opaque once it is suppressed.
+    const opacities = await page
+      .getByRole('heading', { level: 1 })
+      .evaluate((el) => [
+        getComputedStyle(el).opacity,
+        ...[...el.querySelectorAll('span')].map((span) => getComputedStyle(span).opacity),
+      ]);
+
+    expect(opacities.every((value) => Number(value) === 1)).toBe(true);
   });
 });
 

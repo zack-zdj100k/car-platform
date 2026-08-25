@@ -34,7 +34,7 @@ import { adminOrdersService } from '@/services/admin.service';
 import { ApiError } from '@/services/api-client';
 import { formatDateTime } from '@/lib/format';
 import { ORDER_STATUSES, ORDER_STATUS_CLASS } from '@/lib/order-status';
-import type { OrderDetail, OrderStatus, Paginated } from '@/types/api';
+import type { AdminOrderRow, OrderDetail, OrderStatus, Paginated } from '@/types/api';
 
 /** Admin order management (spec §25, §46). */
 export default function AdminOrdersPage() {
@@ -44,12 +44,12 @@ export default function AdminOrdersPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const debounced = useDebouncedValue(search, 350);
 
-  const [active, setActive] = useState<OrderDetail | null>(null);
+  const [active, setActive] = useState<AdminOrderRow | null>(null);
   const [nextStatus, setNextStatus] = useState<OrderStatus | ''>('');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const orders = useAsync<Paginated<OrderDetail>>(
+  const orders = useAsync<Paginated<AdminOrderRow>>(
     () =>
       adminOrdersService.list(
         {
@@ -61,6 +61,16 @@ export default function AdminOrdersPage() {
       ),
     [token, debounced, statusFilter],
     { enabled: Boolean(token), isEmpty: (result) => result.data.length === 0 },
+  );
+
+  /**
+   * The dialog needs the full order, because the list deliberately omits status
+   * history to keep the table query light.
+   */
+  const detail = useAsync<OrderDetail>(
+    () => adminOrdersService.detail(active?.id ?? '', { token }),
+    [active?.id, token],
+    { enabled: Boolean(active && token) },
   );
 
   /** Only transitions the backend permits are offered (spec §25). */
@@ -243,13 +253,13 @@ export default function AdminOrdersPage() {
               />
             </div>
 
-            {active && active.statusHistory.length > 0 && (
+            {detail.data && detail.data.statusHistory.length > 0 && (
               <div className="border-border border-t pt-3">
                 <h3 className="text-muted-foreground mb-2 text-xs font-semibold tracking-widest uppercase">
                   History
                 </h3>
                 <ol className="space-y-1.5 text-xs">
-                  {active.statusHistory.map((entry) => (
+                  {detail.data.statusHistory.map((entry) => (
                     <li key={entry.id} className="text-muted-foreground flex justify-between gap-3">
                       <span>
                         {entry.fromStatus ? `${entry.fromStatus} → ` : ''}

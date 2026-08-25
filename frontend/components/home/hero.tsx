@@ -5,28 +5,24 @@ import { useEffect, useRef, useState } from 'react';
 import { useReducedMotion } from 'motion/react';
 import { ArrowRight, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ElegantDarkPattern } from '@/components/ui/elegant-dark-pattern';
+import { FacebookIcon, InstagramIcon, TikTokIcon } from '@/components/ui/brand-icons';
 import { useLocale } from '@/providers/locale-provider';
+import { cn } from '@/lib/utils';
 
 /**
- * Home hero (spec §8).
+ * Home hero (spec §8), premium light treatment.
  *
- * The owner-supplied clip is the hero itself, not a texture behind one. Layers,
- * bottom to top:
- *
- *   1. the video, at full opacity
- *   2. a brand tint plus the pattern's glow and grid, in overlay mode so the
- *      footage stays visible
- *   3. a contrast scrim, heavy behind the copy and clearing towards the right
- *      so the car is unobstructed
- *   4. the content
+ * The owner-supplied clip fills the viewport, with a light scrim rather than a
+ * dark one so the page reads calm and airy. The headline is set in two
+ * overlapping lines — a muted first line and a solid second — which is what
+ * gives it the editorial feel.
  *
  * Under `prefers-reduced-motion` the video is not rendered at all and its own
- * poster frame is shown instead — never a forced animation (spec §8, §65).
+ * poster frame is shown instead (spec §8, §65).
  *
- * Replace `public/videos/hero.mp4` (and `hero-poster.jpg`) to change the clip.
+ * Replace `public/videos/hero.mp4` and `hero-poster.jpg` to change the footage.
  */
-export function Hero() {
+export function Hero({ social }: { social: { tiktok: string; instagram: string; facebook: string } }) {
   const { t } = useLocale();
   const reducedMotion = useReducedMotion();
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -56,8 +52,14 @@ export function Hero() {
     return () => observer.disconnect();
   }, [reducedMotion]);
 
+  const socials = [
+    { key: 'tiktok', label: t.home.followTikTok, href: social.tiktok, Icon: TikTokIcon },
+    { key: 'instagram', label: t.home.followInstagram, href: social.instagram, Icon: InstagramIcon },
+    { key: 'facebook', label: t.home.followFacebook, href: social.facebook, Icon: FacebookIcon },
+  ];
+
   return (
-    <section className="relative isolate flex min-h-[min(92svh,54rem)] items-center overflow-hidden bg-hero-to">
+    <section className="relative isolate flex h-svh min-h-[40rem] items-center overflow-hidden bg-neutral-100 dark:bg-neutral-900">
       {/* 1 — the footage */}
       {reducedMotion ? (
         <div
@@ -68,9 +70,10 @@ export function Hero() {
       ) : (
         <video
           ref={videoRef}
-          className={`absolute inset-0 size-full object-cover object-[58%_center] transition-opacity duration-[1200ms] sm:object-center ${
-            videoReady ? 'opacity-100' : 'opacity-0'
-          }`}
+          className={cn(
+            'absolute inset-0 size-full object-cover object-[58%_center] transition-opacity duration-[1400ms] sm:object-center',
+            videoReady ? 'opacity-100' : 'opacity-0',
+          )}
           poster="/videos/hero-poster.jpg"
           muted
           loop
@@ -85,86 +88,143 @@ export function Hero() {
         </video>
       )}
 
-      {/* 2 — brand tint, then the pattern's glow and grid over the footage */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-hero-via/35 mix-blend-multiply"
-      />
-      <ElegantDarkPattern variant="hero" overlay vignette={false} gridSize={64} className="opacity-70" />
-
       {/*
-        3 — contrast scrim, which has to work in two very different shapes.
-
-        On a wide screen the copy sits to the left of the car, so the scrim runs
-        left-to-right: heavy behind the text, clearing by the time it reaches the
-        vehicle. On a narrow screen there is no "left" — the copy sits on top of
-        the car — so it runs top-to-bottom instead, darkening the band the
-        headline occupies and releasing over the bodywork below.
+        2 — light scrim.
+        A pale wash rather than a dark one, so the section stays airy while the
+        type still clears AA. Wide screens fade left-to-right, keeping the copy
+        legible and the car clear; narrow screens fade top-to-bottom, since
+        there the copy sits over the vehicle rather than beside it.
       */}
       <div
         aria-hidden="true"
-        className={
-          'absolute inset-0 ' +
-          'bg-[linear-gradient(to_bottom,color-mix(in_oklab,black_84%,transparent)_0%,color-mix(in_oklab,black_70%,transparent)_38%,color-mix(in_oklab,black_40%,transparent)_70%,color-mix(in_oklab,black_25%,transparent)_100%)] ' +
-          'sm:bg-[linear-gradient(95deg,color-mix(in_oklab,black_82%,transparent)_0%,color-mix(in_oklab,black_66%,transparent)_34%,color-mix(in_oklab,black_28%,transparent)_62%,transparent_88%)]'
-        }
+        className={cn(
+          'absolute inset-0',
+          'bg-[linear-gradient(to_bottom,color-mix(in_oklab,white_88%,transparent)_0%,color-mix(in_oklab,white_74%,transparent)_42%,color-mix(in_oklab,white_34%,transparent)_78%,transparent_100%)]',
+          'sm:bg-[linear-gradient(100deg,color-mix(in_oklab,white_90%,transparent)_0%,color-mix(in_oklab,white_72%,transparent)_38%,color-mix(in_oklab,white_26%,transparent)_66%,transparent_92%)]',
+          'dark:bg-[linear-gradient(to_bottom,color-mix(in_oklab,black_84%,transparent)_0%,color-mix(in_oklab,black_66%,transparent)_42%,color-mix(in_oklab,black_30%,transparent)_78%,transparent_100%)]',
+          'dark:sm:bg-[linear-gradient(100deg,color-mix(in_oklab,black_86%,transparent)_0%,color-mix(in_oklab,black_66%,transparent)_38%,color-mix(in_oklab,black_24%,transparent)_66%,transparent_92%)]',
+        )}
       />
+
+      {/* A short fade into the section below, so the seam is not a hard edge. */}
       <div
         aria-hidden="true"
-        className="absolute inset-x-0 bottom-0 h-40 bg-[linear-gradient(to_top,var(--hero-to),transparent)]"
+        className="absolute inset-x-0 bottom-0 h-32 bg-[linear-gradient(to_top,var(--background),transparent)]"
       />
 
-      {/* 4 — content */}
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-5 py-24 sm:px-8">
+      {/* 3 — content */}
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-6 sm:px-8">
         <div className="max-w-3xl">
-          <p className="rise text-hero-foreground/80 inline-flex items-center gap-2 text-xs font-semibold tracking-[0.2em] uppercase">
-            <span className="bg-brand-accent inline-block h-px w-8" aria-hidden="true" />
-            {t.home.statsTitle}
+          <p className="rise text-muted-foreground text-sm font-semibold tracking-[0.18em] uppercase">
+            {t.home.heroEyebrow}
           </p>
 
-          <h1
-            className="rise text-hero-foreground mt-5 text-4xl font-semibold [text-shadow:0_2px_24px_rgb(0_0_0/45%)] sm:text-5xl lg:text-6xl"
-            style={{ '--rise-delay': '80ms' } as React.CSSProperties}
-          >
-            {t.home.heroHeadline}
+          {/*
+            Two overlapping lines: the first recedes, the second lands. The
+            negative margin is what creates the overlap, so it is deliberate
+            rather than a spacing accident.
+          */}
+          <h1 className="mt-4 flex flex-col tracking-tighter">
+            <span
+              className="rise text-6xl leading-none font-normal text-neutral-500 md:text-7xl lg:text-8xl dark:text-neutral-400"
+              style={{ '--rise-delay': '70ms' } as React.CSSProperties}
+            >
+              {t.home.heroLine1}
+            </span>
+            <span
+              className="rise -mt-3 text-6xl leading-none font-normal text-[#202A36] md:text-7xl lg:text-8xl dark:text-neutral-50"
+              style={{ '--rise-delay': '150ms' } as React.CSSProperties}
+            >
+              {t.home.heroLine2}
+            </span>
           </h1>
 
           <p
-            className="rise text-hero-foreground/85 mt-6 max-w-2xl text-base/7 [text-shadow:0_1px_12px_rgb(0_0_0/50%)] sm:text-lg/8"
-            style={{ '--rise-delay': '160ms' } as React.CSSProperties}
+            className="rise text-muted-foreground mt-6 max-w-2xl text-lg md:text-xl"
+            style={{ '--rise-delay': '230ms' } as React.CSSProperties}
           >
-            {t.home.heroBody}
+            {t.home.heroTagline}
           </p>
 
           <div
-            className="rise mt-9 flex flex-wrap items-center gap-3"
-            style={{ '--rise-delay': '240ms' } as React.CSSProperties}
+            className="rise mt-8 flex flex-wrap items-center gap-3"
+            style={{ '--rise-delay': '310ms' } as React.CSSProperties}
           >
-            {/* CTA navigates to the Cars page (spec §8) */}
-            <Button asChild size="lg" className="group h-12 px-7 text-sm font-semibold tracking-wide">
+            {/* Both CTAs lead to the catalogue — the CTA target spec §8 requires. */}
+            <Button
+              asChild
+              size="lg"
+              variant="secondary"
+              className="h-11 rounded-full px-6 font-medium transition-transform duration-300 motion-safe:hover:-translate-y-0.5"
+            >
+              <Link href="/cars">{t.home.heroDiscover}</Link>
+            </Button>
+
+            <Button
+              asChild
+              size="lg"
+              className="group h-11 rounded-full bg-[#202A36] px-6 font-medium text-white transition-transform duration-300 hover:bg-[#1a2229] motion-safe:hover:-translate-y-0.5 dark:bg-white dark:text-[#202A36] dark:hover:bg-neutral-200"
+            >
               <Link href="/cars">
-                {t.home.heroCta}
+                {t.home.heroBook}
                 <ArrowRight
-                  className="size-4 transition-transform motion-safe:group-hover:translate-x-0.5 rtl:rotate-180"
+                  className="size-4 transition-transform duration-300 motion-safe:group-hover:translate-x-0.5 rtl:rotate-180"
                   aria-hidden="true"
                 />
               </Link>
             </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="text-hero-foreground h-12 border-white/30 bg-white/10 px-7 backdrop-blur-sm hover:bg-white/20 hover:text-white"
-            >
-              <Link href="/about">{t.nav.about}</Link>
-            </Button>
           </div>
+
+          {/*
+            Social links (spec §27).
+            The icons are always shown, because they are part of the layout. A
+            platform without a configured URL renders as a muted, non-clickable
+            placeholder rather than a link to nowhere — paste the real URL in
+            admin settings and it becomes live. No account URL is invented.
+          */}
+          <ul
+            className="rise mt-10 flex items-center gap-2.5"
+            style={{ '--rise-delay': '390ms' } as React.CSSProperties}
+          >
+            {socials.map((entry) => {
+              const shared =
+                'grid size-10 place-items-center rounded-full bg-background/60 ring-1 ring-inset ring-border/60 backdrop-blur-sm transition-all duration-300';
+
+              return (
+                <li key={entry.key}>
+                  {entry.href ? (
+                    <a
+                      href={entry.href}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      aria-label={entry.label}
+                      className={cn(
+                        shared,
+                        'text-foreground/70 hover:text-foreground hover:bg-background/90 motion-safe:hover:-translate-y-0.5',
+                      )}
+                    >
+                      <entry.Icon className="size-4.5" />
+                    </a>
+                  ) : (
+                    <span
+                      role="img"
+                      aria-label={`${entry.label} — add the link in admin settings`}
+                      title={`${entry.label} — add the link in admin settings`}
+                      className={cn(shared, 'text-muted-foreground/50 cursor-default')}
+                    >
+                      <entry.Icon className="size-4.5" />
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </div>
       </div>
 
       <a
         href="#features"
-        className="text-hero-foreground/70 absolute bottom-6 left-1/2 z-10 hidden -translate-x-1/2 flex-col items-center gap-1.5 text-[11px] tracking-widest uppercase transition-colors hover:text-white sm:flex"
+        className="text-muted-foreground hover:text-foreground absolute bottom-6 left-1/2 z-10 hidden -translate-x-1/2 flex-col items-center gap-1.5 text-[11px] tracking-widest uppercase transition-colors sm:flex"
       >
         {t.home.heroScroll}
         <ChevronDown className="size-4 motion-safe:animate-bounce" aria-hidden="true" />

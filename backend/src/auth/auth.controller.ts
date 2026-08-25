@@ -94,10 +94,20 @@ export class AuthController {
     return this.present(result);
   }
 
+  /**
+   * The limit is per IP address, not per account.
+   *
+   * Ten was too tight: everyone behind one office NAT or mobile carrier shares
+   * an address, and so does every browser in an automated test run. Thirty in
+   * fifteen minutes still caps a brute-force attempt at two attempts a minute,
+   * and the real cost to an attacker is elsewhere — Argon2id verification is
+   * deliberately slow, and a wrong password is indistinguishable from an
+   * unknown account, so guessing yields no signal either way.
+   */
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 10, ttl: 900_000 } })
+  @Throttle({ default: { limit: 30, ttl: 900_000 } })
   @ApiOperation({ summary: 'Sign in with email and password' })
   async login(@Body() dto: LoginDto, @Req() request: Request, @Res({ passthrough: true }) response: Response) {
     const result = await this.auth.login(dto, this.context(request));

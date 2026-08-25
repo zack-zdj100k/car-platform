@@ -62,10 +62,10 @@ export function SiteHeader() {
         {/* Logo placeholder (spec §7 — do not invent the final logo) */}
         <Link
           href="/"
-          className="flex items-center gap-2.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4"
+          className="group/brand flex items-center gap-2.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4"
           aria-label={t.nav.home}
         >
-          <span className="bg-primary/10 ring-primary/20 grid size-9 place-items-center rounded-lg ring-1 ring-inset">
+          <span className="bg-primary/10 ring-primary/20 grid size-9 place-items-center rounded-lg ring-1 ring-inset transition-transform duration-300 motion-safe:group-hover/brand:-translate-y-0.5">
             <Car className="text-primary size-5" aria-hidden="true" />
           </span>
           <span className="font-display hidden text-base font-semibold tracking-tight sm:inline">
@@ -80,13 +80,23 @@ export function SiteHeader() {
               href={link.href}
               aria-current={isActive(link.href) ? 'page' : undefined}
               className={cn(
-                'rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                isActive(link.href)
-                  ? 'text-foreground bg-secondary'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60',
+                'group relative rounded-md px-3 py-2 text-sm font-medium transition-colors duration-300',
+                isActive(link.href) ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
               )}
             >
               {link.label}
+              {/*
+                Underline grows from the centre. Animating a transform rather
+                than width keeps it off the layout path.
+              */}
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'bg-primary absolute inset-x-3 -bottom-0.5 h-0.5 origin-center rounded-full',
+                  'transition-transform duration-300 ease-out',
+                  isActive(link.href) ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100',
+                )}
+              />
             </Link>
           ))}
         </nav>

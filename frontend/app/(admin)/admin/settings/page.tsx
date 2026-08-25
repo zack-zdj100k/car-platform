@@ -14,7 +14,9 @@ import { useAsync } from '@/hooks/use-async';
 import { useAuth } from '@/providers/auth-provider';
 import { useLocale } from '@/providers/locale-provider';
 import { settingsService } from '@/services/admin.service';
+import { SettingImageField } from '@/components/admin/setting-image-field';
 import { ApiError } from '@/services/api-client';
+import { cn } from '@/lib/utils';
 import type { Setting } from '@/types/api';
 
 /**
@@ -66,8 +68,25 @@ export default function AdminSettingsPage() {
     }
   };
 
+  /** Friendly label from a key like `home.image.safety`. */
+  const imageLabel = (key: string) => {
+    const last = key.split('.').pop() ?? key;
+    return last.charAt(0).toUpperCase() + last.slice(1);
+  };
+
   const renderField = (setting: Setting) => {
     const value = valueOf(setting);
+
+    // Home page photography uploads rather than a typed path (spec §9, §47).
+    if (setting.group === 'home-images') {
+      return (
+        <SettingImageField
+          label={imageLabel(setting.key)}
+          value={typeof value === 'string' ? value : ''}
+          onChange={(next) => setDrafts((current) => ({ ...current, [setting.key]: next }))}
+        />
+      );
+    }
 
     // Marketing statistics carry a label and a caption (spec §33).
     if (value !== null && typeof value === 'object' && 'label' in (value as object)) {
@@ -161,11 +180,22 @@ export default function AdminSettingsPage() {
             {group === 'social' && (
               <CardDescription>Leave empty until the real account URLs are provided.</CardDescription>
             )}
+            {group === 'home-images' && (
+              <CardDescription>
+                Photographs for the home page feature sections. Drop a file in or choose one — an empty
+                slot uses the bundled placeholder.
+              </CardDescription>
+            )}
           </CardHeader>
           <CardContent className="space-y-5">
             {entries.map((setting) => (
               <div key={setting.key} className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
+                <div
+                  className={cn(
+                    'flex flex-wrap items-center gap-2',
+                    setting.group === 'home-images' && 'sr-only',
+                  )}
+                >
                   <Label htmlFor={setting.key} className="font-mono text-xs">
                     {setting.key}
                   </Label>

@@ -37,6 +37,15 @@ export const settings: {
   { key: 'cars.pageSize', value: 12, group: 'cars', isPublic: true, description: 'Default page size for the cars listing (spec §57 pagination).' },
   { key: 'compare.maxCars', value: 4, group: 'cars', isPublic: true, description: 'Maximum vehicles in a single comparison (spec §43).' },
 
+  // Home features showcase (spec §9). Empty means "fall back to a placeholder",
+  // so the section still renders before real photography is uploaded.
+  { key: 'home.image.safety', value: '', group: 'home-images', isPublic: true, description: 'Safety & driver assistance photo (spec §9).' },
+  { key: 'home.image.engine', value: '', group: 'home-images', isPublic: true, description: 'Engine photo (spec §9).' },
+  { key: 'home.image.wheels', value: '', group: 'home-images', isPublic: true, description: 'Wheels photo — standard and sport (spec §9).' },
+  { key: 'home.image.tyres', value: '', group: 'home-images', isPublic: true, description: 'Tyres photo — 14 and 16 inch (spec §9).' },
+  { key: 'home.image.exterior', value: '', group: 'home-images', isPublic: true, description: 'Exterior design photo (spec §9).' },
+  { key: 'home.image.interior', value: '', group: 'home-images', isPublic: true, description: 'Interior design photo (spec §9).' },
+
   { key: 'about.whoWeAre', value: 'PLACEHOLDER — supply the real founding story. Spec §29 forbids inventing facts about the owners.', group: 'about', isPublic: true, description: 'About page "Who We Are" copy (spec §29).' },
   { key: 'about.mission', value: 'To make discovering the right car simple, visual, and inspiring.', group: 'about', isPublic: true, description: 'Mission statement, verbatim from spec §30.' },
 ];
