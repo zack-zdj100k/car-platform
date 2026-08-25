@@ -22,18 +22,52 @@ async function analyse(page: Page, readySelector?: string) {
   if (readySelector) {
     await page.waitForSelector(readySelector);
   }
+
+  /*
+   * Wait until the palette itself has resolved.
+   *
+   * Contrast is computed from painted pixels. Before the stylesheet attaches,
+   * `getComputedStyle` returns empty strings and axe reads that as a failure —
+   * so a page that was merely still loading looked like a contrast bug. Waiting
+   * on a token proves our stylesheet is live, not just that markup exists.
+   */
+  await page.waitForFunction(() => {
+    const root = getComputedStyle(document.documentElement);
+    return root.getPropertyValue('--primary').trim() !== '' && getComputedStyle(document.body).backgroundColor !== '';
+  });
   await page.evaluate(() => document.fonts.ready);
+
+  /*
+   * Wait for the entrance animations to finish.
+   *
+   * Contrast is computed from what is painted, and an element half-way through
+   * a fade is genuinely low-contrast at that instant. Auditing mid-animation
+   * reported failures that no user could ever see, and only intermittently —
+   * whichever frame the measurement happened to land on.
+   */
+  await page.waitForFunction(() => {
+    const animated = [...document.querySelectorAll('.rise')];
+    return animated.every((element) => Number(getComputedStyle(element).opacity) === 1);
+  });
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        // One more frame, so the final paint has certainly landed.
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
 
   return new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
 }
 
 /** Each page, with a selector proving its content has actually arrived. */
 const publicPages = [
-  ['home', '/', 'article'],
-  ['cars listing', '/cars', 'article'],
+  ['home', '/', 'h1'],
+  ['cars listing', '/cars', '[data-testid="car-card"]'],
   ['about', '/about', 'h1'],
   ['sign in', '/login', 'form'],
   ['sign up', '/signup', 'form'],
+  ['forgot password', '/forgot-password', 'form'],
 ] as const;
 
 test.describe('WCAG 2.2 AA — public pages', () => {
@@ -57,7 +91,7 @@ test.describe('WCAG 2.2 AA — public pages', () => {
 
   test('car detail has no automatically detectable violations', async ({ page }) => {
     await page.goto('/cars');
-    await page.locator('article a').first().click();
+    await page.getByTestId('car-card').first().getByRole('link').first().click();
     await expect(page).toHaveURL(/\/car\//);
 
     const results = await analyse(page, 'h1');
@@ -72,7 +106,7 @@ test.describe('WCAG 2.2 AA — public pages', () => {
     await page.goto('/cars');
     await expect(page.locator('html')).toHaveClass(/dark/);
 
-    const results = await analyse(page, 'article');
+    const results = await analyse(page, '[data-testid="car-card"]');
     const contrast = results.violations.filter((violation) => violation.id === 'color-contrast');
     if (contrast.length > 0) {
       console.log(contrast.map((v) => v.nodes.map((n) => n.html).join('\n')).join('\n'));
@@ -103,10 +137,10 @@ test.describe('Keyboard operation (spec §65)', () => {
 
   test('a car card is reachable and openable by keyboard alone', async ({ page }) => {
     await page.goto('/cars');
-    await expect(page.locator('article').first()).toBeVisible();
+    await expect(page.getByTestId('car-card').first()).toBeVisible();
 
     // Focus the first card's link directly, then activate it with the keyboard.
-    await page.locator('article a').first().focus();
+    await page.getByTestId('car-card').first().getByRole('link').first().focus();
     await page.keyboard.press('Enter');
 
     await expect(page).toHaveURL(/\/car\//);
@@ -198,7 +232,7 @@ test.describe('Responsive layout (spec §64)', () => {
     test(`${name} viewport has no horizontal overflow`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.goto('/cars');
-      await expect(page.locator('article').first()).toBeVisible();
+      await expect(page.getByTestId('car-card').first()).toBeVisible();
 
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

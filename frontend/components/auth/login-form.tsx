@@ -23,7 +23,7 @@ const schema = z.object({
 });
 
 /** Sign in (spec §37). Redirects by role: customer → dashboard, admin → admin. */
-export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
+export function LoginForm() {
   const { t } = useLocale();
   const { login } = useAuth();
   const router = useRouter();
@@ -165,7 +165,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
         <Separator className="flex-1" />
       </div>
 
-      <GoogleButton enabled={googleEnabled} />
+      <GoogleButton />
     </AuthShell>
   );
 }

@@ -1,13 +1,19 @@
 import { Hero } from '@/components/home/hero';
-import { FeaturesShowcase } from '@/components/home/features-showcase';
+import { CarDiagram } from '@/components/home/car-diagram';
+import { VideoShowcase } from '@/components/home/video-showcase';
 import { FeaturedCars } from '@/components/home/featured-cars';
-import { StatsStrip } from '@/components/home/stats-strip';
+import { StatsBento } from '@/components/ui/stats-bento';
 import { fetchFeaturedCars, fetchPublicSettings, readMarketingStats, readSetting } from '@/lib/server-api';
 
 /** Home page (spec §7, §8, §9, §33). */
 export default async function HomePage() {
   const [featured, settings] = await Promise.all([fetchFeaturedCars(), fetchPublicSettings()]);
   const stats = readMarketingStats(settings);
+  // Stated plainly on the section itself: these are editable marketing figures,
+  // not measured analytics (spec §33, and docs/DECISIONS.md D-2.1).
+  const marketingNote =
+    readSetting(settings, 'about', 'about.mission') ||
+    'Configurable marketing content — not live analytics.';
 
   // The showcase illustrates its sections with a real vehicle from the
   // catalogue, so no placeholder path is hard-coded into the component.
@@ -23,7 +29,7 @@ export default async function HomePage() {
         }}
       />
       {showcaseSlug ? (
-        <FeaturesShowcase
+        <CarDiagram
           slug={showcaseSlug}
           images={{
             safety: readSetting(settings, 'home-images', 'home.image.safety'),
@@ -35,8 +41,9 @@ export default async function HomePage() {
           }}
         />
       ) : null}
+      <VideoShowcase />
       <FeaturedCars cars={featured} />
-      <StatsStrip stats={stats} />
+      <StatsBento stats={stats} note={marketingNote} />
     </>
   );
 }

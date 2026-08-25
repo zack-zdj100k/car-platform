@@ -11,10 +11,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { AuthGuard } from '@nestjs/passport';
 import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
+import { GoogleAuthGuard } from '../common/guards/google-auth.guard';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../common/types/authenticated-request';
@@ -167,9 +167,20 @@ export class AuthController {
     return { message: 'Your password has been updated. Please sign in.' };
   }
 
+  /**
+   * Lets the sign-in page know whether the provider is actually usable, rather
+   * than inferring it from an environment variable it cannot see.
+   */
+  @Public()
+  @Get('providers')
+  @ApiOperation({ summary: 'Which sign-in providers are configured' })
+  providers() {
+    return { google: this.config.get('auth', { infer: true }).google.enabled };
+  }
+
   @Public()
   @Get('google')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleAuthGuard)
   @ApiOperation({ summary: 'Begin Google OAuth sign-in' })
   googleStart(): void {
     // Passport issues the redirect to Google.
@@ -177,7 +188,7 @@ export class AuthController {
 
   @Public()
   @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
+  @UseGuards(GoogleAuthGuard)
   @ApiOperation({ summary: 'Google OAuth callback' })
   async googleCallback(@Req() request: Request, @Res() response: Response): Promise<void> {
     const profile = request.user as GoogleProfile | undefined;

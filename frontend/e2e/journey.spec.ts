@@ -32,7 +32,7 @@ test.describe('Public site', () => {
     await expect(page.getByRole('link', { name: 'Explore Cars' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Discover' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Featured vehicles' })).toBeVisible();
-    await expect(page.locator('article').first()).toBeVisible();
+    await expect(page.getByTestId('car-card').first()).toBeVisible();
   });
 
   test('the explore call to action leads to the cars page', async ({ page }) => {
@@ -45,7 +45,7 @@ test.describe('Public site', () => {
 
   test('cars page filters by brand and keeps the filter in the URL', async ({ page }) => {
     await page.goto('/cars');
-    await expect(page.locator('article')).not.toHaveCount(0);
+    await expect(page.getByTestId('car-card')).not.toHaveCount(0);
 
     const brandCheckbox = page.locator('[id^="brand-"]').first();
     const brandSlug = (await brandCheckbox.getAttribute('id'))!.replace('brand-', '');
@@ -62,12 +62,12 @@ test.describe('Public site', () => {
     await page.getByLabel('Search', { exact: true }).fill('tiggo');
 
     await expect(page).toHaveURL(/search=tiggo/);
-    await expect(page.locator('article').first()).toContainText(/Tiggo/i);
+    await expect(page.getByTestId('car-card').first()).toContainText(/Tiggo/i);
   });
 
   test('car detail shows every specification group', async ({ page }) => {
     await page.goto('/cars');
-    await page.locator('article a').first().click();
+    await page.getByTestId('car-card').first().getByRole('link').first().click();
 
     await expect(page).toHaveURL(/\/car\//);
     await expect(page.getByRole('heading', { name: 'Specifications' })).toBeVisible();
@@ -83,6 +83,21 @@ test.describe('Public site', () => {
 
     await page.goto('/sign-up');
     await expect(page).toHaveURL(/\/signup$/);
+  });
+
+  test('the forgot-password link reaches a working page', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByRole('link', { name: 'Forgot password?' }).click();
+
+    // This link used to 404: the page had never been built.
+    await expect(page).toHaveURL(/\/forgot-password$/);
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Reset your password');
+
+    await page.getByLabel('Email address').fill('someone@example.com');
+    await page.getByRole('button', { name: 'Send reset link' }).click();
+
+    // The same confirmation regardless of whether the address exists.
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Check your email');
   });
 
   test('about page renders the mission and values', async ({ page }) => {
@@ -151,7 +166,7 @@ test.describe('Customer journey', () => {
 
     // ---- browse and open a car ----
     await page.goto('/cars');
-    await page.locator('article a').first().click();
+    await page.getByTestId('car-card').first().getByRole('link').first().click();
     await expect(page).toHaveURL(/\/car\//);
     const carHeading = await page.getByRole('heading', { level: 1 }).textContent();
 
@@ -169,7 +184,7 @@ test.describe('Customer journey', () => {
 
     // ---- order it ----
     await page.goto('/cars');
-    await page.locator('article a').first().click();
+    await page.getByTestId('car-card').first().getByRole('link').first().click();
     await page.getByRole('link', { name: 'Order this car' }).click();
 
     await expect(page).toHaveURL(/\/order/);

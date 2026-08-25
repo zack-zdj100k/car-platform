@@ -187,6 +187,12 @@ async function seedCars(brandIds: Map<string, string>, adminId: string): Promise
       status: CarStatus.PUBLISHED,
       isFeatured: car.isFeatured ?? false,
       isDemoData: true,
+      /*
+       * Cleared explicitly so re-seeding restores a catalogue that testing or
+       * experimentation has archived. Without this, a soft-deleted vehicle
+       * stayed invisible even after a reseed, and the only fix was SQL.
+       */
+      deletedAt: null,
       publishedAt,
       createdById: adminId,
       createdAt: publishedAt,

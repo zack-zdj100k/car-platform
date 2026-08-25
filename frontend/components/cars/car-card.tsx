@@ -52,6 +52,7 @@ export function CarCard({
 
   return (
     <article
+      data-testid="car-card"
       className={cn(
         'group border-border bg-card relative flex flex-col overflow-hidden rounded-xl border',
         'shadow-[var(--shadow-card)] transition-all duration-300',

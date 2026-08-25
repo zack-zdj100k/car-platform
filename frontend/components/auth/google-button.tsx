@@ -3,6 +3,8 @@
 import { Button } from '@/components/ui/button';
 import { useLocale } from '@/providers/locale-provider';
 import { API_URL } from '@/services/api-client';
+import { authService } from '@/services/auth.service';
+import { useAsync } from '@/hooks/use-async';
 
 /**
  * Google sign-in (spec §36, §37).
@@ -29,8 +31,16 @@ function ProviderLink({
   );
 }
 
-export function GoogleButton({ enabled }: { enabled: boolean }) {
+export function GoogleButton() {
   const { t } = useLocale();
+
+  /*
+   * Ask the API which providers are live rather than reading an environment
+   * variable. The browser cannot see server configuration, and guessing meant
+   * the button could offer a provider the server would refuse.
+   */
+  const providers = useAsync(() => authService.providers(), []);
+  const enabled = providers.data?.google ?? false;
 
   return (
     <div className="space-y-2">
@@ -58,7 +68,9 @@ export function GoogleButton({ enabled }: { enabled: boolean }) {
           {t.auth.google}
         </ProviderLink>
       </Button>
-      {!enabled && <p className="text-muted-foreground text-center text-xs">{t.auth.googleUnavailable}</p>}
+      {providers.status === 'success' && !enabled && (
+        <p className="text-muted-foreground text-center text-xs">{t.auth.googleUnavailable}</p>
+      )}
     </div>
   );
 }

@@ -32,6 +32,14 @@ function collect(page: Page) {
   return problems;
 }
 
+/** How many vehicles the public catalogue currently exposes. */
+async function publishedCarCount(page: Page): Promise<number> {
+  const api = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+  const response = await page.request.get(`${api}/cars?pageSize=1`);
+  const body = (await response.json()) as { meta: { total: number } };
+  return body.meta.total;
+}
+
 async function brokenImages(page: Page) {
   return page.evaluate(() =>
     [...document.images]
@@ -42,10 +50,12 @@ async function brokenImages(page: Page) {
 
 const publicRoutes = [
   ['home', '/', 'h1'],
-  ['cars', '/cars', 'article'],
+  ['cars', '/cars', '[data-testid="car-card"]'],
   ['about', '/about', 'h1'],
   ['sign in', '/login', 'form'],
   ['sign up', '/signup', 'form'],
+  ['forgot password', '/forgot-password', 'form'],
+  ['reset password', '/reset-password', 'form'],
 ] as const;
 
 test.describe('Public pages are error-free', () => {
@@ -65,7 +75,7 @@ test.describe('Public pages are error-free', () => {
     const problems = collect(page);
 
     await page.goto('/cars');
-    await page.locator('article a').first().click();
+    await page.getByTestId('car-card').first().getByRole('link').first().click();
     await expect(page).toHaveURL(/\/car\//);
     await page.waitForTimeout(1000);
 
@@ -89,6 +99,16 @@ test.describe('Public pages are error-free', () => {
 test.describe('Every admin page is error-free', () => {
   test.describe.configure({ mode: 'serial' });
 
+  /**
+   * The catalogue must survive the suite.
+   *
+   * These tests drive a real administrator session against the development
+   * database, where the destructive controls are one click away. An earlier
+   * iteration of this file damaged the demo catalogue, so the count is now
+   * checked before and after and the run fails loudly if it changed.
+   */
+  let carCountBefore = 0;
+
   let page: Page;
   let problems: string[];
 
@@ -106,10 +126,19 @@ test.describe('Every admin page is error-free', () => {
     await page.getByLabel('Password', { exact: true }).fill(password!);
     await page.getByRole('button', { name: 'Sign In' }).click();
     await expect(page).toHaveURL(/\/admin\/dashboard$/);
+
+    carCountBefore = await publishedCarCount(page);
+    expect(carCountBefore).toBeGreaterThan(0);
   });
 
   test.afterAll(async () => {
-    await page?.context().close();
+    if (page) {
+      const after = await publishedCarCount(page);
+      await page.context().close();
+
+      // Fail the run rather than let a silent deletion pass unnoticed.
+      expect(after, 'the suite changed the published car count').toBe(carCountBefore);
+    }
   });
 
   test.beforeEach(() => {
