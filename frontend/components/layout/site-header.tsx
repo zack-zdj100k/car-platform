@@ -84,7 +84,7 @@ export function SiteHeader() {
           actually reaches.
         */}
         <div className="absolute left-1/2 hidden -translate-x-1/2 md:block">
-          <NavBar items={navItems} variant="inline" layoutGroup="header" />
+          <NavBar items={navItems} variant="inline" indicator="pill" layoutGroup="header" />
         </div>
 
         <div className="ms-auto flex items-center gap-1">
