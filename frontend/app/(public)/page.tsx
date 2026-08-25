@@ -39,6 +39,9 @@ export default async function HomePage() {
             exterior: readSetting(settings, 'home-images', 'home.image.exterior'),
             interior: readSetting(settings, 'home-images', 'home.image.interior'),
           }}
+          fallbackImages={featured
+            .map((car) => car.images[0]?.url)
+            .filter((url): url is string => Boolean(url))}
         />
       ) : null}
       <VideoShowcase />

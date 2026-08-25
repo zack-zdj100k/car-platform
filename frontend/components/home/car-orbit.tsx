@@ -20,11 +20,23 @@ export type HomeImageKey = 'safety' | 'engine' | 'wheels' | 'tyres' | 'exterior'
 export function CarOrbit({
   slug,
   images,
+  fallbackImages = [],
 }: {
   slug: string;
   images: Partial<Record<HomeImageKey, string>>;
+  /** Catalogue photographs, used for any group without a picture of its own. */
+  fallbackImages?: string[];
 }) {
   const { t } = useLocale();
+
+  /*
+   * Selecting a point should always show something. Until an administrator
+   * uploads a picture for a group, a photograph from the catalogue stands in —
+   * a different one per group, so the ring does not repeat the same frame six
+   * times.
+   */
+  const picture = (own: string | undefined, index: number) =>
+    own || fallbackImages[index % Math.max(fallbackImages.length, 1)] || `/images/cars/${slug}/main.svg`;
 
   const items: OrbitalItem[] = [
     {
@@ -33,7 +45,7 @@ export function CarOrbit({
       content: t.features.safetyBody,
       badge: t.features.safetyTag,
       icon: Shield,
-      image: images.safety,
+      image: picture(images.safety, 0),
       relatedIds: [2, 4],
       energy: 100,
     },
@@ -43,7 +55,7 @@ export function CarOrbit({
       content: t.features.engineBody,
       badge: t.features.engineTag,
       icon: Gauge,
-      image: images.engine,
+      image: picture(images.engine, 1),
       relatedIds: [1, 3],
       energy: 92,
     },
@@ -53,7 +65,7 @@ export function CarOrbit({
       content: t.features.wheelsBody,
       badge: t.features.wheelsTag,
       icon: Disc3,
-      image: images.wheels,
+      image: picture(images.wheels, 2),
       tags: [t.features.wheelsStandard, t.features.wheelsSport],
       relatedIds: [2, 4],
       energy: 78,
@@ -64,7 +76,7 @@ export function CarOrbit({
       content: t.features.tyresBody,
       badge: t.features.tyresTag,
       icon: CircleDot,
-      image: images.tyres,
+      image: picture(images.tyres, 3),
       tags: [t.features.tyres14, t.features.tyres16],
       relatedIds: [3, 1],
       energy: 70,
@@ -75,7 +87,7 @@ export function CarOrbit({
       content: t.features.exteriorBody,
       badge: t.features.exteriorTag,
       icon: Palette,
-      image: images.exterior,
+      image: picture(images.exterior, 4),
       relatedIds: [6, 3],
       energy: 88,
     },
@@ -85,7 +97,7 @@ export function CarOrbit({
       content: t.features.interiorBody,
       badge: t.features.interiorTag,
       icon: Sofa,
-      image: images.interior,
+      image: picture(images.interior, 5),
       relatedIds: [5, 1],
       energy: 84,
     },

@@ -109,7 +109,7 @@ export function RadialOrbitalTimeline({
     const measure = () => {
       const { width, height } = element.getBoundingClientRect();
       const usable = Math.min(width, height) / 2;
-      setRadius(Math.max(92, Math.min(usable - 64, 224)));
+      setRadius(Math.max(96, Math.min(usable - 68, 268)));
     };
 
     measure();
@@ -245,10 +245,10 @@ export function RadialOrbitalTimeline({
         </Button>
       </div>
 
-      <div className="mt-6 grid items-center gap-6 md:grid-cols-[minmax(0,1fr)_19rem]">
+      <div className="mt-6 grid items-center gap-6 md:grid-cols-[minmax(0,1fr)_20rem]">
       <div
         ref={ringRef}
-        className="relative mx-auto flex h-[24rem] w-full max-w-3xl items-center justify-center sm:h-[30rem] lg:h-[34rem]"
+        className="relative mx-auto flex h-[24rem] w-full max-w-4xl items-center justify-center sm:h-[34rem] lg:h-[40rem]"
         onPointerEnter={() => setEngaged(true)}
         onPointerLeave={() => setEngaged(false)}
         onFocusCapture={() => setEngaged(true)}
@@ -303,20 +303,20 @@ export function RadialOrbitalTimeline({
         {/* Centre piece: the vehicle everything is describing. */}
         <div className="absolute z-10 grid place-items-center">
           <span
-            className="bg-primary/10 absolute size-24 animate-ping rounded-full opacity-40 [animation-duration:3s] motion-reduce:animate-none sm:size-40"
+            className="bg-primary/10 absolute size-28 animate-ping rounded-full opacity-40 [animation-duration:3s] motion-reduce:animate-none sm:size-48"
             aria-hidden="true"
           />
           <span
-            className="ring-primary/20 absolute size-32 rounded-full ring-1 sm:size-52"
+            className="ring-primary/20 absolute size-36 rounded-full ring-1 sm:size-60"
             aria-hidden="true"
           />
           {centerImage ? (
-            <span className="bg-card ring-border/60 relative block size-28 overflow-hidden rounded-full ring-1 sm:size-44">
+            <span className="bg-card ring-border/60 relative block size-32 overflow-hidden rounded-full ring-1 sm:size-52">
               <MediaImage
                 src={centerImage}
                 alt={centerLabel ?? ''}
                 fill
-                sizes="(min-width: 40rem) 11rem, 7rem"
+                sizes="(min-width: 40rem) 13rem, 8rem"
                 className="object-cover"
               />
             </span>
@@ -353,7 +353,7 @@ export function RadialOrbitalTimeline({
                 aria-expanded={isActive}
                 aria-controls={`orbit-detail-${item.id}`}
                 className={cn(
-                  'group grid size-11 place-items-center rounded-full border-2 transition-[background-color,border-color,box-shadow,transform] duration-300',
+                  'group grid size-12 place-items-center rounded-full border-2 transition-[background-color,border-color,box-shadow,transform] duration-300',
                   'focus-visible:outline-2 focus-visible:outline-offset-4',
                   isActive
                     ? 'bg-primary text-primary-foreground border-primary scale-125 shadow-lg'
@@ -362,13 +362,13 @@ export function RadialOrbitalTimeline({
                       : 'bg-card text-foreground border-border hover:border-primary hover:text-primary',
                 )}
               >
-                <Icon className="size-4.5" aria-hidden="true" />
+                <Icon className="size-5" aria-hidden="true" />
                 <span className="sr-only">{item.title}</span>
               </button>
 
               <span
                 className={cn(
-                  'pointer-events-none absolute top-13 left-1/2 hidden -translate-x-1/2 text-center text-[11px] font-semibold tracking-wide whitespace-nowrap transition-colors duration-300 sm:block',
+                  'pointer-events-none absolute top-14 left-1/2 hidden -translate-x-1/2 text-center text-xs font-semibold tracking-wide whitespace-nowrap transition-colors duration-300 sm:block',
                   // Full token colours only: `foreground/70` measured 4.35:1
                   // against the light surface, just under the 4.5:1 minimum.
                   isActive ? 'text-primary' : 'text-muted-foreground',
