@@ -84,7 +84,16 @@ export function NavBar({
     >
       <nav
         aria-label="Primary"
-        className="border-border bg-background/5 flex items-center gap-1 rounded-full border p-1 shadow-lg backdrop-blur-lg sm:gap-3"
+        className={cn(
+          'border-border flex items-center gap-1 rounded-full border p-1 backdrop-blur-lg sm:gap-3',
+          variant === 'floating'
+            ? // Nearly transparent (5%) over the hero it looked deliberate; over
+              // a page of cards and text it simply disappeared, and this is the
+              // only navigation there is on a phone or a tablet. It carries a
+              // real surface so it stays legible against whatever scrolls past.
+              'bg-background/90 shadow-xl'
+            : 'bg-background/5 shadow-lg',
+        )}
       >
         {items.map((item) => {
           const Icon = item.icon;

@@ -131,7 +131,7 @@ export function RadialOrbitalTimeline({
     const measure = () => {
       const { width, height } = element.getBoundingClientRect();
       const usable = Math.min(width, height) / 2;
-      setRadius(Math.max(96, Math.min(usable - 68, 268)));
+      setRadius(Math.max(96, Math.min(usable - 68, 320)));
     };
 
     measure();
@@ -273,7 +273,7 @@ export function RadialOrbitalTimeline({
       <div className="mt-6 grid items-center gap-6 md:grid-cols-[minmax(0,1fr)_20rem]">
       <div
         ref={ringRef}
-        className="relative mx-auto flex h-[24rem] w-full max-w-4xl items-center justify-center sm:h-[34rem] lg:h-[40rem]"
+        className="relative mx-auto flex h-[24rem] w-full max-w-5xl items-center justify-center sm:h-[38rem] lg:h-[46rem]"
         onPointerEnter={() => setEngaged(true)}
         onPointerLeave={() => setEngaged(false)}
         onFocusCapture={() => setEngaged(true)}
@@ -328,20 +328,20 @@ export function RadialOrbitalTimeline({
         {/* Centre piece: the vehicle everything is describing. */}
         <div className="absolute z-10 grid place-items-center">
           <span
-            className="bg-primary/10 absolute size-28 animate-ping rounded-full opacity-40 [animation-duration:3s] motion-reduce:animate-none sm:size-48"
+            className="bg-primary/10 absolute size-28 animate-ping rounded-full opacity-40 [animation-duration:3s] motion-reduce:animate-none sm:size-52 lg:size-60"
             aria-hidden="true"
           />
           <span
-            className="ring-primary/20 absolute size-36 rounded-full ring-1 sm:size-60"
+            className="ring-primary/20 absolute size-36 rounded-full ring-1 sm:size-64 lg:size-72"
             aria-hidden="true"
           />
           {centerImage ? (
-            <span className="bg-card ring-border/60 relative block size-32 overflow-hidden rounded-full ring-1 sm:size-52">
+            <span className="bg-card ring-border/60 relative block size-32 overflow-hidden rounded-full ring-1 sm:size-56 lg:size-64">
               <MediaImage
                 src={centerImage}
                 alt={centerLabel ?? ''}
                 fill
-                sizes="(min-width: 40rem) 13rem, 8rem"
+                sizes="(min-width: 64rem) 16rem, (min-width: 40rem) 14rem, 8rem"
                 className="object-cover"
               />
             </span>
