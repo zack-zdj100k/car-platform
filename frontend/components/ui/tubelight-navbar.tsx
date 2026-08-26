@@ -87,11 +87,13 @@ export function NavBar({
         className={cn(
           'border-border flex items-center gap-1 rounded-full border p-1 backdrop-blur-lg sm:gap-3',
           variant === 'floating'
-            ? // Nearly transparent (5%) over the hero it looked deliberate; over
-              // a page of cards and text it simply disappeared, and this is the
-              // only navigation there is on a phone or a tablet. It carries a
-              // real surface so it stays legible against whatever scrolls past.
-              'bg-background/90 shadow-xl'
+            ? // This is the only navigation there is on a phone or a tablet, so
+              // it has to stay readable over everything that scrolls beneath it.
+              // Translucent it vanished into the page; even opaque it vanished
+              // again over the pale footer, white on white. An opaque card
+              // surface, a full-strength edge and a lifted shadow separate it
+              // from any background, dark or light.
+              'bg-card border-border ring-foreground/5 shadow-[var(--shadow-lifted)] ring-1'
             : 'bg-background/5 shadow-lg',
         )}
       >

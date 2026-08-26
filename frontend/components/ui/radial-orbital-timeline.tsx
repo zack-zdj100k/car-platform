@@ -328,20 +328,20 @@ export function RadialOrbitalTimeline({
         {/* Centre piece: the vehicle everything is describing. */}
         <div className="absolute z-10 grid place-items-center">
           <span
-            className="bg-primary/10 absolute size-28 animate-ping rounded-full opacity-40 [animation-duration:3s] motion-reduce:animate-none sm:size-52 lg:size-60"
+            className="bg-primary/10 absolute size-28 animate-ping rounded-full opacity-40 [animation-duration:3s] motion-reduce:animate-none sm:size-60 lg:size-72"
             aria-hidden="true"
           />
           <span
-            className="ring-primary/20 absolute size-36 rounded-full ring-1 sm:size-64 lg:size-72"
+            className="ring-primary/20 absolute size-40 rounded-full ring-1 sm:size-72 lg:size-84"
             aria-hidden="true"
           />
           {centerImage ? (
-            <span className="bg-card ring-border/60 relative block size-32 overflow-hidden rounded-full ring-1 sm:size-56 lg:size-64">
+            <span className="bg-card ring-border/60 relative block size-36 overflow-hidden rounded-full ring-1 sm:size-64 lg:size-76">
               <MediaImage
                 src={centerImage}
                 alt={centerLabel ?? ''}
                 fill
-                sizes="(min-width: 64rem) 16rem, (min-width: 40rem) 14rem, 8rem"
+                sizes="(min-width: 64rem) 19rem, (min-width: 40rem) 16rem, 9rem"
                 className="object-cover"
               />
             </span>
