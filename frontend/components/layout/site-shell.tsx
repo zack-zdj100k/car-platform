@@ -32,13 +32,13 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
         The floating bar leaves room beneath it on small screens, so it never
         covers the end of the page or the footer.
       */}
-      <main id="main" className="flex-1 pb-24 md:pb-0">
+      <main id="main" className="flex-1 pb-24 lg:pb-0">
         {children}
       </main>
-      <FooterSection className="pb-24 md:pb-12" />
+      <FooterSection className="pb-24 lg:pb-12" />
 
       {/* Thumb-reachable primary navigation, small screens only. */}
-      <div className="md:hidden">
+      <div className="lg:hidden">
         <NavBar items={navItems} layoutGroup="mobile" />
       </div>
     </div>

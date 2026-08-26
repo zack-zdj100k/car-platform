@@ -55,11 +55,16 @@ export function SiteHeader() {
     .toUpperCase();
 
   /*
-   * Once the page scrolls, content passes beneath the header. The logo and the
-   * account actions pick up their own translucent capsule then, so they stay
-   * readable without the header itself becoming a bar again.
+   * The header paints nothing itself, so each cluster carries its own capsule.
+   * It is there from the start, not only once the page scrolls: over the hero
+   * photograph the controls are dark ink on a dark picture, and the language
+   * and theme buttons simply could not be seen until something appeared behind
+   * them. It deepens slightly on scroll, when page content passes underneath.
    */
-  const floatingSurface = 'border-border/60 bg-background/70 border shadow-sm backdrop-blur-lg';
+  const floatingSurface = cn(
+    'border-border/60 border shadow-sm backdrop-blur-lg transition-colors duration-300',
+    scrolled ? 'bg-background/85' : 'bg-background/70',
+  );
 
   return (
     <header className="sticky top-0 z-50 w-full">
@@ -68,13 +73,21 @@ export function SiteHeader() {
         cluster inside it carries its own surface. A solid strip across the top
         cut the hero in half.
       */}
-      <div className="relative mx-auto flex h-16 w-full max-w-7xl items-center gap-3 px-5 sm:px-8 md:h-20">
+      {/*
+        Three columns rather than an absolutely centred pill: the pill used to
+        be positioned independently of the clusters beside it, so between 768px
+        and roughly 930px the account controls sat on top of "About Us". Equal
+        side columns keep the pill centred in the row and make an overlap
+        impossible at any width or in any language.
+      */}
+      <div className="relative mx-auto grid h-16 w-full max-w-7xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-5 sm:px-8 md:h-20">
         {/* Logo placeholder (spec §7 — do not invent the final logo) */}
         <Link
           href="/"
           className={cn(
-            'group/brand flex items-center gap-2.5 rounded-full transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-4',
-            scrolled ? `${floatingSurface} ps-1.5 pe-4 py-1` : 'border border-transparent',
+            'group/brand flex w-fit items-center gap-2.5 justify-self-start rounded-full transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-4',
+            floatingSurface,
+            'ps-1.5 pe-4 py-1',
           )}
           aria-label={t.nav.home}
         >
@@ -87,18 +100,26 @@ export function SiteHeader() {
         </Link>
 
         {/*
-          Primary navigation. The pill is centred on wide screens and becomes a
-          floating bar at the bottom on small ones, which is where a thumb
-          actually reaches.
+          Primary navigation. The pill appears once there is genuinely room for
+          it beside the logo and the account controls — below that width the
+          floating bar at the bottom carries it, which is where a thumb reaches
+          anyway.
         */}
-        <div className="absolute left-1/2 hidden -translate-x-1/2 md:block">
-          <NavBar items={navItems} variant="inline" layoutGroup="header" />
+        {/*
+          The column itself is always present. Hiding it with `display: none`
+          removes it from the grid altogether, and the account controls slide
+          into the middle column with it.
+        */}
+        <div className="flex justify-center">
+          <div className="hidden lg:block">
+            <NavBar items={navItems} variant="inline" layoutGroup="header" />
+          </div>
         </div>
 
         <div
           className={cn(
-            'ms-auto flex items-center gap-1 rounded-full transition-colors duration-300',
-            scrolled ? `${floatingSurface} px-1.5 py-1` : 'border border-transparent',
+            'flex items-center gap-1 justify-self-end rounded-full px-1.5 py-1',
+            floatingSurface,
           )}
         >
           <LanguageSwitcher />
@@ -165,7 +186,7 @@ export function SiteHeader() {
           {/* Mobile navigation */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden" aria-label={t.nav.openMenu}>
+              <Button variant="ghost" size="icon" className="lg:hidden" aria-label={t.nav.openMenu}>
                 <Menu className="size-5" aria-hidden="true" />
               </Button>
             </SheetTrigger>

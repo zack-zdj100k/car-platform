@@ -73,7 +73,11 @@ export function NavBar({
     <div
       className={cn(
         variant === 'floating'
-          ? 'fixed bottom-0 left-1/2 z-50 mb-6 -translate-x-1/2 sm:top-0 sm:mb-0 sm:pt-6'
+          ? // The reference moves this bar to the top of the window from 640px
+            // up. On a page that already has a header that puts it straight
+            // through the logo and the account controls — the language button
+            // ended up underneath it. It stays where a thumb reaches instead.
+            'fixed bottom-0 left-1/2 z-50 mb-6 -translate-x-1/2'
           : 'relative',
         className,
       )}
