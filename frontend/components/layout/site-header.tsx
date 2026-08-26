@@ -20,7 +20,7 @@ import { LanguageSwitcher } from './language-switcher';
 import { ThemeToggle } from './theme-toggle';
 import { useLocale } from '@/providers/locale-provider';
 import { useAuth } from '@/providers/auth-provider';
-import { useScrolledPast } from '@/hooks/use-client-store';
+import { revealHeader, useHeaderRetreated, useScrolledPast } from '@/hooks/use-client-store';
 import { cn } from '@/lib/utils';
 
 /**
@@ -32,6 +32,7 @@ export function SiteHeader() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const scrolled = useScrolledPast(8);
+  const retreated = useHeaderRetreated();
 
   const links = [
     { href: '/', label: t.nav.home, icon: Home },
@@ -67,7 +68,20 @@ export function SiteHeader() {
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full">
+    /*
+     * On a phone or a tablet the header steps out of the way while the reader
+     * moves down the page and returns the moment they move back up — the
+     * screen is small and the logo, language and theme controls are not worth
+     * a permanent strip of it. From `lg` up it never moves: there is room for
+     * it, and a header that jumps around on a desktop is just noise.
+     */
+    <header
+      className={cn(
+        'sticky top-0 z-50 w-full transition-transform duration-300 ease-out lg:translate-y-0',
+        retreated ? '-translate-y-full' : 'translate-y-0',
+      )}
+      onFocusCapture={revealHeader}
+    >
       {/*
         No bar of its own: the header is a layout row over the page, and each
         cluster inside it carries its own surface. A solid strip across the top
@@ -184,7 +198,13 @@ export function SiteHeader() {
           )}
 
           {/* Mobile navigation */}
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <Sheet
+            open={mobileOpen}
+            onOpenChange={(open) => {
+              if (open) revealHeader();
+              setMobileOpen(open);
+            }}
+          >
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="lg:hidden" aria-label={t.nav.openMenu}>
                 <Menu className="size-5" aria-hidden="true" />
