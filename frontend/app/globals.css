@@ -295,6 +295,20 @@
   .mask-fade-b {
     mask-image: linear-gradient(to bottom, black 85%, transparent 100%);
   }
+
+  /*
+   * Hides the scrollbar on a rail that has its own arrows, a snap grid and
+   * keyboard focus. The row still scrolls by wheel, trackpad, touch and arrow
+   * key — only the bar itself is gone.
+   */
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* Spec §8, §65 — honour reduced-motion for every animation and the hero video. */
