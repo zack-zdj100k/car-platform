@@ -73,6 +73,28 @@ export interface RadialOrbitalTimelineProps {
 /** Degrees per second. A full turn takes just under a minute. */
 const ROTATION_SPEED = 6;
 
+/**
+ * Rounds a computed length or ratio before it reaches an inline style.
+ *
+ * Two things go wrong when raw floating point is written into `style`, and both
+ * break hydration:
+ *
+ *   1. The browser does not keep the precision. `translate(-90.00000000000009px)`
+ *      comes back out of the CSSOM as `translate(-90px)`, so the string React
+ *      compares against during hydration is not the string the server sent —
+ *      the mismatch appears on every visit, in every browser.
+ *
+ *   2. `Math.cos`/`Math.sin` are implementation-dependent to the last unit in
+ *      the last place, so the Node build rendering on the server and the engine
+ *      in the visitor's browser need not agree on the final digit at all.
+ *
+ * Rounding to three decimals — well below a device pixel — removes both, and
+ * incidentally removes exponent notation like `2.2e-14px` from the output.
+ * Everything downstream is plain arithmetic, which IEEE-754 does define exactly,
+ * so both renders produce the same string.
+ */
+const quantise = (value: number, decimals = 3) => Number(value.toFixed(decimals));
+
 export function RadialOrbitalTimeline({
   items,
   centerImage,
@@ -164,14 +186,17 @@ export function RadialOrbitalTimeline({
     return items.map((item, index) => {
       const angle = ((index / items.length) * 360 + rotation) % 360;
       const radian = (angle * Math.PI) / 180;
-      const depth = Math.cos(radian); // -1 behind, 1 in front
+      // Quantised once, here, so every value below is derived from the same
+      // numbers on the server and in the browser.
+      const depth = quantise(Math.cos(radian), 6); // -1 behind, 1 in front
+      const lift = quantise(Math.sin(radian), 6);
       return {
         id: item.id,
-        x: radius * Math.cos(radian),
-        y: radius * Math.sin(radian),
+        x: quantise(radius * depth),
+        y: quantise(radius * lift),
         zIndex: Math.round(100 + 50 * depth),
-        opacity: Math.max(0.55, 0.55 + 0.45 * ((1 + Math.sin(radian)) / 2)),
-        scale: 0.9 + 0.1 * ((depth + 1) / 2),
+        opacity: quantise(Math.max(0.55, 0.55 + 0.45 * ((1 + lift) / 2))),
+        scale: quantise(0.9 + 0.1 * ((depth + 1) / 2)),
       };
     });
   }, [items, radius, rotation]);
@@ -266,7 +291,7 @@ export function RadialOrbitalTimeline({
         />
         <div
           className="border-primary/20 pointer-events-none absolute rounded-full border border-dashed"
-          style={{ width: radius * 2.36, height: radius * 2.36 }}
+          style={{ width: quantise(radius * 2.36, 1), height: quantise(radius * 2.36, 1) }}
           aria-hidden="true"
         />
 
