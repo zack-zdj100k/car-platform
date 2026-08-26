@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Section, SectionHeading } from '@/components/shared/section';
 import { Reveal } from '@/components/shared/reveal';
-import { AboutUsSection } from '@/components/ui/about-us-section';
+import { AboutStats, AboutUsSection } from '@/components/ui/about-us-section';
 import { useLocale } from '@/providers/locale-provider';
 import type { MarketingStat } from '@/types/api';
 
@@ -71,19 +71,37 @@ export function AboutCopy({
         portraitLabel={t.about.portraitLabel}
         portraitAlt={t.about.portraitAlt}
         portraitEmpty={t.about.portraitEmpty}
-        stats={stats.map((stat, index) => ({
-          icon: values[index % values.length].icon,
-          value: stat.label,
-          label: stat.caption,
-        }))}
-        statsNote={t.admin.marketingCopy}
         valuesTitle={t.about.valuesTitle}
         values={values.map((value) => value.label)}
         ctaTitle={t.about.finalCtaTitle}
         ctaBody={t.about.missionStatement}
         ctaLabel={t.about.finalCtaButton}
         ctaHref="/cars"
-      />
+      >
+        {/*
+          Mission (spec §30), in the place the figures used to hold. What the
+          platform is for reads better beside the story than a row of numbers
+          does; the numbers now close the page.
+        */}
+        <div id="mission">
+          <SectionHeading eyebrow={t.about.missionTitle} title={mission} align="center" />
+          <ol className="mt-12 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {missionSteps.map((step, index) => (
+              <li key={step.label}>
+                <Reveal
+                  delay={index * 0.07}
+                  className="border-border bg-card flex h-full flex-col items-center gap-3 rounded-xl border p-6 text-center shadow-[var(--shadow-card)]"
+                >
+                  <span className="bg-primary/10 text-primary grid size-11 place-items-center rounded-full">
+                    <step.icon className="size-5" aria-hidden="true" />
+                  </span>
+                  <span className="font-display font-semibold">{step.label}</span>
+                </Reveal>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </AboutUsSection>
 
       {/* Who we are (spec §29) */}
       <Section id="who-we-are">
@@ -96,25 +114,19 @@ export function AboutCopy({
         </div>
       </Section>
 
-      {/* Mission (spec §30) */}
-      <Section id="mission" tone="muted">
-        <SectionHeading eyebrow={t.about.missionTitle} title={mission} align="center" />
-        <ol className="mt-12 grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {missionSteps.map((step, index) => (
-            <li key={step.label}>
-              <Reveal
-                delay={index * 0.07}
-                className="border-border bg-card flex h-full flex-col items-center gap-3 rounded-xl border p-6 text-center shadow-[var(--shadow-card)]"
-              >
-                <span className="bg-primary/10 text-primary grid size-11 place-items-center rounded-full">
-                  <step.icon className="size-5" aria-hidden="true" />
-                </span>
-                <span className="font-display font-semibold">{step.label}</span>
-              </Reveal>
-            </li>
-          ))}
-        </ol>
-      </Section>
+      {/* Statistics (spec §33) — configurable marketing content, not analytics */}
+      {stats.length > 0 && (
+        <Section tone="muted">
+          <AboutStats
+            stats={stats.map((stat, index) => ({
+              icon: values[index % values.length].icon,
+              value: stat.label,
+              label: stat.caption,
+            }))}
+            note={t.admin.marketingCopy}
+          />
+        </Section>
+      )}
 
     </>
   );

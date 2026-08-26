@@ -66,9 +66,12 @@ export interface AboutUsSectionProps {
   portraitLabel: string;
   portraitEmpty: string;
   portraitAlt: string;
-  stats: AboutStat[];
+  /** Counters, when they belong inside the section. */
+  stats?: AboutStat[];
   /** Says plainly that the figures are editable copy, not measured analytics. */
   statsNote?: string;
+  /** Sits between the portrait row and the values — the mission, here. */
+  children?: React.ReactNode;
   valuesTitle?: string;
   values?: string[];
   ctaTitle: string;
@@ -96,6 +99,7 @@ export function AboutUsSection({
   ctaLabel,
   ctaHref,
   className,
+  children,
 }: AboutUsSectionProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const reduced = useReducedMotion();
@@ -207,16 +211,13 @@ export function AboutUsSection({
           </ul>
         </div>
 
-        {/* Counters. */}
-        <div className="mt-20 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => (
-            <StatCounter key={stat.label} stat={stat} reduced={reduced} />
-          ))}
-        </div>
-
-        {statsNote && (
-          <p className="text-muted-foreground mt-6 text-center text-[11px]">{statsNote}</p>
+        {stats && stats.length > 0 && (
+          <div className="mt-20">
+            <AboutStats stats={stats} note={statsNote} />
+          </div>
         )}
+
+        {children && <div className="mt-20">{children}</div>}
 
         {/* Values. */}
         {valuesTitle && values && values.length > 0 && (
@@ -259,6 +260,22 @@ export function AboutUsSection({
         </motion.div>
       </motion.div>
     </section>
+  );
+}
+
+/** The counter row, so a page can place it wherever it belongs. */
+export function AboutStats({ stats, note }: { stats: AboutStat[]; note?: string }) {
+  const reduced = useReducedMotion();
+
+  return (
+    <div>
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat) => (
+          <StatCounter key={stat.label} stat={stat} reduced={reduced} />
+        ))}
+      </div>
+      {note && <p className="text-muted-foreground mt-6 text-center text-[11px]">{note}</p>}
+    </div>
   );
 }
 
