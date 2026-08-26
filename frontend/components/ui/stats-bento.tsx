@@ -156,7 +156,7 @@ export function StatsBento({ stats, note }: { stats: MarketingStat[]; note: stri
                       <Icon className="size-5" aria-hidden="true" />
                     </span>
                     <CountUp label={stat.label} className="font-display text-foreground text-2xl" />
-                    <p className="text-muted-foreground mt-1 text-xs font-semibold tracking-widest uppercase">
+                    <p className="text-foreground/80 mt-1 text-xs font-semibold tracking-widest uppercase">
                       {stat.caption}
                     </p>
                   </>
@@ -166,7 +166,7 @@ export function StatsBento({ stats, note }: { stats: MarketingStat[]; note: stri
                       <Icon className="size-5" aria-hidden="true" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">
+                      <p className="text-foreground/80 text-xs font-semibold tracking-widest uppercase">
                         {stat.caption}
                       </p>
                       <CountUp

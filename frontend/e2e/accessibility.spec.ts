@@ -45,8 +45,48 @@ async function analyse(page: Page, readySelector?: string) {
    * reported failures that no user could ever see, and only intermittently —
    * whichever frame the measurement happened to land on.
    */
+  /*
+   * Measure with motion suppressed.
+   *
+   * Contrast is computed from painted pixels, and an element half-way through a
+   * fade genuinely is low contrast at that instant. Waiting for entrances to
+   * finish narrowed the window but could not close it: a scroll-triggered fade
+   * can begin while axe is already walking the tree, and the failure then
+   * depends on which frame it lands on. Under reduced motion this site renders
+   * every entrance in its final state, which is the state a reader sees and the
+   * only one contrast can meaningfully be judged from. The animated path has
+   * its own tests further down this file.
+   */
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.reload({ waitUntil: 'load' });
+  if (readySelector) {
+    await page.waitForSelector(readySelector);
+  }
+
+  /*
+   * Trigger every lazy section, then let it settle.
+   *
+   * Scroll-triggered fades start when their element reaches the viewport, so
+   * simply waiting is not enough: an audit can begin while a section further
+   * down is still untouched, and the fade then starts under it — axe reaches
+   * that element mid-fade and reports a contrast failure no user could see.
+   * Walking the page down and back means every entrance has been asked to run
+   * before anything is measured.
+   */
+  await page.evaluate(async () => {
+    const step = Math.max(1, window.innerHeight);
+    for (let y = 0; y < document.body.scrollHeight; y += step) {
+      window.scrollTo(0, y);
+      await new Promise((resolve) => setTimeout(resolve, 120));
+    }
+    window.scrollTo(0, 0);
+  });
+
   await page.waitForFunction(() => {
-    const animated = [...document.querySelectorAll('.rise')];
+    // `.rise` is the CSS entrance; `[data-entrance]` marks the ones a motion
+    // component drives. Both fade text in, and both must have finished before
+    // contrast means anything.
+    const animated = [...document.querySelectorAll('.rise, [data-entrance]')];
     return animated.every((element) => Number(getComputedStyle(element).opacity) === 1);
   });
   await page.evaluate(

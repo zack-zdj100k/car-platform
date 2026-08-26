@@ -27,6 +27,10 @@ export function Reveal({
 
   return (
     <motion.div
+      // Marks an entrance the accessibility audit must let finish before it
+      // measures contrast — text half-way through a fade really is low
+      // contrast, and auditing that frame reported failures nobody could see.
+      data-entrance
       className={className}
       initial={{ opacity: 0, y }}
       whileInView={{ opacity: 1, y: 0 }}

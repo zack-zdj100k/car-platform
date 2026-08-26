@@ -77,8 +77,8 @@ export default function AdminSettingsPage() {
   const renderField = (setting: Setting) => {
     const value = valueOf(setting);
 
-    // Home page photography uploads rather than a typed path (spec §9, §47).
-    if (setting.group === 'home-images') {
+    // Photography uploads rather than a typed path (spec §9, §47).
+    if (setting.group === 'home-images' || setting.group === 'about-images') {
       return (
         <SettingImageField
           label={imageLabel(setting.key)}
@@ -186,6 +186,12 @@ export default function AdminSettingsPage() {
                 slot uses the bundled placeholder.
               </CardDescription>
             )}
+            {group === 'about-images' && (
+              <CardDescription>
+                Your photograph, shown on the About page under &ldquo;Developed by me&rdquo;. Drop a file
+                in or choose one — while it is empty the page shows a placeholder in its place.
+              </CardDescription>
+            )}
           </CardHeader>
           <CardContent className="space-y-5">
             {entries.map((setting) => (
@@ -193,7 +199,7 @@ export default function AdminSettingsPage() {
                 <div
                   className={cn(
                     'flex flex-wrap items-center gap-2',
-                    setting.group === 'home-images' && 'sr-only',
+                    (setting.group === 'home-images' || setting.group === 'about-images') && 'sr-only',
                   )}
                 >
                   <Label htmlFor={setting.key} className="font-mono text-xs">

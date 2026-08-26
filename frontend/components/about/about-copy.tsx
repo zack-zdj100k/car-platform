@@ -1,8 +1,6 @@
 'use client';
 
-import Link from 'next/link';
 import {
-  ArrowRight,
   Compass,
   Eye,
   GitCompare,
@@ -14,11 +12,9 @@ import {
   Sparkles,
   UserRound,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Section, SectionHeading } from '@/components/shared/section';
 import { Reveal } from '@/components/shared/reveal';
-import { ElegantDarkPattern } from '@/components/ui/elegant-dark-pattern';
+import { AboutUsSection } from '@/components/ui/about-us-section';
 import { useLocale } from '@/providers/locale-provider';
 import type { MarketingStat } from '@/types/api';
 
@@ -33,10 +29,13 @@ export function AboutCopy({
   stats,
   whoWeAre,
   mission,
+  portrait,
 }: {
   stats: MarketingStat[];
   whoWeAre: string;
   mission: string;
+  /** Photograph uploaded in Administration › Settings › about images. */
+  portrait?: string;
 }) {
   const { t } = useLocale();
 
@@ -63,34 +62,28 @@ export function AboutCopy({
 
   return (
     <>
-      {/* Hero (spec §28) */}
-      <section className="relative isolate flex min-h-[60svh] items-center overflow-hidden">
-        <ElegantDarkPattern variant="hero" />
-        <div className="relative mx-auto w-full max-w-7xl px-5 py-24 sm:px-8">
-          <div className="max-w-3xl">
-            <h1 className="rise text-hero-foreground text-4xl font-semibold sm:text-5xl lg:text-6xl">
-              {t.about.heroTitle}
-            </h1>
-            <p
-              className="rise text-hero-foreground/75 mt-6 max-w-2xl text-base/7 sm:text-lg/8"
-              style={{ '--rise-delay': '100ms' } as React.CSSProperties}
-            >
-              {t.about.heroSubtitle}
-            </p>
-            <div className="rise mt-9" style={{ '--rise-delay': '200ms' } as React.CSSProperties}>
-              <Button asChild size="lg" className="group h-12 px-7">
-                <Link href="/cars">
-                  {t.about.heroCta}
-                  <ArrowRight
-                    className="size-4 transition-transform motion-safe:group-hover:translate-x-0.5 rtl:rotate-180"
-                    aria-hidden="true"
-                  />
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <AboutUsSection
+        eyebrow={t.about.storyEyebrow}
+        title={t.about.heroTitle}
+        intro={t.about.heroSubtitle}
+        points={differentiators}
+        portrait={portrait}
+        portraitLabel={t.about.portraitLabel}
+        portraitAlt={t.about.portraitAlt}
+        portraitEmpty={t.about.portraitEmpty}
+        stats={stats.map((stat, index) => ({
+          icon: values[index % values.length].icon,
+          value: stat.label,
+          label: stat.caption,
+        }))}
+        statsNote={t.admin.marketingCopy}
+        valuesTitle={t.about.valuesTitle}
+        values={values.map((value) => value.label)}
+        ctaTitle={t.about.finalCtaTitle}
+        ctaBody={t.about.missionStatement}
+        ctaLabel={t.about.finalCtaButton}
+        ctaHref="/cars"
+      />
 
       {/* Who we are (spec §29) */}
       <Section id="who-we-are">
@@ -123,81 +116,6 @@ export function AboutCopy({
         </ol>
       </Section>
 
-      {/* What makes us different (spec §31) */}
-      <Section id="different">
-        <SectionHeading eyebrow={t.about.differentTitle} title={t.about.differentTitle} align="center" />
-        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {differentiators.map((item, index) => (
-            <Reveal key={item.title} delay={index * 0.06}>
-              <Card className="h-full">
-                <CardContent className="flex flex-col gap-3 pt-1">
-                  <span className="bg-primary/10 text-primary grid size-10 place-items-center rounded-lg">
-                    <item.icon className="size-5" aria-hidden="true" />
-                  </span>
-                  <h3 className="font-display text-base font-semibold">{item.title}</h3>
-                  <p className="text-muted-foreground text-sm/6">{item.body}</p>
-                </CardContent>
-              </Card>
-            </Reveal>
-          ))}
-        </div>
-      </Section>
-
-      {/* Values (spec §32) */}
-      <Section id="values" tone="dark">
-        <ElegantDarkPattern variant="section" gridSize={68} vignette={false} />
-        <div className="relative">
-          <h2 className="text-center text-3xl font-semibold sm:text-4xl">{t.about.valuesTitle}</h2>
-          <ul className="mt-12 grid grid-cols-2 gap-6 lg:grid-cols-4">
-            {values.map((value, index) => (
-              <li key={value.label}>
-                <Reveal delay={index * 0.06} className="flex flex-col items-center gap-3 text-center">
-                  <span className="grid size-12 place-items-center rounded-full bg-white/8 ring-1 ring-inset ring-white/12">
-                    <value.icon className="text-primary size-5" aria-hidden="true" />
-                  </span>
-                  <span className="font-display font-semibold">{value.label}</span>
-                </Reveal>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </Section>
-
-      {/* Statistics (spec §33) — configurable marketing content, not analytics */}
-      {stats.length > 0 && (
-        <Section tone="muted" className="py-14 sm:py-16">
-          <dl className="grid grid-cols-2 gap-8 lg:grid-cols-4">
-            {/* dt precedes dd, and only one div may sit between dl and them. */}
-            {stats.map((stat, index) => (
-              <Reveal key={stat.caption} delay={index * 0.06} className="text-center">
-                <dt className="text-muted-foreground text-xs font-medium tracking-widest uppercase">
-                  {stat.caption}
-                </dt>
-                <dd className="font-display mt-2 text-3xl font-semibold sm:text-4xl">{stat.label}</dd>
-              </Reveal>
-            ))}
-          </dl>
-          <p className="text-muted-foreground mt-8 text-center text-[11px]">{t.admin.marketingCopy}</p>
-        </Section>
-      )}
-
-      {/* Final CTA (spec §35) */}
-      <Section>
-        <div className="border-border bg-card relative overflow-hidden rounded-2xl border px-6 py-14 text-center shadow-[var(--shadow-card)] sm:px-12">
-          <h2 className="text-3xl font-semibold sm:text-4xl">{t.about.finalCtaTitle}</h2>
-          <div className="mt-8">
-            <Button asChild size="lg" className="group h-12 px-7">
-              <Link href="/cars">
-                {t.about.finalCtaButton}
-                <ArrowRight
-                  className="size-4 transition-transform motion-safe:group-hover:translate-x-0.5 rtl:rotate-180"
-                  aria-hidden="true"
-                />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </Section>
     </>
   );
 }

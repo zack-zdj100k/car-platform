@@ -46,6 +46,9 @@ export const settings: {
   { key: 'home.image.exterior', value: '', group: 'home-images', isPublic: true, description: 'Exterior design photo (spec §9).' },
   { key: 'home.image.interior', value: '', group: 'home-images', isPublic: true, description: 'Interior design photo (spec §9).' },
 
+  // Portrait shown on the About page (spec §29 — supplied, never invented).
+  { key: 'about.image.portrait', value: '', group: 'about-images', isPublic: true, description: 'Photograph of the person behind the platform, shown on the About page.' },
+
   { key: 'about.whoWeAre', value: 'PLACEHOLDER — supply the real founding story. Spec §29 forbids inventing facts about the owners.', group: 'about', isPublic: true, description: 'About page "Who We Are" copy (spec §29).' },
   { key: 'about.mission', value: 'To make discovering the right car simple, visual, and inspiring.', group: 'about', isPublic: true, description: 'Mission statement, verbatim from spec §30.' },
 ];
