@@ -69,15 +69,16 @@ export function SiteHeader() {
 
   return (
     /*
-     * On a phone or a tablet the header steps out of the way while the reader
-     * moves down the page and returns the moment they move back up — the
-     * screen is small and the logo, language and theme controls are not worth
-     * a permanent strip of it. From `lg` up it never moves: there is room for
-     * it, and a header that jumps around on a desktop is just noise.
+     * The header steps out of the way while the reader moves down the page and
+     * returns the moment they move back up, at every width. It floats over the
+     * content rather than pushing it down, so on the way down it sits on top of
+     * whatever is being read — the orbital diagram and the showcase photograph
+     * both pass underneath it. Getting out of the way is the whole point of a
+     * header with no bar of its own.
      */
     <header
       className={cn(
-        'sticky top-0 z-50 w-full transition-transform duration-300 ease-out lg:translate-y-0',
+        'sticky top-0 z-50 w-full transition-transform duration-300 ease-out',
         retreated ? '-translate-y-full' : 'translate-y-0',
       )}
       onFocusCapture={revealHeader}
