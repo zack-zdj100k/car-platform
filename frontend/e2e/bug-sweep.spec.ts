@@ -1,4 +1,11 @@
-import { expect, test, type Browser, type ConsoleMessage, type Page } from '@playwright/test';
+import {
+  expect,
+  request as apiRequest,
+  test,
+  type Browser,
+  type ConsoleMessage,
+  type Page,
+} from '@playwright/test';
 
 /**
  * Whole-site bug sweep.
@@ -38,6 +45,61 @@ async function publishedCarCount(page: Page): Promise<number> {
   const response = await page.request.get(`${api}/cars?pageSize=1`);
   const body = (await response.json()) as { meta: { total: number } };
   return body.meta.total;
+}
+
+/**
+ * Puts a fresh PENDING order in the database and returns its reference.
+ *
+ * Used only when every existing order has already been marched to COMPLETED,
+ * which is terminal: statuses move forwards only, so a test that advances one
+ * cannot put it back, and a suite run often enough eventually runs out of
+ * orders to advance. Creating one is the fallback rather than the default
+ * because both registration and order submission are rate limited — as they
+ * should be — and a test should not spend that budget when it does not have to.
+ *
+ * The calls go through a context of their own. Registering sets the new
+ * customer's session cookies, and borrowing the admin page's request context
+ * hands those cookies to the browser, signing the administrator out mid-test.
+ */
+async function createPendingOrder(): Promise<string> {
+  const api = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+  const password = 'Str0ng!Passw0rd#2026';
+  const email = `sweep-${Date.now()}@example.com`;
+  const client = await apiRequest.newContext();
+
+  try {
+    const registered = await client.post(`${api}/auth/register`, {
+      data: {
+        email,
+        password,
+        confirmPassword: password,
+        fullName: 'Sweep Customer',
+        phone: '+213600000321',
+        acceptTerms: true,
+      },
+    });
+    expect(registered.ok(), await registered.text()).toBeTruthy();
+    const { accessToken } = (await registered.json()) as { accessToken: string };
+
+    const catalogue = await client.get(`${api}/cars`);
+    const { data } = (await catalogue.json()) as { data: { id: string }[] };
+    expect(data.length, 'the catalogue is empty').toBeGreaterThan(0);
+
+    const order = await client.post(`${api}/orders`, {
+      headers: { authorization: `Bearer ${accessToken}` },
+      data: {
+        carId: data[0].id,
+        buyerName: 'Sweep Customer',
+        buyerEmail: email,
+        buyerPhone: '+213600000321',
+      },
+    });
+    expect(order.ok(), await order.text()).toBeTruthy();
+    const { reference } = (await order.json()) as { reference: string };
+    return reference;
+  } finally {
+    await client.dispose();
+  }
 }
 
 async function brokenImages(page: Page) {
@@ -195,8 +257,16 @@ test.describe('Every admin page is error-free', () => {
       }
     }
 
-    expect(reference, 'no order with a remaining transition was found').not.toBeNull();
-    await expect(page.locator('tbody tr').first()).toContainText(reference!);
+    // Every order has already been finished by earlier runs: bring a new one,
+    // since a COMPLETED order cannot be moved back to make this runnable again.
+    if (reference === null) {
+      reference = await createPendingOrder();
+      await page.reload();
+      await page.locator('#order-status').click();
+      await page.getByRole('option', { name: 'PENDING', exact: true }).click();
+    }
+
+    await expect(page.locator('tbody tr').first()).toContainText(reference);
 
     // The flow that used to crash: the dialog read status history the list
     // endpoint never returns.
@@ -215,7 +285,7 @@ test.describe('Every admin page is error-free', () => {
 
     await page.locator('#order-status').click();
     await page.getByRole('option', { name: chosen, exact: true }).click();
-    await expect(page.getByText(reference!, { exact: true })).toBeVisible();
+    await expect(page.getByText(reference, { exact: true })).toBeVisible();
 
     expect(problems).toEqual([]);
   });

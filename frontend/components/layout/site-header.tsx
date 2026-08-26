@@ -198,7 +198,13 @@ export function SiteHeader() {
             </div>
           )}
 
-          {/* Mobile navigation */}
+          {/*
+            Account actions for the narrowest screens only. From `sm` up the
+            same actions are already on the header itself — Sign In and Sign Up
+            for a guest, the avatar menu for a signed-in customer — so on a
+            tablet this button opened a panel offering exactly what was visible
+            behind it.
+          */}
           <Sheet
             open={mobileOpen}
             onOpenChange={(open) => {
@@ -207,7 +213,7 @@ export function SiteHeader() {
             }}
           >
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden" aria-label={t.nav.openMenu}>
+              <Button variant="ghost" size="icon" className="sm:hidden" aria-label={t.nav.openMenu}>
                 <Menu className="size-5" aria-hidden="true" />
               </Button>
             </SheetTrigger>
