@@ -13,8 +13,8 @@ import {
   UserRound,
 } from 'lucide-react';
 import { Section, SectionHeading } from '@/components/shared/section';
-import { Reveal } from '@/components/shared/reveal';
 import { AboutStats, AboutUsSection } from '@/components/ui/about-us-section';
+import { MissionSteps } from '@/components/about/mission-steps';
 import { useLocale } from '@/providers/locale-provider';
 import type { MarketingStat } from '@/types/api';
 
@@ -85,21 +85,7 @@ export function AboutCopy({
         */}
         <div id="mission">
           <SectionHeading eyebrow={t.about.missionTitle} title={mission} align="center" />
-          <ol className="mt-12 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            {missionSteps.map((step, index) => (
-              <li key={step.label}>
-                <Reveal
-                  delay={index * 0.07}
-                  className="border-border bg-card flex h-full flex-col items-center gap-3 rounded-xl border p-6 text-center shadow-[var(--shadow-card)]"
-                >
-                  <span className="bg-primary/10 text-primary grid size-11 place-items-center rounded-full">
-                    <step.icon className="size-5" aria-hidden="true" />
-                  </span>
-                  <span className="font-display font-semibold">{step.label}</span>
-                </Reveal>
-              </li>
-            ))}
-          </ol>
+          <MissionSteps steps={missionSteps} className="mt-12" />
         </div>
       </AboutUsSection>
 
