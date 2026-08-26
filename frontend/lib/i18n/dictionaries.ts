@@ -310,6 +310,8 @@ const en: {
     updateStatus: 'Update status',
     demoData: 'Demo',
     marketingCopy: 'Marketing content — not live analytics',
+    brandPlaceholder: 'Search a marque, or type a new one',
+    brandCreate: 'Add “{name}” as a new marque',
   },
   common: {
     loading: 'Loading…',
@@ -647,6 +649,8 @@ const fr: DeepPartial<Dictionary> = {
     updateStatus: 'Modifier le statut',
     demoData: 'Démo',
     marketingCopy: 'Contenu marketing — pas des analyses en direct',
+    brandPlaceholder: 'Cherchez une marque, ou saisissez-en une nouvelle',
+    brandCreate: 'Ajouter « {name} » comme nouvelle marque',
   },
   common: {
     loading: 'Chargement…',
@@ -974,6 +978,8 @@ const ar: DeepPartial<Dictionary> = {
     updateStatus: 'تحديث الحالة',
     demoData: 'تجريبي',
     marketingCopy: 'محتوى تسويقي — ليست تحليلات مباشرة',
+    brandPlaceholder: 'ابحث عن علامة تجارية أو اكتب واحدة جديدة',
+    brandCreate: 'إضافة «{name}» كعلامة تجارية جديدة',
   },
   common: {
     loading: 'جارٍ التحميل…',

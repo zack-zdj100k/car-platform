@@ -47,6 +47,9 @@ test.describe('Public site', () => {
     await page.goto('/cars');
     await expect(page.getByTestId('car-card')).not.toHaveCount(0);
 
+    // The controls open on request at every width now, rather than standing in
+    // a column of their own.
+    await page.getByRole('button', { name: /Filters/i }).click();
     const brandCheckbox = page.locator('[id^="brand-"]').first();
     const brandSlug = (await brandCheckbox.getAttribute('id'))!.replace('brand-', '');
     await brandCheckbox.click();
@@ -59,6 +62,7 @@ test.describe('Public site', () => {
 
   test('search narrows the catalogue', async ({ page }) => {
     await page.goto('/cars');
+    await page.getByRole('button', { name: /Filters/i }).click();
     await page.getByLabel('Search', { exact: true }).fill('tiggo');
 
     await expect(page).toHaveURL(/search=tiggo/);

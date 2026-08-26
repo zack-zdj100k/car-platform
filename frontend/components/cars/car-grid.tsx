@@ -71,7 +71,7 @@ export function CarGrid({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       {cars.map((car, index) => (
         <Reveal key={car.id} delay={Math.min(index, 5) * 0.05}>
           {card(car, index)}

@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useAuth } from '@/providers/auth-provider';
+import { BrandPicker } from '@/components/admin/brand-picker';
 import { useLocale } from '@/providers/locale-provider';
 import { carsService } from '@/services/cars.service';
 import { ApiError } from '@/services/api-client';
@@ -233,6 +234,11 @@ function NumberGrid({
 }
 
 export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
+  /*
+   * The catalogue's marques, held locally so one created from the brand field
+   * appears immediately without reloading the form and losing what is typed.
+   */
+  const [knownBrands, setKnownBrands] = useState<Brand[]>(brands);
   const { token } = useAuth();
   const { t } = useLocale();
   const router = useRouter();
@@ -465,18 +471,17 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="brandId">{t.cars.brand} *</Label>
-            <Select value={basic.brandId} onValueChange={(value) => setBasic({ ...basic, brandId: value })}>
-              <SelectTrigger id="brandId" className="w-full">
-                <SelectValue placeholder={t.cars.anyBrand} />
-              </SelectTrigger>
-              <SelectContent>
-                {brands.map((brand) => (
-                  <SelectItem key={brand.id} value={brand.id}>
-                    {brand.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <BrandPicker
+              id="brandId"
+              brands={knownBrands}
+              value={basic.brandId}
+              onChange={(brandId) => setBasic({ ...basic, brandId })}
+              onCreated={(brand) =>
+                setKnownBrands((current) =>
+                  [...current, brand].sort((a, b) => a.name.localeCompare(b.name)),
+                )
+              }
+            />
           </div>
 
           <div className="space-y-2">
