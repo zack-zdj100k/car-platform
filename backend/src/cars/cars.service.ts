@@ -18,6 +18,8 @@ const listSelect = {
   price: true,
   currency: true,
   marketingDescription: true,
+  // Cards show a TikTok badge for the cars that have a clip.
+  tiktokUrl: true,
   isFeatured: true,
   isDemoData: true,
   status: true,

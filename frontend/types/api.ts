@@ -210,6 +210,8 @@ export interface CarListItem {
   price: string;
   currency: string;
   marketingDescription: string | null;
+  /** Set when this vehicle has a TikTok clip; the card links to it. */
+  tiktokUrl?: string | null;
   isFeatured: boolean;
   isDemoData: boolean;
   status: CarStatus;

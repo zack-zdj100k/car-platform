@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Fuel, GaugeCircle, Heart, Scale } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { TikTokIcon } from '@/components/ui/brand-icons';
 import { Button } from '@/components/ui/button';
 import { DemoBadge } from '@/components/shared/demo-badge';
 import { useLocale } from '@/providers/locale-provider';
@@ -74,7 +75,13 @@ export function CarCard({
           <div className="text-muted-foreground grid h-full place-items-center text-xs">—</div>
         )}
 
-        <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
+        {/*
+          Above the card-covering link, or nothing here can be clicked.
+          The title's `after:inset-0` pseudo-element spans the whole card and
+          paints over this row, so favourite and compare silently did nothing
+          on the catalogue — the click landed on the link underneath.
+        */}
+        <div className="absolute inset-x-3 top-3 z-10 flex items-start justify-between gap-2">
           <div className="flex flex-wrap gap-1.5">
             {car.isFeatured && (
               <Badge className="bg-primary/95 text-primary-foreground shadow-sm">
@@ -167,6 +174,25 @@ export function CarCard({
 
         {car.marketingDescription && (
           <p className="text-muted-foreground mt-3 line-clamp-2 text-sm/6">{car.marketingDescription}</p>
+        )}
+
+        {/*
+          Straight to the clip, for the cars that have one — so the badge means
+          something rather than appearing on every card and disappointing
+          whoever taps it. It sits after the vehicle's own link and above the
+          card overlay: first tab stop stays "open this car", and this one is
+          actually clickable.
+        */}
+        {car.tiktokUrl && (
+          <a
+            href={car.tiktokUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="bg-foreground text-background hover:bg-foreground/85 focus-visible:outline-2 focus-visible:outline-offset-2 relative z-10 mt-3 inline-flex w-fit items-center gap-1.5 self-start rounded-full px-2.5 py-1 text-xs font-semibold transition-colors"
+          >
+            <TikTokIcon className="size-3.5" aria-hidden="true" />
+            TikTok
+          </a>
         )}
 
         <div className="mt-4 flex items-end justify-between gap-3 pt-2">
