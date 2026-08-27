@@ -68,6 +68,13 @@ export const settingsService = {
   all(options: RequestOptions = {}) {
     return apiRequest<Setting[]>('/settings', options);
   },
+  /** Whether order notifications are actually delivered, and to whom. */
+  emailDelivery(options: RequestOptions = {}) {
+    return apiRequest<{ provider: string; delivers: boolean; recipient: string }>(
+      '/settings/email-delivery',
+      options,
+    );
+  },
   update(key: string, value: unknown, options: RequestOptions = {}) {
     return apiRequest<Setting>(`/settings/${encodeURIComponent(key)}`, {
       ...options,

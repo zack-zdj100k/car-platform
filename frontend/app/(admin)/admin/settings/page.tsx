@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Info, Loader2 } from 'lucide-react';
+import { Info, Loader2, MailCheck, MailWarning } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,6 +34,17 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
 
   const settings = useAsync<Setting[]>(() => settingsService.all({ token }), [token], {
+    enabled: Boolean(token),
+  });
+
+  /*
+   * Whether order notifications actually leave the machine.
+   *
+   * With no mail provider configured the platform renders every notification
+   * and files it away, which from the outside looks exactly like working. An
+   * administrator waiting for an order alert has to be told.
+   */
+  const delivery = useAsync(() => settingsService.emailDelivery({ token }), [token], {
     enabled: Boolean(token),
   });
 
@@ -195,6 +206,28 @@ export default function AdminSettingsPage() {
           {t.dashboard.saveChanges}
         </Button>
       </header>
+
+      {delivery.data && !delivery.data.delivers && (
+        <Alert>
+          <MailWarning className="size-4" aria-hidden="true" />
+          <AlertDescription>
+            Order notifications are being written to the log but not sent — no mail provider is
+            configured (<code className="font-mono text-xs">MAIL_PROVIDER={delivery.data.provider}</code>).
+            They would go to <strong>{delivery.data.recipient}</strong>. See
+            docs/EMAIL_NOTIFICATIONS.md to switch delivery on.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {delivery.data?.delivers && (
+        <Alert>
+          <MailCheck className="size-4" aria-hidden="true" />
+          <AlertDescription>
+            Order notifications are being sent to <strong>{delivery.data.recipient}</strong> over{' '}
+            {delivery.data.provider}.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {Object.entries(groups).map(([group, entries]) => (
         <Card key={group}>

@@ -115,6 +115,11 @@ enum Locale {
 enum EmailStatus {
   QUEUED
   SENT
+  /// Rendered and recorded, but no mail provider is configured, so nothing left
+  /// the building. Distinct from SENT on purpose: an administrator reading the
+  /// log has to be able to tell a delivered message from one that only reached
+  /// the console.
+  LOGGED
   FAILED
 }
 

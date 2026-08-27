@@ -81,10 +81,12 @@ export class NotificationsService implements OnModuleInit {
     });
 
     try {
-      if (!this.transporter) {
+      const delivered = this.transporter !== null && this.transporter !== undefined;
+
+      if (!delivered) {
         this.logger.log(`[console mail] to=${args.to} subject="${args.subject}"`);
       } else {
-        await this.transporter.sendMail({
+        await this.transporter!.sendMail({
           from: this.mail.from,
           to: args.to,
           subject: args.subject,
@@ -93,11 +95,23 @@ export class NotificationsService implements OnModuleInit {
         });
       }
 
+      /*
+       * Only a real delivery is recorded as SENT.
+       *
+       * Without a provider configured this used to write SENT anyway, so the
+       * log claimed every order notification had gone out when none had left
+       * the machine — the most misleading thing a log can do. `sentAt` stays
+       * empty for the same reason.
+       */
       await this.prisma.emailLog.update({
         where: { id: log.id },
-        data: { status: EmailStatus.SENT, sentAt: new Date(), attempts: { increment: 1 } },
+        data: {
+          status: delivered ? EmailStatus.SENT : EmailStatus.LOGGED,
+          sentAt: delivered ? new Date() : null,
+          attempts: { increment: 1 },
+        },
       });
-      return true;
+      return delivered;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       // Logged, recorded, and swallowed — the order must survive a mail outage.
@@ -126,6 +140,22 @@ export class NotificationsService implements OnModuleInit {
   async sendPasswordReset(args: { to: string; fullName: string; resetUrl: string }): Promise<void> {
     const rendered = renderPasswordReset({ fullName: args.fullName, resetUrl: args.resetUrl });
     await this.send({ ...rendered, to: args.to, template: 'password-reset' });
+  }
+
+  /**
+   * Whether a notification would actually be delivered, and to whom.
+   *
+   * Worth exposing: with no provider configured the platform renders every
+   * notification and files it away, which from the outside is indistinguishable
+   * from working. An administrator waiting for an order alert deserves to be
+   * told plainly that delivery is switched off.
+   */
+  async deliveryStatus(): Promise<{ provider: string; delivers: boolean; recipient: string }> {
+    return {
+      provider: this.mail.provider,
+      delivers: Boolean(this.transporter),
+      recipient: await this.resolveAdminEmail(),
+    };
   }
 
   /** A settings override takes precedence over the environment default. */

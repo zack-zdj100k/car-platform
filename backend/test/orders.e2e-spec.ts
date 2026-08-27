@@ -157,7 +157,15 @@ describe('Orders', () => {
 
       // One to the administrator, one to the customer.
       expect(emails).toHaveLength(2);
-      expect(emails.every((entry) => entry.status === 'SENT')).toBe(true);
+
+      /*
+       * `LOGGED`, not `SENT`. Tests run with no mail provider configured, so
+       * nothing leaves the machine — and the log has to say so. This used to
+       * assert `SENT`, which was the platform lying to its owner: every order
+       * notification was recorded as delivered when none had been.
+       */
+      expect(emails.map((entry) => entry.status)).toEqual(['LOGGED', 'LOGGED']);
+      expect(emails.every((entry) => entry.sentAt === null)).toBe(true);
     });
   });
 
