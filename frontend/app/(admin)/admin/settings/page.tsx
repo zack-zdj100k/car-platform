@@ -68,17 +68,27 @@ export default function AdminSettingsPage() {
     }
   };
 
-  /** Friendly label from a key like `home.image.safety`. */
+  /** Friendly label from a key like `home.image.safety` or `home.best.3.image`. */
   const imageLabel = (key: string) => {
-    const last = key.split('.').pop() ?? key;
+    const parts = key.split('.');
+    const last = parts.pop() ?? key;
+    if (last === 'image' && parts[0] === 'home' && parts[1] === 'best') {
+      return `Photo ${parts[2]}`;
+    }
     return last.charAt(0).toUpperCase() + last.slice(1);
   };
 
   const renderField = (setting: Setting) => {
     const value = valueOf(setting);
 
-    // Photography uploads rather than a typed path (spec §9, §47).
-    if (setting.group === 'home-images' || setting.group === 'about-images') {
+    // Photography uploads rather than a typed path (spec §9, §47). In the
+    // best-of group only the `.image` half is a photograph — its caption beside
+    // it stays an ordinary text field.
+    if (
+      setting.group === 'home-images' ||
+      setting.group === 'about-images' ||
+      (setting.group === 'best-of' && setting.key.endsWith('.image'))
+    ) {
       return (
         <SettingImageField
           label={imageLabel(setting.key)}
@@ -186,6 +196,12 @@ export default function AdminSettingsPage() {
                 slot uses the bundled placeholder.
               </CardDescription>
             )}
+            {group === 'best-of' && (
+              <CardDescription>
+                The gallery at the top of the home page. Upload a photograph and give it a caption;
+                slots left empty are skipped, and with none filled the section does not appear.
+              </CardDescription>
+            )}
             {group === 'about-images' && (
               <CardDescription>
                 Your photograph, shown on the About page under &ldquo;Developed by me&rdquo;. Drop a file
@@ -199,7 +215,10 @@ export default function AdminSettingsPage() {
                 <div
                   className={cn(
                     'flex flex-wrap items-center gap-2',
-                    (setting.group === 'home-images' || setting.group === 'about-images') && 'sr-only',
+                    (setting.group === 'home-images' ||
+                      setting.group === 'about-images' ||
+                      (setting.group === 'best-of' && setting.key.endsWith('.image'))) &&
+                      'sr-only',
                   )}
                 >
                   <Label htmlFor={setting.key} className="font-mono text-xs">

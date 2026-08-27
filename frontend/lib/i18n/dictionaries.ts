@@ -754,6 +754,10 @@ const ar: DeepPartial<Dictionary> = {
     featuresTitle: 'هندسة في التفاصيل',
     featuresBody:
       'كل سيارة في الكتالوج موثّقة عبر تسع مجموعات من المواصفات — من أنظمة مساعدة السائق إلى مقاسات الإطارات — لتقارن الحقائق لا الأوصاف.',
+    bestEyebrow: 'اختيارنا',
+    bestTitle: 'أفضل سياراتنا',
+    bestBody: 'مجموعة قصيرة، اخترناها وصوّرناها بأنفسنا.',
+    bestFallbackCaption: 'من اختيارنا',
     featuredTitle: 'سيارات مختارة',
     featuredBody: 'مجموعة مختارة من الكتالوج الحالي.',
     viewAllCars: 'عرض جميع السيارات',

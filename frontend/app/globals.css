@@ -203,6 +203,23 @@
     text-rendering: optimizeLegibility;
   }
 
+  /*
+   * The silk backdrop shows through in dark mode.
+   *
+   * The page's own surfaces — cards, panels, the header capsules — keep their
+   * colour, so text never sits directly on a moving texture; the silk appears
+   * in the space between them. `html` keeps the solid colour so there is
+   * something beneath the canvas before it paints, and so light mode is
+   * untouched: a dark woven texture under a light page would only muddy it.
+   */
+  html.dark {
+    background-color: var(--background);
+  }
+
+  html.dark body {
+    background-color: transparent;
+  }
+
   /* Arabic renders right-to-left with a dedicated face (spec §7, §65). */
   [dir='rtl'] body {
     @apply font-arabic;

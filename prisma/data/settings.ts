@@ -46,6 +46,25 @@ export const settings: {
   { key: 'home.image.exterior', value: '', group: 'home-images', isPublic: true, description: 'Exterior design photo (spec §9).' },
   { key: 'home.image.interior', value: '', group: 'home-images', isPublic: true, description: 'Interior design photo (spec §9).' },
 
+  /*
+   * "The best of our cars" — the gallery above the feature diagram on the home
+   * page. Six slots, each a photograph the administrator uploads with a caption
+   * beside it, so the section is curated rather than whatever the catalogue
+   * happens to sort first.
+   */
+  { key: 'home.best.1.image', value: '', group: 'best-of', isPublic: true, description: 'Best-of gallery photo 1.' },
+  { key: 'home.best.1.caption', value: '', group: 'best-of', isPublic: true, description: 'Best-of gallery caption 1.' },
+  { key: 'home.best.2.image', value: '', group: 'best-of', isPublic: true, description: 'Best-of gallery photo 2.' },
+  { key: 'home.best.2.caption', value: '', group: 'best-of', isPublic: true, description: 'Best-of gallery caption 2.' },
+  { key: 'home.best.3.image', value: '', group: 'best-of', isPublic: true, description: 'Best-of gallery photo 3.' },
+  { key: 'home.best.3.caption', value: '', group: 'best-of', isPublic: true, description: 'Best-of gallery caption 3.' },
+  { key: 'home.best.4.image', value: '', group: 'best-of', isPublic: true, description: 'Best-of gallery photo 4.' },
+  { key: 'home.best.4.caption', value: '', group: 'best-of', isPublic: true, description: 'Best-of gallery caption 4.' },
+  { key: 'home.best.5.image', value: '', group: 'best-of', isPublic: true, description: 'Best-of gallery photo 5.' },
+  { key: 'home.best.5.caption', value: '', group: 'best-of', isPublic: true, description: 'Best-of gallery caption 5.' },
+  { key: 'home.best.6.image', value: '', group: 'best-of', isPublic: true, description: 'Best-of gallery photo 6.' },
+  { key: 'home.best.6.caption', value: '', group: 'best-of', isPublic: true, description: 'Best-of gallery caption 6.' },
+
   // Portrait shown on the About page (spec §29 — supplied, never invented).
   { key: 'about.image.portrait', value: '', group: 'about-images', isPublic: true, description: 'Photograph of the person behind the platform, shown on the About page.' },
 

@@ -1,4 +1,5 @@
 import { Hero } from '@/components/home/hero';
+import { BestOfGallery } from '@/components/home/best-of-gallery';
 import { CarOrbit } from '@/components/home/car-orbit';
 import { VideoShowcase } from '@/components/home/video-showcase';
 import { FeaturedCars } from '@/components/home/featured-cars';
@@ -28,6 +29,14 @@ export default async function HomePage() {
           facebook: readSetting(settings, 'social', 'social.facebook'),
         }}
       />
+      {/* Curated first, then the diagram that explains what is documented. */}
+      <BestOfGallery
+        entries={[1, 2, 3, 4, 5, 6].map((slot) => ({
+          image: readSetting(settings, 'best-of', `home.best.${slot}.image`),
+          caption: readSetting(settings, 'best-of', `home.best.${slot}.caption`),
+        }))}
+      />
+
       {showcaseSlug ? (
         <CarOrbit
           slug={showcaseSlug}
