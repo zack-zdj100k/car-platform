@@ -1,7 +1,7 @@
 'use client';
 
 import { Section, SectionHeading } from '@/components/shared/section';
-import { InteractiveBentoGallery, type BentoItem } from '@/components/ui/interactive-bento-gallery';
+import { ElasticGallery, type ElasticItem } from '@/components/ui/elastic-gallery';
 import { useLocale } from '@/providers/locale-provider';
 
 export interface BestOfEntry {
@@ -10,36 +10,28 @@ export interface BestOfEntry {
 }
 
 /**
- * "The best of our cars" — a curated gallery above the feature diagram.
+ * "The best of our cars" — the curated gallery above the feature diagram.
  *
- * Curated rather than computed: the six photographs and their captions come
- * from settings an administrator uploads, so this section shows the cars you
- * want shown, in the order you want them, instead of whatever the catalogue
- * happens to sort first. Empty slots are skipped, and with none filled the
- * section does not render at all — an empty gallery is worse than no gallery.
+ * Curated rather than computed: the photographs and their captions come from
+ * settings an administrator uploads, so this section shows the cars you want
+ * shown, in the order you want them, instead of whatever the catalogue happens
+ * to sort first. Empty slots are skipped, and with none filled the section does
+ * not render at all — an empty gallery is worse than no gallery.
  *
- * The tile footprints alternate deliberately: two wide, four square, which
- * fills the bento grid without leaving holes at any breakpoint.
+ * Panels expand as you point at them, or when focus lands on one from the
+ * keyboard.
  */
-const SPANS = [
-  'col-span-2 row-span-2',
-  '',
-  '',
-  'col-span-2',
-  '',
-  '',
-] as const;
-
 export function BestOfGallery({ entries }: { entries: BestOfEntry[] }) {
   const { t } = useLocale();
 
-  const items: BentoItem[] = entries
+  const items: ElasticItem[] = entries
     .filter((entry) => entry.image)
     .map((entry, index) => ({
-      id: `best-${index}`,
+      id: String(index + 1).padStart(2, '0'),
       title: entry.caption || t.home.bestFallbackCaption,
-      image: entry.image,
-      span: SPANS[index % SPANS.length],
+      category: t.home.bestEyebrow,
+      src: entry.image,
+      alt: entry.caption || t.home.bestFallbackCaption,
       href: '/cars',
     }));
 
@@ -54,15 +46,7 @@ export function BestOfGallery({ entries }: { entries: BestOfEntry[] }) {
         align="center"
       />
 
-      <InteractiveBentoGallery
-        className="mt-12"
-        items={items}
-        labels={{
-          watch: t.car.tiktokTitle,
-          view: t.home.viewAllCars,
-          noImage: t.videos.noImage,
-        }}
-      />
+      <ElasticGallery className="mt-12" items={items} actionLabel={t.home.viewAllCars} />
     </Section>
   );
 }
