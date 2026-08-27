@@ -36,7 +36,7 @@ const listSelect = {
   },
   colors: {
     where: { kind: ColorKind.EXTERIOR },
-    select: { id: true, name: true, hexCode: true, finish: true, isDefault: true },
+    select: { id: true, name: true, hexCode: true, finish: true, isDefault: true, imageUrl: true },
     orderBy: { sortOrder: 'asc' },
   },
   _count: { select: { favorites: true } },
@@ -107,6 +107,12 @@ export class CarsService {
         throw new BadRequestException('priceMin cannot be greater than priceMax');
       }
       and.push({ price: { gte: query.priceMin, lte: query.priceMax } });
+    }
+
+    // The videos page asks for the cars that actually have a clip, rather than
+    // fetching the catalogue and discarding most of it in the browser.
+    if (query.hasVideo) {
+      and.push({ tiktokUrl: { not: null } });
     }
 
     return { AND: and };

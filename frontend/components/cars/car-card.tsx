@@ -2,6 +2,7 @@
 
 import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Fuel, GaugeCircle, Heart, Scale } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -41,7 +42,12 @@ export function CarCard({
   const { isAuthenticated } = useAuth();
   const router = useRouter();
 
-  const image = car.images[0];
+  const [shownColorId, setShownColorId] = useState<string | null>(null);
+  const shownColor = car.colors.find((color) => color.id === shownColorId);
+  // The chosen colour's photograph when there is one, the car's own otherwise.
+  const image = shownColor?.imageUrl
+    ? { url: shownColor.imageUrl, alt: `${car.brand.name} ${car.model} — ${shownColor.name}` }
+    : car.images[0];
   const defaultColor = car.colors.find((color) => color.isDefault) ?? car.colors[0];
 
   const handleFavorite = () => {
@@ -184,16 +190,23 @@ export function CarCard({
           card overlay: first tab stop stays "open this car", and this one is
           actually clickable.
         */}
+        {/*
+          Straight to the video, for the cars that have one — so the badge means
+          something rather than appearing on every card and disappointing
+          whoever taps it. It goes to our own videos page rather than off to
+          TikTok directly: the clip is one tap further, and the visitor sees the
+          rest of the films on the way. It sits after the vehicle's own link and
+          above the card overlay: first tab stop stays "open this car", and this
+          one is actually clickable.
+        */}
         {car.tiktokUrl && (
-          <a
-            href={car.tiktokUrl}
-            target="_blank"
-            rel="noreferrer noopener"
+          <Link
+            href={`/videos#${car.slug}`}
             className="bg-foreground text-background hover:bg-foreground/85 focus-visible:outline-2 focus-visible:outline-offset-2 relative z-10 mt-3 inline-flex w-fit items-center gap-1.5 self-start rounded-full px-2.5 py-1 text-xs font-semibold transition-colors"
           >
             <TikTokIcon className="size-3.5" aria-hidden="true" />
-            TikTok
-          </a>
+            {t.videos.watchOnCard}
+          </Link>
         )}
 
         <div className="mt-4 flex items-end justify-between gap-3 pt-2">
@@ -208,16 +221,41 @@ export function CarCard({
           </div>
 
           {car.colors.length > 0 && (
-            <ul className="flex items-center gap-1.5" aria-label={t.car.colours}>
+            /*
+             * Choosing by colour, from the card. A colour with a photograph of
+             * its own swaps the card's picture; one without stays a swatch, so
+             * a dot never promises a change it cannot make. Above the card
+             * overlay, or the click would open the vehicle instead.
+             */
+            <ul className="relative z-10 flex items-center gap-1.5" aria-label={t.car.colours}>
               {car.colors.slice(0, 4).map((color) => (
                 <li key={color.id}>
-                  <span
-                    className="border-border/80 block size-4.5 rounded-full border shadow-inner"
-                    style={{ backgroundColor: color.hexCode }}
-                    title={color.name}
-                  >
-                    <span className="sr-only">{color.name}</span>
-                  </span>
+                  {color.imageUrl ? (
+                    <button
+                      type="button"
+                      aria-pressed={color.id === shownColorId}
+                      title={color.name}
+                      onClick={() => setShownColorId(color.id)}
+                      onMouseEnter={() => setShownColorId(color.id)}
+                      className={cn(
+                        'border-border/80 block size-4.5 rounded-full border shadow-inner transition-transform',
+                        color.id === shownColorId
+                          ? 'ring-primary ring-offset-background scale-110 ring-2 ring-offset-1'
+                          : 'hover:scale-110',
+                      )}
+                      style={{ backgroundColor: color.hexCode }}
+                    >
+                      <span className="sr-only">{color.name}</span>
+                    </button>
+                  ) : (
+                    <span
+                      className="border-border/80 block size-4.5 rounded-full border shadow-inner"
+                      style={{ backgroundColor: color.hexCode }}
+                      title={color.name}
+                    >
+                      <span className="sr-only">{color.name}</span>
+                    </span>
+                  )}
                 </li>
               ))}
               {car.colors.length > 4 && (

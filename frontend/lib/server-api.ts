@@ -21,6 +21,20 @@ export async function fetchFeaturedCars(): Promise<CarListItem[]> {
   }
 }
 
+/** Every published vehicle that has a clip, for the videos page. */
+export async function fetchCarsWithVideo(): Promise<CarListItem[]> {
+  try {
+    const page = await carsService.list(
+      { hasVideo: true, pageSize: 100, sort: 'newest' },
+      { next: { revalidate: REVALIDATE_CATALOGUE } },
+    );
+    return page.data;
+  } catch (error) {
+    logFailure('cars with video', error);
+    return [];
+  }
+}
+
 export async function fetchPublicSettings(): Promise<Record<string, Record<string, unknown>>> {
   try {
     return await settingsService.public({ next: { revalidate: 300 } });

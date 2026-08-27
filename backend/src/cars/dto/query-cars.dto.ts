@@ -107,6 +107,12 @@ export class QueryCarsDto extends PaginationQueryDto {
   @IsBoolean()
   featured?: boolean;
 
+  @ApiPropertyOptional({ description: 'Only vehicles with a TikTok video' })
+  @IsOptional()
+  @Transform(toBoolean)
+  @IsBoolean()
+  hasVideo?: boolean;
+
   @ApiPropertyOptional({ enum: CarSort, default: CarSort.NEWEST })
   @IsOptional()
   @IsEnum(CarSort)

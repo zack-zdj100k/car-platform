@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { Car, Home, Info, LayoutDashboard, LogOut, Menu, ShieldCheck, User } from 'lucide-react';
+import { Car, Home, Info, LayoutDashboard, LogOut, Menu, ShieldCheck, User, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
@@ -37,6 +37,7 @@ export function SiteHeader() {
   const links = [
     { href: '/', label: t.nav.home, icon: Home },
     { href: '/cars', label: t.nav.cars, icon: Car },
+    { href: '/videos', label: t.videos.navLabel, icon: Video },
     { href: '/about', label: t.nav.about, icon: Info },
   ];
 

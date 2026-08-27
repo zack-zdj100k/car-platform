@@ -222,7 +222,8 @@ export interface CarListItem {
   brand: Pick<Brand, 'id' | 'name' | 'slug' | 'logoUrl'>;
   engine: Pick<CarEngine, 'fuelType' | 'transmission' | 'drivetrain' | 'powerHp' | 'displacementL'> | null;
   images: Pick<CarImage, 'url' | 'alt'>[];
-  colors: Pick<CarColor, 'id' | 'name' | 'hexCode' | 'finish' | 'isDefault'>[];
+  // `imageUrl` lets the card swap its photograph when a colour is chosen.
+  colors: Pick<CarColor, 'id' | 'name' | 'hexCode' | 'finish' | 'isDefault' | 'imageUrl'>[];
   _count?: { favorites: number };
 }
 

@@ -18,6 +18,8 @@ export interface CarQuery {
   priceMax?: number;
   seats?: number;
   featured?: boolean;
+  /** Only vehicles that have a TikTok clip — the videos page. */
+  hasVideo?: boolean;
   sort?: string;
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { Car, Home, Info } from 'lucide-react';
+import { Car, Home, Info, Video } from 'lucide-react';
 import { SiteHeader } from './site-header';
 import { FooterSection } from '@/components/ui/footer-section';
 import { NavBar, type NavItem } from '@/components/ui/tubelight-navbar';
@@ -16,6 +16,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
   const navItems: NavItem[] = [
     { name: t.nav.home, url: '/', icon: Home },
     { name: t.nav.cars, url: '/cars', icon: Car },
+    { name: t.videos.navLabel, url: '/videos', icon: Video },
     { name: t.nav.about, url: '/about', icon: Info },
   ];
 
