@@ -288,6 +288,10 @@ const en: {
     submitted: 'Submitted',
     vehicle: 'Vehicle',
   },
+  legal: {
+    notPublished: 'This document has not been published yet. Write it in Administration › Settings › legal and it appears here.',
+    aboutUs: 'About us',
+  },
   videos: {
     eyebrow: 'On camera',
     title: 'Car videos',
@@ -644,6 +648,10 @@ const fr: DeepPartial<Dictionary> = {
     submitted: 'Envoyée',
     vehicle: 'Véhicule',
   },
+  legal: {
+    notPublished: 'Ce document n’est pas encore publié. Rédigez-le dans Administration › Paramètres › legal et il apparaîtra ici.',
+    aboutUs: 'À propos',
+  },
   videos: {
     eyebrow: 'En vidéo',
     title: 'Vidéos des voitures',
@@ -993,6 +1001,10 @@ const ar: DeepPartial<Dictionary> = {
     status: 'الحالة',
     submitted: 'أُرسل',
     vehicle: 'السيارة',
+  },
+  legal: {
+    notPublished: 'لم يُنشر هذا المستند بعد. اكتبه من الإدارة › الإعدادات › legal ليظهر هنا.',
+    aboutUs: 'من نحن',
   },
   videos: {
     eyebrow: 'بالفيديو',

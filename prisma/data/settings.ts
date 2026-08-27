@@ -68,6 +68,15 @@ export const settings: {
   // Portrait shown on the About page (spec §29 — supplied, never invented).
   { key: 'about.image.portrait', value: '', group: 'about-images', isPublic: true, description: 'Photograph of the person behind the platform, shown on the About page.' },
 
+  /*
+   * The two documents the footer links to. Left empty deliberately: a privacy
+   * notice and terms of use are the owner's statements, and inventing them
+   * would put commitments in their name that they never made. While empty, the
+   * pages say so plainly rather than returning a 404.
+   */
+  { key: 'legal.privacy', value: '', group: 'legal', isPublic: true, description: 'Privacy notice shown at /privacy.' },
+  { key: 'legal.terms', value: '', group: 'legal', isPublic: true, description: 'Terms shown at /terms.' },
+
   { key: 'about.whoWeAre', value: 'PLACEHOLDER — supply the real founding story. Spec §29 forbids inventing facts about the owners.', group: 'about', isPublic: true, description: 'About page "Who We Are" copy (spec §29).' },
   { key: 'about.mission', value: 'To make discovering the right car simple, visual, and inspiring.', group: 'about', isPublic: true, description: 'Mission statement, verbatim from spec §30.' },
 ];

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Info, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -163,6 +164,19 @@ export default function AdminSettingsPage() {
       );
     }
 
+    // Long-form copy needs room to write in; a single-line input for a privacy
+    // notice is unusable.
+    if (setting.group === 'legal' || setting.key === 'about.whoWeAre') {
+      return (
+        <Textarea
+          id={setting.key}
+          rows={10}
+          value={typeof value === 'string' ? value : ''}
+          onChange={(event) => setDrafts((current) => ({ ...current, [setting.key]: event.target.value }))}
+        />
+      );
+    }
+
     return (
       <Input
         id={setting.key}
@@ -194,6 +208,12 @@ export default function AdminSettingsPage() {
               <CardDescription>
                 Photographs for the home page feature sections. Drop a file in or choose one — an empty
                 slot uses the bundled placeholder.
+              </CardDescription>
+            )}
+            {group === 'legal' && (
+              <CardDescription>
+                Shown on /privacy and /terms. Until you write them, those pages say plainly that the
+                document has not been published yet rather than inventing one.
               </CardDescription>
             )}
             {group === 'best-of' && (
