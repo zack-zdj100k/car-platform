@@ -84,8 +84,16 @@ export function InteractiveBentoGallery({
     <div className={cn('w-full', className)}>
       <motion.ul
         className={cn(
-          'grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4',
-          ratio === 'portrait' ? '[&>li]:aspect-9/16' : '[&>li]:aspect-4/3',
+          /*
+           * Fixed row height, spans, and dense flow.
+           *
+           * Tiles are sized in grid rows rather than by aspect ratio: an
+           * aspect-ratio fights a `row-span` — the tile is told two different
+           * heights and the grid ends up with holes in it. Dense flow then lets
+           * later tiles backfill whatever a wide tile leaves beside it.
+           */
+          'grid grid-cols-2 gap-3 [grid-auto-flow:dense] sm:grid-cols-3 lg:grid-cols-4',
+          ratio === 'portrait' ? 'auto-rows-[7.5rem]' : 'auto-rows-[9rem]',
         )}
         initial="hidden"
         whileInView="visible"
@@ -97,7 +105,12 @@ export function InteractiveBentoGallery({
             key={item.id}
             id={item.anchor}
             data-entrance
-            className={cn('relative scroll-mt-28', item.span)}
+            className={cn(
+              'relative scroll-mt-28',
+              // Upright by default on the videos page, square elsewhere.
+              ratio === 'portrait' ? 'row-span-2' : 'row-span-1',
+              item.span,
+            )}
             variants={
               reduced
                 ? { hidden: {}, visible: {} }
@@ -115,6 +128,13 @@ export function InteractiveBentoGallery({
             <motion.button
               type="button"
               onClick={() => setOpenId(item.id)}
+              /*
+               * A tile's name normally comes from the caption inside it. This
+               * guarantees one even when a caption is missing — a button with no
+               * name is announced as just "button", and a missing translation
+               * once left every tile on the home page in exactly that state.
+               */
+              aria-label={item.title || undefined}
               whileHover={reduced ? undefined : { scale: 1.02 }}
               transition={{ duration: 0.2 }}
               className="group border-border/70 bg-secondary focus-visible:outline-2 focus-visible:outline-offset-4 relative h-full w-full overflow-hidden rounded-2xl border text-start"

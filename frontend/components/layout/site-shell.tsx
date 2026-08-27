@@ -3,7 +3,6 @@
 import { Car, Home, Info, Video } from 'lucide-react';
 import { SiteHeader } from './site-header';
 import { FooterSection } from '@/components/ui/footer-section';
-import { SilkBackgroundAnimation } from '@/components/ui/silk-background-animation';
 import { NavBar, type NavItem } from '@/components/ui/tubelight-navbar';
 import { useLocale } from '@/providers/locale-provider';
 
@@ -29,13 +28,6 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
       >
         {t.nav.skipToContent}
       </a>
-      {/*
-        The silk backdrop, behind everything and only in dark mode — the texture
-        is dark, and under a light page it would only muddy it. Decorative, so
-        it is hidden from assistive technology and takes no clicks.
-      */}
-      <SilkBackgroundAnimation className="hidden dark:block" />
-
       <SiteHeader />
       {/*
         The floating bar leaves room beneath it on small screens, so it never

@@ -46,6 +46,10 @@ const en: {
     featuresTitle: 'Engineered in detail',
     featuresBody:
       'Every vehicle in the catalogue is documented across nine specification groups — from driver assistance to tyre sizing — so you compare facts, not adjectives.',
+    bestEyebrow: 'Hand picked',
+    bestTitle: 'The best of our cars',
+    bestBody: 'A short selection, chosen and photographed by us.',
+    bestFallbackCaption: 'From our selection',
     featuredTitle: 'Featured vehicles',
     featuredBody: 'A selection from the current catalogue.',
     viewAllCars: 'View all cars',
@@ -406,6 +410,10 @@ const fr: DeepPartial<Dictionary> = {
     featuresTitle: 'Conçues dans le détail',
     featuresBody:
       'Chaque véhicule du catalogue est documenté selon neuf groupes de spécifications — des aides à la conduite au dimensionnement des pneus — pour comparer des faits, pas des adjectifs.',
+    bestEyebrow: 'Sélection',
+    bestTitle: 'Le meilleur de nos voitures',
+    bestBody: 'Une courte sélection, choisie et photographiée par nous.',
+    bestFallbackCaption: 'De notre sélection',
     featuredTitle: 'Véhicules en vedette',
     featuredBody: 'Une sélection du catalogue actuel.',
     viewAllCars: 'Voir toutes les voitures',

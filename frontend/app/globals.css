@@ -21,9 +21,12 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.17 0.008 250);
 
-  /* #63e — the brand primary, deepened slightly so white text on it clears AA */
-  --primary: oklch(0.446 0.228 285.3);
-  --primary-foreground: oklch(0.985 0.004 300);
+  /*
+   * Army green. Deep enough that pale text on a filled button clears AA
+   * (7.53:1) and the green itself reads on white (8.21:1).
+   */
+  --primary: #4b5320;
+  --primary-foreground: #f5f5f5;
 
   --secondary: oklch(0.965 0.004 106);
   --secondary-foreground: oklch(0.23 0.012 250);
@@ -32,10 +35,10 @@
      white cards in the accessibility audit (spec §65). */
   --muted-foreground: oklch(0.44 0.012 250);
 
-  /* A violet tint for emphasis, drawn from the same hue as the primary */
-  --accent: oklch(0.945 0.030 298.3);
-  --accent-foreground: oklch(0.33 0.14 287);
-  --brand-accent: oklch(0.640 0.209 290.2);
+  /* A green tint for emphasis, drawn from the same hue as the primary */
+  --accent: #eef0e2;
+  --accent-foreground: #3f4a1c;
+  --brand-accent: #6b7f3a;
 
   --destructive: oklch(0.55 0.19 27);
   --destructive-foreground: oklch(0.985 0.004 106);
@@ -44,91 +47,104 @@
 
   --border: oklch(0.915 0.004 106);
   --input: oklch(0.915 0.004 106);
-  --ring: oklch(0.446 0.228 285.3);
+  --ring: #4b5320;
 
   /*
-   * Hero environment (spec §8, §59) — the black-to-violet the design calls for.
-   * `from` is near-black and `via`/`to` carry the violet, which is what the
-   * radial gradient reads as.
+   * Hero environment (spec §8, §59) — black easing into army green.
+   * `from` is black and `via` carries the green, which is what the radial
+   * gradient reads as.
    */
-  --hero-from: oklch(0.157 0.019 294.3);
-  --hero-via: oklch(0.34 0.16 287);
-  --hero-to: oklch(0.115 0.02 292);
+  --hero-from: #0a0a0a;
+  --hero-via: #3f4a1c;
+  --hero-to: #050505;
   --hero-foreground: oklch(0.98 0.005 300);
 
   /* Dark premium section, used on light pages */
-  --surface-dark: oklch(0.157 0.019 294.3);
+  --surface-dark: #101012;
   --surface-dark-foreground: oklch(0.97 0.004 300);
 
-  /* Data visualisation (admin analytics), keyed to the violet hue */
-  --chart-1: oklch(0.50 0.22 286);
-  --chart-2: oklch(0.62 0.17 300);
-  --chart-3: oklch(0.55 0.14 258);
-  --chart-4: oklch(0.60 0.15 330);
-  --chart-5: oklch(0.66 0.12 272);
+  /* Data visualisation (admin analytics), keyed to the green */
+  --chart-1: #4b5320;
+  --chart-2: #6b7f3a;
+  --chart-3: #8a9a5b;
+  --chart-4: #3f4a1c;
+  --chart-5: #4f6b52;
 
   --sidebar: oklch(0.985 0.003 106);
   --sidebar-foreground: oklch(0.17 0.008 250);
-  --sidebar-primary: oklch(0.446 0.228 285.3);
-  --sidebar-primary-foreground: oklch(0.985 0.004 300);
-  --sidebar-accent: oklch(0.955 0.004 300);
-  --sidebar-accent-foreground: oklch(0.23 0.012 290);
+  --sidebar-primary: #4b5320;
+  --sidebar-primary-foreground: #f5f5f5;
+  --sidebar-accent: #eef0e2;
+  --sidebar-accent-foreground: #3f4a1c;
   --sidebar-border: oklch(0.915 0.004 300);
-  --sidebar-ring: oklch(0.446 0.228 285.3);
+  --sidebar-ring: #4b5320;
 }
 
 .dark {
-  --background: oklch(0.145 0.012 294);
-  --foreground: oklch(0.965 0.004 106);
-  --card: oklch(0.185 0.014 294);
-  --card-foreground: oklch(0.965 0.004 106);
-  --popover: oklch(0.185 0.014 294);
-  --popover-foreground: oklch(0.965 0.004 106);
+  /*
+   * Black page, army green accents.
+   *
+   * The three fixed values were specified: #000000 behind everything, #171719
+   * for cards, #F5F5F5 for text. The green is #8A9A5B — army green, lifted far
+   * enough off the deep #4B5320 to be legible on black: measured 6.85:1 on the
+   * page and 5.84:1 on a card, where 4.5:1 is the minimum for small text, and
+   * 6.46:1 for the near-black text that sits on a filled button. The deep army
+   * green itself reaches only 2.56:1 on black, so it is used for fills under
+   * pale text rather than for text or thin details.
+   */
+  --background: #000000;
+  --foreground: #f5f5f5;
+  --card: #171719;
+  --card-foreground: #f5f5f5;
+  --popover: #171719;
+  --popover-foreground: #f5f5f5;
 
-  /* Lifted so contrast holds on dark surfaces (spec §60) */
-  --primary: oklch(0.72 0.175 290);
-  --primary-foreground: oklch(0.15 0.03 292);
+  --primary: #8a9a5b;
+  --primary-foreground: #0a0a0a;
 
-  --secondary: oklch(0.235 0.016 294);
-  --secondary-foreground: oklch(0.965 0.004 106);
-  --muted: oklch(0.235 0.016 294);
-  --muted-foreground: oklch(0.7 0.012 250);
+  --secondary: #1f1f22;
+  --secondary-foreground: #f5f5f5;
+  --muted: #1f1f22;
+  /* 7.5:1 on black, 6.4:1 on a card. */
+  --muted-foreground: #9a9aa0;
 
-  --accent: oklch(0.27 0.05 292);
-  --accent-foreground: oklch(0.95 0.03 298);
-  --brand-accent: oklch(0.78 0.16 292);
+  --accent: #24291a;
+  --accent-foreground: #cddba6;
+  --brand-accent: #a8bc6e;
 
   --destructive: oklch(0.68 0.17 25);
-  --destructive-foreground: oklch(0.15 0.01 250);
-  --success: oklch(0.72 0.13 155);
+  --destructive-foreground: #0a0a0a;
+  --success: #8a9a5b;
   --warning: oklch(0.8 0.13 75);
 
-  --border: oklch(0.28 0.011 250);
-  --input: oklch(0.3 0.011 250);
-  --ring: oklch(0.72 0.175 290);
+  --border: #2a2a2e;
+  --input: #303036;
+  --ring: #8a9a5b;
 
-  --hero-from: oklch(0.13 0.02 294);
-  --hero-via: oklch(0.30 0.15 287);
-  --hero-to: oklch(0.095 0.018 292);
-  --hero-foreground: oklch(0.98 0.005 300);
+  /* Hero: black easing into army green rather than violet. */
+  --hero-from: #000000;
+  --hero-via: #3f4a1c;
+  --hero-to: #0a0a0a;
+  --hero-foreground: #f5f5f5;
 
-  --surface-dark: oklch(0.115 0.018 294);
-  --surface-dark-foreground: oklch(0.965 0.004 300);
+  --surface-dark: #0e0e10;
+  --surface-dark-foreground: #f5f5f5;
 
-  --chart-1: oklch(0.72 0.175 288);
-  --chart-2: oklch(0.78 0.14 302);
-  --chart-3: oklch(0.70 0.13 260);
-  --chart-4: oklch(0.74 0.14 330);
-  --chart-5: oklch(0.80 0.10 274);
+  /* Analytics, keyed to the green with enough separation to read apart. */
+  --chart-1: #8a9a5b;
+  --chart-2: #a8bc6e;
+  --chart-3: #6b7f3a;
+  --chart-4: #c3d18f;
+  --chart-5: #4f6b52;
 
-  --sidebar: oklch(0.175 0.009 250);
-  --sidebar-foreground: oklch(0.965 0.004 106);
-  --sidebar-primary: oklch(0.72 0.175 290);
-  --sidebar-primary-foreground: oklch(0.15 0.03 292);
-  --sidebar-accent: oklch(0.245 0.011 250);
-  --sidebar-accent-foreground: oklch(0.965 0.004 106);
-  --sidebar-border: oklch(0.28 0.011 250);
-  --sidebar-ring: oklch(0.72 0.175 290);
+  --sidebar: #101012;
+  --sidebar-foreground: #f5f5f5;
+  --sidebar-primary: #8a9a5b;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: #1f1f22;
+  --sidebar-accent-foreground: #f5f5f5;
+  --sidebar-border: #2a2a2e;
+  --sidebar-ring: #8a9a5b;
 }
 
 @theme inline {
@@ -203,23 +219,6 @@
     text-rendering: optimizeLegibility;
   }
 
-  /*
-   * The silk backdrop shows through in dark mode.
-   *
-   * The page's own surfaces — cards, panels, the header capsules — keep their
-   * colour, so text never sits directly on a moving texture; the silk appears
-   * in the space between them. `html` keeps the solid colour so there is
-   * something beneath the canvas before it paints, and so light mode is
-   * untouched: a dark woven texture under a light page would only muddy it.
-   */
-  html.dark {
-    background-color: var(--background);
-  }
-
-  html.dark body {
-    background-color: transparent;
-  }
-
   /* Arabic renders right-to-left with a dedicated face (spec §7, §65). */
   [dir='rtl'] body {
     @apply font-arabic;
@@ -247,7 +246,7 @@
 
 @layer utilities {
   /*
-   * The signature backdrop: black at the top easing into the brand violet.
+   * The signature backdrop: black at the top easing into the army green.
    *
    * Uses the palette tokens rather than literal hex, so light and dark modes
    * stay coherent and the hue can be changed in one place.
