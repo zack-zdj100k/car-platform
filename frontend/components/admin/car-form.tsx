@@ -260,6 +260,7 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
     currency: car?.currency ?? 'USD',
     marketingDescription: car?.marketingDescription ?? '',
     tiktokUrl: car?.tiktokUrl ?? '',
+    promoPrice: car?.promoPrice ?? '',
     description: car?.description ?? '',
     isFeatured: car?.isFeatured ?? false,
   });
@@ -384,6 +385,9 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
       currency: basic.currency || undefined,
       marketingDescription: basic.marketingDescription || undefined,
       tiktokUrl: basic.tiktokUrl.trim() || undefined,
+      // Sent as null to end a promotion, so clearing the field actually clears
+      // it rather than leaving the old figure in place.
+      promoPrice: String(basic.promoPrice).trim() === '' ? null : num(basic.promoPrice),
       description: basic.description || undefined,
       isFeatured: basic.isFeatured,
       engine: clean({
@@ -552,6 +556,23 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
           <div className="space-y-2">
             <Label htmlFor="price">Price *</Label>
             <Input id="price" type="number" step="0.01" required value={String(basic.price)} onChange={(event) => setBasic({ ...basic, price: event.target.value })} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="promoPrice">Promotional price</Label>
+            <Input
+              id="promoPrice"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="—"
+              value={String(basic.promoPrice)}
+              onChange={(event) => setBasic({ ...basic, promoPrice: event.target.value })}
+            />
+            <p className="text-muted-foreground text-xs">
+              While this is set it is the price customers pay, with the normal price struck through
+              beside it. It must be lower than the price. Clear the field to end the promotion.
+            </p>
           </div>
 
           <div className="space-y-2">

@@ -3,8 +3,9 @@
 import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Price } from '@/components/shared/price';
 import { useLocale } from '@/providers/locale-provider';
-import { formatAcronym, formatPrice, humaniseEnum } from '@/lib/format';
+import { formatAcronym, humaniseEnum } from '@/lib/format';
 import type { CarEngine, CarListItem } from '@/types/api';
 
 /**
@@ -29,7 +30,7 @@ export function CarRow({
   showEngine?: boolean;
   action?: React.ReactNode;
 }) {
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const image = car.images[0];
 
   return (
@@ -69,9 +70,7 @@ export function CarRow({
       </div>
 
       <div className="flex shrink-0 flex-col items-end gap-2">
-        <p className="font-display font-semibold whitespace-nowrap">
-          {formatPrice(car.price, car.currency, locale)}
-        </p>
+        <Price price={car.price} promoPrice={car.promoPrice} currency={car.currency} size="sm" />
         <div className="flex items-center gap-2">
           <Button asChild size="sm" variant="outline">
             <Link href={`/car/${car.slug}`}>{t.car.viewDetails}</Link>

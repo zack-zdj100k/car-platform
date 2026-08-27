@@ -40,6 +40,13 @@ export class CreateCarDto {
   @MinLength(1)
   brandId: string;
 
+  @ApiPropertyOptional({ description: 'Promotional price; must be below the normal price' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  promoPrice?: number;
+
   @ApiPropertyOptional({ description: 'Link to this vehicle\'s TikTok video' })
   @IsOptional()
   @IsString()

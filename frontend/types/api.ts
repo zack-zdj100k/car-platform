@@ -212,6 +212,8 @@ export interface CarListItem {
   marketingDescription: string | null;
   /** Set when this vehicle has a TikTok clip; the card links to it. */
   tiktokUrl?: string | null;
+  /** Promotional price while a promotion runs; `price` is then struck through. */
+  promoPrice?: string | null;
   isFeatured: boolean;
   isDemoData: boolean;
   status: CarStatus;
@@ -243,6 +245,8 @@ export interface CarDetail {
   description: string | null;
   /** Link to this vehicle's TikTok video, when one has been recorded. */
   tiktokUrl: string | null;
+  /** Promotional price while a promotion runs; `price` is then struck through. */
+  promoPrice: string | null;
   status: CarStatus;
   isFeatured: boolean;
   isDemoData: boolean;

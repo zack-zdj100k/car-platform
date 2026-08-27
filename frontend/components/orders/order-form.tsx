@@ -12,12 +12,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Price } from '@/components/shared/price';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useLocale } from '@/providers/locale-provider';
 import { useAuth } from '@/providers/auth-provider';
 import { ordersService } from '@/services/customer.service';
 import { ApiError } from '@/services/api-client';
-import { formatPrice } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { CarDetail, OrderDetail } from '@/types/api';
 
@@ -42,7 +42,7 @@ const schema = z.object({
 type FieldErrors = Partial<Record<'buyerName' | 'buyerEmail' | 'buyerPhone' | 'message', string>>;
 
 export function OrderForm({ car, initialColorId }: { car: CarDetail; initialColorId?: string }) {
-  const { t, locale, format } = useLocale();
+  const { t, format } = useLocale();
   const { user, token, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -336,9 +336,8 @@ export function OrderForm({ car, initialColorId }: { car: CarDetail; initialColo
                 {car.trim ? ` · ${car.trim}` : ''}
               </p>
               <Separator className="my-4" />
-              <p className="font-display text-2xl font-semibold">
-                {formatPrice(car.price, car.currency, locale)}
-              </p>
+              {/* The same figure the customer saw on the vehicle's page. */}
+              <Price price={car.price} promoPrice={car.promoPrice} currency={car.currency} />
               {selectedColor && (
                 <p className="text-muted-foreground mt-2 inline-flex items-center gap-2 text-sm">
                   <span

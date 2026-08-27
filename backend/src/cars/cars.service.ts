@@ -16,6 +16,7 @@ const listSelect = {
   trim: true,
   bodyType: true,
   price: true,
+  promoPrice: true,
   currency: true,
   marketingDescription: true,
   // Cards show a TikTok badge for the cars that have a clip.
@@ -261,8 +262,29 @@ export class CarsService {
     return candidate;
   }
 
+  /**
+   * A promotion has to be a reduction.
+   *
+   * The vehicle page strikes the normal price through and shows this one
+   * instead, so a promotional price at or above the normal one would read as a
+   * discount while charging more. Refused with a clear message rather than
+   * displayed.
+   */
+  private assertPromotionIsADiscount(promoPrice: number | undefined, price: Prisma.Decimal | number) {
+    if (promoPrice === undefined || promoPrice === null) return;
+
+    const normal = new Prisma.Decimal(price);
+    if (new Prisma.Decimal(promoPrice).greaterThanOrEqualTo(normal)) {
+      throw new BadRequestException(
+        `The promotional price must be below the normal price of ${normal.toString()}.`,
+      );
+    }
+  }
+
   /** Spec §46, §47 — create a vehicle with all specification groups. */
   async create(dto: CreateCarDto, adminId: string) {
+    this.assertPromotionIsADiscount(dto.promoPrice, dto.price);
+
     const slug = await this.uniqueSlug(dto.brandId, dto.model, dto.year, dto.trim);
     const status = dto.status ?? CarStatus.DRAFT;
 
@@ -280,6 +302,7 @@ export class CarsService {
         doors: dto.doors ?? null,
         seats: dto.seats ?? null,
         price: new Prisma.Decimal(dto.price),
+        promoPrice: dto.promoPrice !== undefined ? new Prisma.Decimal(dto.promoPrice) : null,
         currency: dto.currency ?? 'USD',
         marketingDescription: dto.marketingDescription ?? null,
         tiktokUrl: dto.tiktokUrl ?? null,
@@ -337,12 +360,24 @@ export class CarsService {
   async update(id: string, dto: UpdateCarDto, adminId: string) {
     const existing = await this.prisma.car.findUnique({
       where: { id },
-      select: { id: true, status: true, publishedAt: true, brandId: true, model: true, year: true, trim: true },
+      select: {
+        id: true,
+        status: true,
+        publishedAt: true,
+        brandId: true,
+        model: true,
+        year: true,
+        trim: true,
+        price: true,
+      },
     });
 
     if (!existing) {
       throw new NotFoundException('Vehicle not found');
     }
+
+    // Compared against whatever the normal price will be after this edit.
+    this.assertPromotionIsADiscount(dto.promoPrice, dto.price ?? existing.price);
 
     const identityChanged =
       (dto.brandId !== undefined && dto.brandId !== existing.brandId) ||
@@ -365,6 +400,9 @@ export class CarsService {
       ...(dto.doors !== undefined ? { doors: dto.doors } : {}),
       ...(dto.seats !== undefined ? { seats: dto.seats } : {}),
       ...(dto.price !== undefined ? { price: new Prisma.Decimal(dto.price) } : {}),
+      ...(dto.promoPrice !== undefined
+        ? { promoPrice: dto.promoPrice === null ? null : new Prisma.Decimal(dto.promoPrice) }
+        : {}),
       ...(dto.currency !== undefined ? { currency: dto.currency } : {}),
       ...(dto.marketingDescription !== undefined ? { marketingDescription: dto.marketingDescription } : {}),
       ...(dto.tiktokUrl !== undefined ? { tiktokUrl: dto.tiktokUrl || null } : {}),

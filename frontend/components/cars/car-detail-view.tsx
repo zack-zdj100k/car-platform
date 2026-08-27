@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, ExternalLink, Heart, Scale, ShoppingCart } from 'lucide-react';
 import { TikTokIcon } from '@/components/ui/brand-icons';
 import { Badge } from '@/components/ui/badge';
+import { Price } from '@/components/shared/price';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -17,7 +18,7 @@ import { useLocale } from '@/providers/locale-provider';
 import { useAuth } from '@/providers/auth-provider';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useCompare } from '@/hooks/use-compare';
-import { formatAcronym, formatMeasure, formatPrice, humaniseEnum } from '@/lib/format';
+import { formatAcronym, formatMeasure, humaniseEnum } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { CarDetail } from '@/types/api';
 
@@ -299,9 +300,13 @@ export function CarDetailView({ car }: { car: CarDetail }) {
             {car.seats ? ` · ${car.seats} seats` : ''}
           </p>
 
-          <p className="font-display mt-5 text-3xl font-semibold tracking-tight">
-            {formatPrice(car.price, car.currency, locale)}
-          </p>
+          <Price
+            price={car.price}
+            promoPrice={car.promoPrice}
+            currency={car.currency}
+            size="lg"
+            className="mt-5"
+          />
 
           {car.marketingDescription && (
             <p className="text-muted-foreground mt-4 text-base/7">{car.marketingDescription}</p>

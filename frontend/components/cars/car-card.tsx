@@ -5,12 +5,13 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Fuel, GaugeCircle, Heart, Scale } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Price } from '@/components/shared/price';
 import { TikTokIcon } from '@/components/ui/brand-icons';
 import { Button } from '@/components/ui/button';
 import { DemoBadge } from '@/components/shared/demo-badge';
 import { useLocale } from '@/providers/locale-provider';
 import { useAuth } from '@/providers/auth-provider';
-import { formatAcronym, formatPrice, humaniseEnum } from '@/lib/format';
+import { formatAcronym, humaniseEnum } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { CarListItem } from '@/types/api';
 
@@ -36,7 +37,7 @@ export function CarCard({
   onToggleCompare?: (carId: string) => void;
   priority?: boolean;
 }) {
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const { isAuthenticated } = useAuth();
   const router = useRouter();
 
@@ -197,9 +198,7 @@ export function CarCard({
 
         <div className="mt-4 flex items-end justify-between gap-3 pt-2">
           <div>
-            <p className="font-display text-xl font-semibold tracking-tight">
-              {formatPrice(car.price, car.currency, locale)}
-            </p>
+            <Price price={car.price} promoPrice={car.promoPrice} currency={car.currency} />
             {car.engine?.transmission && (
               <p className="text-muted-foreground mt-0.5 text-xs">
                 {formatAcronym(car.engine.transmission)}
