@@ -229,6 +229,11 @@ model Car {
   price    Decimal @db.Decimal(12, 2)
   currency String  @default("USD")
 
+  /// A TikTok video for this vehicle, shown on its page. One per car: the
+  /// catalogue links to the clip rather than embedding a third-party player,
+  /// which would load their scripts on a page we control.
+  tiktokUrl            String? @map("tiktok_url")
+
   /// Spec §23 — concise copy for cards and promo sections
   marketingDescription String? @map("marketing_description")
   /// Spec §14 — universal premium description

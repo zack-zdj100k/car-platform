@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ArrowLeft, Heart, Scale, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Heart, Scale, ShoppingCart } from 'lucide-react';
+import { TikTokIcon } from '@/components/ui/brand-icons';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -42,13 +43,37 @@ export function CarDetailView({ car }: { car: CarDetail }) {
   const selectedColor = exteriorColors.find((color) => color.id === selectedColorId);
   const alt = `${car.brand.name} ${car.model} ${car.year}`;
 
-  /** A colour with its own photography swaps the lead image (spec §13). */
+  /**
+   * The gallery follows the chosen colour (spec §13).
+   *
+   * Photographs attached to that colour come first — its own portrait, then any
+   * gallery shot recorded against it — and the rest of the car's photography
+   * follows, so a colour with one picture still has a full gallery behind it.
+   * The colour's picture is included even when it is not among the car's
+   * images, which is the normal case: it is uploaded on the colour itself.
+   */
   const images = useMemo(() => {
-    if (!selectedColor?.imageUrl) return car.images;
-    const matching = car.images.find((image) => image.url === selectedColor.imageUrl);
-    if (!matching) return car.images;
-    return [matching, ...car.images.filter((image) => image !== matching)];
-  }, [car.images, selectedColor]);
+    if (!selectedColor) return car.images;
+
+    const forColour = car.images.filter((image) => image.colorId === selectedColor.id);
+    const rest = car.images.filter((image) => image.colorId !== selectedColor.id);
+
+    const portrait = selectedColor.imageUrl
+      ? [
+          car.images.find((image) => image.url === selectedColor.imageUrl) ?? {
+            kind: 'GALLERY' as const,
+            url: selectedColor.imageUrl,
+            alt: `${car.brand.name} ${car.model} — ${selectedColor.name}`,
+          },
+        ]
+      : [];
+
+    const ordered = [...portrait, ...forColour, ...rest];
+    // Same photograph reached two ways — keep the first appearance only.
+    return ordered.filter(
+      (image, index) => ordered.findIndex((other) => other.url === image.url) === index,
+    );
+  }, [car.brand.name, car.images, car.model, selectedColor]);
 
   const labels = { fitted: t.car.fitted, notFitted: t.car.notFitted };
 
@@ -248,7 +273,12 @@ export function CarDetailView({ car }: { car: CarDetail }) {
 
       <div className="grid gap-10 lg:grid-cols-[1.35fr_1fr] lg:gap-12">
         <div className="min-w-0">
-          <CarGallery images={images} alt={alt} />
+          {/*
+            Keyed by colour: the gallery holds its own index, so without this a
+            colour change would leave you on photograph four of the old colour
+            and the swap would look like nothing happened.
+          */}
+          <CarGallery key={selectedColorId} images={images} alt={alt} />
         </div>
 
         <div className="min-w-0">
@@ -328,6 +358,27 @@ export function CarDetailView({ car }: { car: CarDetail }) {
                 ))}
               </ul>
             </div>
+          )}
+
+          {car.tiktokUrl && (
+            <a
+              href={car.tiktokUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="border-border bg-card hover:border-primary hover:bg-secondary/60 group mt-7 flex items-center gap-3 rounded-xl border p-3.5 transition-colors"
+            >
+              <span className="bg-foreground text-background grid size-10 shrink-0 place-items-center rounded-full">
+                <TikTokIcon className="size-5" aria-hidden="true" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold">{t.car.tiktokTitle}</span>
+                <span className="text-muted-foreground block text-xs">{t.car.tiktokBody}</span>
+              </span>
+              <ExternalLink
+                className="text-muted-foreground group-hover:text-primary ms-auto size-4 shrink-0"
+                aria-hidden="true"
+              />
+            </a>
           )}
 
           <div className="mt-8 flex flex-wrap gap-3">

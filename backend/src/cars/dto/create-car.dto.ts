@@ -40,6 +40,13 @@ export class CreateCarDto {
   @MinLength(1)
   brandId: string;
 
+  @ApiPropertyOptional({ description: 'Link to this vehicle\'s TikTok video' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  @Transform(trim)
+  tiktokUrl?: string;
+
   @ApiProperty({ example: 'Tiggo 8 Pro Max' })
   @IsString()
   @MinLength(1)

@@ -239,6 +239,8 @@ export interface CarDetail {
   currency: string;
   marketingDescription: string | null;
   description: string | null;
+  /** Link to this vehicle's TikTok video, when one has been recorded. */
+  tiktokUrl: string | null;
   status: CarStatus;
   isFeatured: boolean;
   isDemoData: boolean;

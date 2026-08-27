@@ -280,6 +280,7 @@ export class CarsService {
         price: new Prisma.Decimal(dto.price),
         currency: dto.currency ?? 'USD',
         marketingDescription: dto.marketingDescription ?? null,
+        tiktokUrl: dto.tiktokUrl ?? null,
         description: dto.description ?? null,
         status,
         isFeatured: dto.isFeatured ?? false,
@@ -364,6 +365,7 @@ export class CarsService {
       ...(dto.price !== undefined ? { price: new Prisma.Decimal(dto.price) } : {}),
       ...(dto.currency !== undefined ? { currency: dto.currency } : {}),
       ...(dto.marketingDescription !== undefined ? { marketingDescription: dto.marketingDescription } : {}),
+      ...(dto.tiktokUrl !== undefined ? { tiktokUrl: dto.tiktokUrl || null } : {}),
       ...(dto.description !== undefined ? { description: dto.description } : {}),
       ...(dto.status !== undefined ? { status: dto.status } : {}),
       ...(dto.isFeatured !== undefined ? { isFeatured: dto.isFeatured } : {}),
@@ -388,11 +390,20 @@ export class CarsService {
       ...(dto.dimensions ? { dimensions: { upsert: { create: dto.dimensions, update: dto.dimensions } } } : {}),
     };
 
-    // Supplying a collection replaces it; omitting it leaves it alone. Colours
-    // referenced by an order keep that order's snapshot column intact.
+    /*
+     * Supplying a collection replaces it; omitting it leaves it alone. Colours
+     * referenced by an order keep that order's snapshot column intact.
+     *
+     * Only the kinds actually supplied are replaced. The admin form edits
+     * exterior colours and sends those alone, and a blanket `deleteMany` then
+     * destroyed every interior colour on the car each time it was saved — with
+     * no way to notice, since the form never showed them in the first place.
+     */
     if (dto.colors) {
+      const kinds = [...new Set(dto.colors.map((color) => color.kind ?? ColorKind.EXTERIOR))];
+
       data.colors = {
-        deleteMany: {},
+        deleteMany: { kind: { in: kinds } },
         create: dto.colors.map((color, index) => ({
           kind: color.kind ?? ColorKind.EXTERIOR,
           name: color.name,

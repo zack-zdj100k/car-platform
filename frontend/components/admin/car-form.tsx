@@ -25,6 +25,7 @@ import { useLocale } from '@/providers/locale-provider';
 import { carsService } from '@/services/cars.service';
 import { ApiError } from '@/services/api-client';
 import { ImageUploader, type CarImageDraft } from './image-uploader';
+import { SettingImageField } from './setting-image-field';
 import type { Brand, CarDetail } from '@/types/api';
 
 /**
@@ -258,6 +259,7 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
     price: car?.price ?? '',
     currency: car?.currency ?? 'USD',
     marketingDescription: car?.marketingDescription ?? '',
+    tiktokUrl: car?.tiktokUrl ?? '',
     description: car?.description ?? '',
     isFeatured: car?.isFeatured ?? false,
   });
@@ -337,9 +339,12 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
   const [colors, setColors] = useState(
     car?.colors
       .filter((color) => color.kind === 'EXTERIOR')
-      .map((color) => ({ name: color.name, hexCode: color.hexCode, finish: color.finish ?? '' })) ?? [
-      { name: '', hexCode: '#000000', finish: '' },
-    ],
+      .map((color) => ({
+        name: color.name,
+        hexCode: color.hexCode,
+        finish: color.finish ?? '',
+        imageUrl: color.imageUrl ?? '',
+      })) ?? [{ name: '', hexCode: '#000000', finish: '', imageUrl: '' }],
   );
 
   const [images, setImages] = useState<CarImageDraft[]>(
@@ -378,6 +383,7 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
       price: Number(basic.price),
       currency: basic.currency || undefined,
       marketingDescription: basic.marketingDescription || undefined,
+      tiktokUrl: basic.tiktokUrl.trim() || undefined,
       description: basic.description || undefined,
       isFeatured: basic.isFeatured,
       engine: clean({
@@ -429,6 +435,9 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
           name: color.name,
           hexCode: color.hexCode,
           finish: color.finish || undefined,
+          // The photograph of the car in this colour, shown when a visitor
+          // selects the swatch.
+          imageUrl: color.imageUrl || undefined,
           isDefault: index === 0,
           sortOrder: index,
         })),
@@ -548,6 +557,22 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
           <div className="space-y-2">
             <Label htmlFor="currency">Currency</Label>
             <Input id="currency" maxLength={3} value={basic.currency} onChange={(event) => setBasic({ ...basic, currency: event.target.value.toUpperCase() })} />
+          </div>
+
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="tiktokUrl">TikTok video</Label>
+            <Input
+              id="tiktokUrl"
+              type="url"
+              inputMode="url"
+              placeholder="https://www.tiktok.com/@you/video/…"
+              value={basic.tiktokUrl}
+              onChange={(event) => setBasic({ ...basic, tiktokUrl: event.target.value })}
+            />
+            <p className="text-muted-foreground text-xs">
+              Paste the link to this car&rsquo;s TikTok. It appears on the vehicle&rsquo;s page; leave
+              it empty and nothing is shown.
+            </p>
           </div>
 
           <div className="space-y-2 sm:col-span-2">
@@ -753,7 +778,7 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
             <div className="space-y-3">
               <h3 className="text-sm font-medium">{t.car.exteriorColours}</h3>
               {colors.map((color, index) => (
-                <div key={index} className="flex flex-wrap items-end gap-3">
+                <div key={index} className="border-border/70 flex flex-wrap items-end gap-3 rounded-lg border p-3">
                   <div className="flex-1 space-y-2">
                     <Label htmlFor={`color-name-${index}`}>Name</Label>
                     <Input
@@ -795,13 +820,33 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
                   >
                     <Trash2 className="size-4" aria-hidden="true" />
                   </Button>
+
+                  {/*
+                    The car photographed in this colour. Selecting the swatch on
+                    the vehicle's page shows this picture, so a customer sees
+                    the colour they are about to ask for rather than a swatch
+                    beside a photograph of a different car.
+                  */}
+                  <div className="w-full">
+                    <SettingImageField
+                      label={color.name || `Colour ${index + 1}`}
+                      value={color.imageUrl}
+                      onChange={(next) =>
+                        setColors(
+                          colors.map((entry, i) => (i === index ? { ...entry, imageUrl: next } : entry)),
+                        )
+                      }
+                    />
+                  </div>
                 </div>
               ))}
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setColors([...colors, { name: '', hexCode: '#000000', finish: '' }])}
+                onClick={() =>
+                  setColors([...colors, { name: '', hexCode: '#000000', finish: '', imageUrl: '' }])
+                }
               >
                 <Plus className="size-4" aria-hidden="true" />
                 Add colour
