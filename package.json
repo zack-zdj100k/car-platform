@@ -11,10 +11,14 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "npm-run-all --parallel dev:backend dev:frontend",
+    "dev": "node scripts/dev-preflight.mjs && concurrently --kill-others --names FRONTEND,BACKEND --prefix-colors cyan.bold,magenta.bold --prefix \"[{name}]\" \"npm:dev:frontend\" \"npm:dev:backend\"",
     "dev:frontend": "npm run dev --workspace frontend",
     "dev:backend": "npm run start:dev --workspace backend",
+    "doctor": "node scripts/dev-preflight.mjs",
     "build": "npm run build --workspace backend && npm run build --workspace frontend",
+    "start": "concurrently --kill-others --names FRONTEND,BACKEND --prefix-colors cyan.bold,magenta.bold --prefix \"[{name}]\" \"npm:start:frontend\" \"npm:start:backend\"",
+    "start:frontend": "npm run start --workspace frontend",
+    "start:backend": "npm run start:prod --workspace backend",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
@@ -30,6 +34,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.2.0",
+    "concurrently": "^10.0.5",
     "dotenv": "^17.4.2",
     "npm-run-all": "^4.1.5",
     "prisma": "6.19.3",

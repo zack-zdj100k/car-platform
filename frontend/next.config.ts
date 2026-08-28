@@ -1,4 +1,18 @@
+import { config as loadEnv } from 'dotenv';
 import type { NextConfig } from 'next';
+
+/*
+ * One environment file for the whole project.
+ *
+ * Next only reads `.env` files inside its own directory, so the frontend used to
+ * keep its own copy of NEXT_PUBLIC_API_URL and NEXT_PUBLIC_SITE_URL alongside
+ * the ones in `car-platform/.env`. Two copies of the same setting drift: change
+ * the shared file and the site quietly carries on using the stale value, which
+ * is a miserable thing to debug. The shared file is loaded here instead, and
+ * anything already set in the environment still wins — so a one-off override on
+ * the command line keeps working.
+ */
+loadEnv({ path: new URL('../.env', import.meta.url).pathname, override: false });
 
 /**
  * Spec §6 defines /sign-in, /sign-up, /cars/[id] and /dashboard/recently-viewed,
