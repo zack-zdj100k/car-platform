@@ -315,7 +315,13 @@ export class CarsService {
         doors: dto.doors ?? null,
         seats: dto.seats ?? null,
         price: new Prisma.Decimal(dto.price),
-        promoPrice: dto.promoPrice !== undefined ? new Prisma.Decimal(dto.promoPrice) : null,
+        /*
+         * `!= null` rather than `!== undefined`: the form sends null for an
+         * empty promotional price, and `new Decimal(null)` throws — so creating
+         * any car without a promotion failed with "an unexpected error", while
+         * editing one worked, because the edit path already handled null.
+         */
+        promoPrice: dto.promoPrice != null ? new Prisma.Decimal(dto.promoPrice) : null,
         currency: dto.currency ?? 'USD',
         marketingDescription: dto.marketingDescription ?? null,
         videoUrl: dto.videoUrl ?? null,

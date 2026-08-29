@@ -541,6 +541,34 @@ describe('Cars', () => {
       ]);
     });
 
+    it('creates a vehicle with no promotional price', async () => {
+      /*
+       * The form sends null for an empty promotional price, and the create path
+       * only guarded against undefined — so `new Decimal(null)` threw and every
+       * attempt to add a car ended in "an unexpected error occurred". Editing a
+       * car worked the whole time, which is why it went unnoticed.
+       */
+      const existing = await seedCar(context);
+
+      const response = await context
+        .http()
+        .post('/api/cars')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({
+          brandId: existing.brandId,
+          model: 'Picanto',
+          year: 2026,
+          bodyType: 'SUV',
+          price: 340000,
+          promoPrice: null,
+          engine: { fuelType: 'PETROL', powerHp: 100 },
+        })
+        .expect(201);
+
+      expect(response.body.promoPrice).toBeNull();
+      expect(response.body.model).toBe('Picanto');
+    });
+
     it('publishes and unpublishes', async () => {
       const car = await seedCar(context);
       await context.prisma.car.update({ where: { id: car.id }, data: { status: 'DRAFT' } });
