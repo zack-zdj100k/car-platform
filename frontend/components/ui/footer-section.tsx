@@ -61,7 +61,7 @@ export function FooterSection({ className }: { className?: string }) {
     return typeof value === 'string' ? value : '';
   };
 
-  const siteName = read('general', 'site.name') || 'ZODIK CAR';
+  const siteName = read('general', 'site.name') || 'ZODIC CAR';
   const contactEmail = read('general', 'site.contactEmail');
   const contactPhone = read('general', 'site.contactPhone');
 

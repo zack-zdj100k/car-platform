@@ -66,8 +66,8 @@ async function bootstrap(): Promise<void> {
 
   if (!appConfig.isProduction) {
     const swagger = new DocumentBuilder()
-      .setTitle('ZODIK CAR API')
-      .setDescription('REST API for ZODIK CAR — see docs/API.md')
+      .setTitle('ZODIC CAR API')
+      .setDescription('REST API for ZODIC CAR — see docs/API.md')
       .setVersion('0.1.0')
       .addBearerAuth()
       .build();
