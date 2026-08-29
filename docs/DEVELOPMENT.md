@@ -84,6 +84,24 @@ The only commands that touch data are the ones that say so: `npm run db:reset`
 (destroys and rebuilds) and `npm run db:seed` (inserts the demo catalogue).
 Neither runs on its own.
 
+## Signing in to the administration
+
+The site ships with one administrator, `admin@carplatform.dev`, whose password is
+`SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` in `car-platform/.env`.
+
+Every account created by signing up on the site is a **customer**, so signing in
+with your own email and opening `/admin` sends you away again — correctly, and
+without explaining itself. To use your own account instead:
+
+```bash
+npm run make:admin                       # lists the accounts and their roles
+npm run make:admin -- you@example.com    # makes that one an administrator
+npm run make:admin -- you@example.com --customer   # and undoes it
+```
+
+It changes an account that already exists; it never creates one and never
+touches a password. Sign out and back in afterwards.
+
 ## The figures in the administration are real
 
 Every number under Analyses et rapports is counted from the database. Nothing is
@@ -136,6 +154,7 @@ SEED_DEMO_ACTIVITY=1 npm run db:seed   # put it back, for working on the screens
 | `npm run prisma:deploy` | Apply pending migrations |
 | `npm run db:seed` | Insert the demo catalogue |
 | `npm run analytics:reset` | Remove invented views, favourites and demo orders |
+| `npm run make:admin` | Give an existing account administrator rights |
 
 ## Settings live in one file
 
