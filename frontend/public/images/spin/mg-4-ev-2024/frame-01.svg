@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1128 640" width="1128" height="640" role="img" aria-label="Placeholder frame at 0 degrees">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0%" stop-color="#26231d"/><stop offset="60%" stop-color="#1c1a16"/><stop offset="100%" stop-color="#100f0d"/>
+    </linearGradient>
+    <radialGradient id="pool" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.55"/><stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1128" height="640" fill="url(#bg)"/>
+  <ellipse cx="564" cy="428" rx="300" ry="54" fill="url(#pool)"/>
+  <ellipse cx="731.6" cy="388.6" rx="47.2" ry="11.8" fill="#000000" fill-opacity="0.35"/><ellipse cx="731.6" cy="349.7" rx="12.0" ry="40.1" fill="#14130f" stroke="#4a4238" stroke-width="2"/><ellipse cx="731.6" cy="349.7" rx="5.0" ry="16.5" fill="#2b2721"/>
+  <ellipse cx="387.0" cy="388.6" rx="47.2" ry="11.8" fill="#000000" fill-opacity="0.35"/><ellipse cx="387.0" cy="349.7" rx="12.0" ry="40.1" fill="#14130f" stroke="#4a4238" stroke-width="2"/><ellipse cx="387.0" cy="349.7" rx="5.0" ry="16.5" fill="#2b2721"/>
+  <polygon points="303.2,341.1 824.8,341.1 824.8,270.1 303.2,270.1" fill="rgb(61,54,42)" stroke="#0f0e0c" stroke-opacity="0.35" stroke-width="1.2"/>
+  <polygon points="394.1,272.4 691.4,272.4 691.4,208.3 394.1,208.3" fill="rgb(57,51,41)" stroke="#0f0e0c" stroke-opacity="0.35" stroke-width="1.2"/>
+  <polygon points="303.2,394.7 824.8,394.7 824.8,341.1 303.2,341.1" fill="rgb(67,58,44)" stroke="#0f0e0c" stroke-opacity="0.35" stroke-width="1.2"/>
+  <polygon points="303.2,323.8 824.8,323.8 824.8,270.1 303.2,270.1" fill="rgb(67,58,44)" stroke="#0f0e0c" stroke-opacity="0.35" stroke-width="1.2"/>
+  <polygon points="824.8,394.7 824.8,341.1 824.8,270.1 824.8,323.8" fill="rgb(59,53,42)" stroke="#0f0e0c" stroke-opacity="0.35" stroke-width="1.2"/>
+  <polygon points="303.2,394.7 303.2,341.1 303.2,270.1 303.2,323.8" fill="rgb(59,53,42)" stroke="#0f0e0c" stroke-opacity="0.35" stroke-width="1.2"/>
+  <polygon points="394.1,321.5 691.4,321.5 691.4,272.4 394.1,272.4" fill="rgb(62,54,42)" stroke="#0f0e0c" stroke-opacity="0.35" stroke-width="1.2"/>
+  <polygon points="394.1,257.4 691.4,257.4 691.4,208.3 394.1,208.3" fill="rgb(62,54,42)" stroke="#0f0e0c" stroke-opacity="0.35" stroke-width="1.2"/>
+  <polygon points="691.4,321.5 691.4,272.4 691.4,208.3 691.4,257.4" fill="rgb(56,50,41)" stroke="#0f0e0c" stroke-opacity="0.35" stroke-width="1.2"/>
+  <polygon points="394.1,321.5 394.1,272.4 394.1,208.3 394.1,257.4" fill="rgb(56,50,41)" stroke="#0f0e0c" stroke-opacity="0.35" stroke-width="1.2"/>
+  <polygon points="394.1,321.5 691.4,321.5 691.4,257.4 394.1,257.4" fill="rgb(57,51,41)" stroke="#0f0e0c" stroke-opacity="0.35" stroke-width="1.2"/>
+  <polygon points="303.2,394.7 824.8,394.7 824.8,323.8 303.2,323.8" fill="rgb(61,54,42)" stroke="#0f0e0c" stroke-opacity="0.35" stroke-width="1.2"/>
+  <ellipse cx="731.6" cy="443.4" rx="47.2" ry="11.8" fill="#000000" fill-opacity="0.35"/><ellipse cx="731.6" cy="404.5" rx="12.0" ry="40.1" fill="#14130f" stroke="#4a4238" stroke-width="2"/><ellipse cx="731.6" cy="404.5" rx="5.0" ry="16.5" fill="#2b2721"/>
+  <ellipse cx="387.0" cy="443.4" rx="47.2" ry="11.8" fill="#000000" fill-opacity="0.35"/><ellipse cx="387.0" cy="404.5" rx="12.0" ry="40.1" fill="#14130f" stroke="#4a4238" stroke-width="2"/><ellipse cx="387.0" cy="404.5" rx="5.0" ry="16.5" fill="#2b2721"/>
+  <text x="564" y="606" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="19" letter-spacing="5" fill="#b08a4a" fill-opacity="0.75">PLACEHOLDER · 000°</text>
+</svg>

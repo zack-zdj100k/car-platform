@@ -4,14 +4,14 @@ import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Fuel, GaugeCircle, Heart, Scale } from 'lucide-react';
+import { Fuel, GaugeCircle, Heart, Play, Scale } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Price } from '@/components/shared/price';
-import { TikTokIcon } from '@/components/ui/brand-icons';
 import { Button } from '@/components/ui/button';
 import { DemoBadge } from '@/components/shared/demo-badge';
 import { useLocale } from '@/providers/locale-provider';
 import { useAuth } from '@/providers/auth-provider';
+import { useTilt } from '@/hooks/use-tilt';
 import { formatAcronym, humaniseEnum } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { CarListItem } from '@/types/api';
@@ -42,6 +42,7 @@ export function CarCard({
   const { isAuthenticated } = useAuth();
   const router = useRouter();
 
+  const { ref: tiltRef, onPointerMove: onTiltMove, onPointerLeave: onTiltLeave } = useTilt<HTMLElement>();
   const [shownColorId, setShownColorId] = useState<string | null>(null);
   const shownColor = car.colors.find((color) => color.id === shownColorId);
   // The chosen colour's photograph when there is one, the car's own otherwise.
@@ -60,12 +61,22 @@ export function CarCard({
 
   return (
     <article
+      ref={tiltRef}
+      onPointerMove={onTiltMove}
+      onPointerLeave={onTiltLeave}
       data-testid="car-card"
       className={cn(
         'group border-border bg-card relative flex flex-col overflow-hidden rounded-xl border',
         'shadow-[var(--shadow-card)] transition-all duration-300',
         'hover:border-primary/25 hover:shadow-[var(--shadow-lifted)] focus-within:border-primary/40',
+        /*
+         * The lift lives in the tilt's own transform, not here: a utility class
+         * and an inline transform cannot both set one, and the inline one wins.
+         * Without a pointer — touch, or reduced motion — this class is the only
+         * one that applies and the card simply rises as it always did.
+         */
         'motion-safe:hover:-translate-y-0.5',
+        'transition-transform',
       )}
     >
       <div className="bg-secondary relative aspect-16/10 overflow-hidden">
@@ -199,12 +210,12 @@ export function CarCard({
           above the card overlay: first tab stop stays "open this car", and this
           one is actually clickable.
         */}
-        {car.tiktokUrl && (
+        {car.videoUrl && (
           <Link
             href={`/videos#${car.slug}`}
             className="bg-foreground text-background hover:bg-foreground/85 focus-visible:outline-2 focus-visible:outline-offset-2 relative z-10 mt-3 inline-flex w-fit items-center gap-1.5 self-start rounded-full px-2.5 py-1 text-xs font-semibold transition-colors"
           >
-            <TikTokIcon className="size-3.5" aria-hidden="true" />
+            <Play className="size-3.5" aria-hidden="true" />
             {t.videos.watchOnCard}
           </Link>
         )}
