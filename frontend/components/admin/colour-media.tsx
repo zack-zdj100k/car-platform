@@ -7,6 +7,7 @@ import { MediaImage } from '@/components/shared/media-image';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { uploadsService } from '@/services/uploads.service';
+import { uploadToast, type UploadToastId } from '@/lib/upload-toast';
 import { ApiError } from '@/services/api-client';
 import { useAuth } from '@/providers/auth-provider';
 import type { CarImageDraft } from './image-uploader';
@@ -111,9 +112,19 @@ export function ColourMedia({
 
       setBusy(free ? `OTHER-${free.slot}` : kind);
 
-      // One request for the batch, rather than one per photograph in turn.
+      let card: UploadToastId | undefined;
       try {
-        const results = await uploadsService.uploadImages(list, token);
+        const results = await uploadsService.uploadImages(list, token, (done, total) => {
+          card = uploadToast.progress(
+            {
+              title: `Uploading ${trimmed} photographs`,
+              description: `${done} of ${total} sent.`,
+              progress: (done / total) * 100,
+            },
+            card,
+          );
+        });
+
         const uploaded: CarImageDraft[] = results.map((result) => ({
           kind,
           url: result.url,
@@ -124,10 +135,24 @@ export function ColourMedia({
         }));
 
         onChange([...images, ...uploaded]);
-        toast.success(`${uploaded.length} added to ${trimmed}`);
+        uploadToast.success(
+          {
+            title: `${uploaded.length} added to ${trimmed}`,
+            description: 'Save the car to keep them.',
+            primaryText: 'Done',
+          },
+          card,
+        );
       } catch (error) {
-        toast.error(
-          error instanceof ApiError ? error.message : 'Those photographs could not be uploaded.',
+        uploadToast.error(
+          {
+            title: `Nothing was added to ${trimmed}`,
+            description:
+              error instanceof ApiError ? error.message : 'Those photographs could not be uploaded.',
+            primaryText: 'Try again',
+            secondaryText: 'Cancel',
+          },
+          card,
         );
       } finally {
         setBusy(null);

@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
-import { toast } from 'sonner';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +24,7 @@ import { useLocale } from '@/providers/locale-provider';
 import { carsService } from '@/services/cars.service';
 import { ApiError } from '@/services/api-client';
 import { uploadsService } from '@/services/uploads.service';
+import { uploadToast } from '@/lib/upload-toast';
 import { ImageUploader, type CarImageDraft } from './image-uploader';
 import { SpinUploader } from './spin-uploader';
 import { ColourMedia } from './colour-media';
@@ -550,10 +550,28 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
       uploadedThisSession.current = new Set();
       filesOnOpen.current = kept;
 
-      toast.success(isEdit ? t.admin.editCar : t.admin.addCar);
+      uploadToast.success({
+        title: isEdit ? 'The car is saved' : 'The car is added',
+        description: `${saved.brand?.name ?? ''} ${saved.model} ${saved.year} — ${
+          saved.status === 'PUBLISHED' ? 'visible on the site' : 'saved as a draft, not yet published'
+        }.`,
+        primaryText: 'Done',
+      });
       router.push(`/admin/cars/${saved.id}/edit`);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : t.common.error);
+      const message = caught instanceof ApiError ? caught.message : t.common.error;
+      setError(message);
+      uploadToast.error({
+        title: isEdit ? 'The car was not saved' : 'The car was not added',
+        description: message,
+        /*
+         * No retry button here. Submitting again needs the form event this
+         * handler was given, and inventing one would send a request the form
+         * never asked for. The message stays on the form as well, so pressing
+         * Save again is the retry.
+         */
+        primaryText: 'Close',
+      });
     } finally {
       setSaving(false);
     }

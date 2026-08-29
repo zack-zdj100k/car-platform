@@ -6,6 +6,7 @@ import { Check, Loader2, Rotate3d, Trash2, Upload } from 'lucide-react';
 import { MediaImage } from '@/components/shared/media-image';
 import { Button } from '@/components/ui/button';
 import { uploadsService } from '@/services/uploads.service';
+import { uploadToast, type UploadToastId } from '@/lib/upload-toast';
 import { ApiError } from '@/services/api-client';
 import { useAuth } from '@/providers/auth-provider';
 import { SPIN_MINIMUM, SPIN_PLAN } from '@/lib/spin-plan';
@@ -76,9 +77,13 @@ export function SpinUploader({
 
         void previous; // Reclaimed by the form after the save, not here.
       } catch (error) {
-        toast.error(
-          `${file.name}: ${error instanceof ApiError ? error.message : 'could not be uploaded'}`,
-        );
+        uploadToast.error({
+          title: `Frame ${index + 1} was not uploaded`,
+          description:
+            error instanceof ApiError ? error.message : `${file.name} could not be uploaded.`,
+          primaryText: 'Try again',
+          onPrimary: () => slotInputs.current[index]?.click(),
+        });
       } finally {
         setBusySlot(null);
       }
@@ -102,17 +107,22 @@ export function SpinUploader({
       setBulk({ done: 0, total: files.length });
 
       /*
-       * Sent in batches rather than one at a time.
-       *
-       * Twenty-four files used to mean twenty-four requests, each waiting for
-       * the one before — most of the wait when adding a set, and all of it
-       * avoidable. The API takes twenty per request, so a full set is two.
-       *
        * All-or-nothing on purpose: a set with holes in it is worse than no set,
        * because the car jumps at every missing angle.
        */
+      let card: UploadToastId | undefined;
       try {
-        const results = await uploadsService.uploadImages(files, token);
+        const results = await uploadsService.uploadImages(files, token, (done, total) => {
+          setBulk({ done, total });
+          card = uploadToast.progress(
+            {
+              title: 'Uploading the 360° set',
+              description: `${done} of ${total} photographs sent. Keep this page open until it finishes.`,
+              progress: (done / total) * 100,
+            },
+            card,
+          );
+        });
 
         onChange(
           results.map((result, index) => ({
@@ -123,10 +133,28 @@ export function SpinUploader({
             sortOrder: index,
           })),
         );
-        toast.success(`360° set uploaded — ${results.length} frames`);
+
+        uploadToast.success(
+          {
+            title: 'The set is uploaded',
+            description: `${results.length} frames, in order. Save the car to attach them to it.`,
+            primaryText: 'Done',
+          },
+          card,
+        );
       } catch (error) {
-        toast.error(
-          `The set was not uploaded, so nothing changed. ${error instanceof ApiError ? error.message : 'Please try again.'}`,
+        uploadToast.error(
+          {
+            title: 'The set was not uploaded',
+            description:
+              error instanceof ApiError
+                ? `${error.message} Nothing was changed — your previous set is untouched.`
+                : 'Nothing was changed. Your previous set is untouched.',
+            primaryText: 'Try again',
+            onPrimary: () => bulkInput.current?.click(),
+            secondaryText: 'Cancel',
+          },
+          card,
         );
       } finally {
         setBulk(null);
@@ -143,7 +171,7 @@ export function SpinUploader({
 
   const clearAll = () => {
     onChange([]);
-    toast.success('360° set removed');
+    uploadToast.success({ title: '360° set removed', description: 'Save the car to confirm it.' });
   };
 
   return (
@@ -165,6 +193,8 @@ export function SpinUploader({
           <input
             ref={bulkInput}
             id={`${fieldId}-bulk`}
+            // Named so a test can hand it files: the ids here are generated.
+            data-testid="spin-bulk-input"
             type="file"
             multiple
             accept={ACCEPTED}

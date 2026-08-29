@@ -1,12 +1,12 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { toast } from 'sonner';
 import { Film, Loader2, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { ApiError } from '@/services/api-client';
 import { resolveImageUrl, uploadsService } from '@/services/uploads.service';
+import { uploadToast, type UploadToastId } from '@/lib/upload-toast';
 import { useAuth } from '@/providers/auth-provider';
 
 /**
@@ -37,13 +37,41 @@ export function VideoField({
 
   const upload = async (file: File) => {
     setBusy(true);
+    const megabytes = (file.size / (1024 * 1024)).toFixed(1);
+    let card: UploadToastId | undefined;
+
     try {
-      const result = await uploadsService.uploadVideo(file, token);
+      const result = await uploadsService.uploadVideo(file, token, (percent) => {
+        card = uploadToast.progress(
+          {
+            title: 'Uploading the video',
+            description: `${file.name} — ${megabytes} MB. Keep this page open until it finishes.`,
+            progress: percent,
+          },
+          card,
+        );
+      });
+
       onChange(result.url);
-      toast.success(`Video uploaded — ${(result.sizeBytes / (1024 * 1024)).toFixed(1)} MB`);
+      uploadToast.success(
+        {
+          title: 'The video is uploaded',
+          description: `${(result.sizeBytes / (1024 * 1024)).toFixed(1)} MB. Save the car to attach it.`,
+          primaryText: 'Done',
+        },
+        card,
+      );
     } catch (error) {
-      toast.error(
-        error instanceof ApiError ? error.message : 'That video could not be uploaded.',
+      uploadToast.error(
+        {
+          title: 'The video was not uploaded',
+          description:
+            error instanceof ApiError ? error.message : 'That video could not be uploaded.',
+          primaryText: 'Try again',
+          onPrimary: () => input.current?.click(),
+          secondaryText: 'Cancel',
+        },
+        card,
       );
     } finally {
       setBusy(false);
