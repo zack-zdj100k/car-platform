@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,11 @@ import { BrandPicker } from '@/components/admin/brand-picker';
 import { useLocale } from '@/providers/locale-provider';
 import { carsService } from '@/services/cars.service';
 import { ApiError } from '@/services/api-client';
+import { uploadsService } from '@/services/uploads.service';
 import { ImageUploader, type CarImageDraft } from './image-uploader';
+import { SpinUploader } from './spin-uploader';
+import { ColourMedia } from './colour-media';
+import { VideoField } from './video-field';
 import { SettingImageField } from './setting-image-field';
 import type { Brand, CarDetail } from '@/types/api';
 
@@ -259,7 +263,7 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
     price: car?.price ?? '',
     currency: car?.currency ?? 'USD',
     marketingDescription: car?.marketingDescription ?? '',
-    tiktokUrl: car?.tiktokUrl ?? '',
+    videoUrl: car?.videoUrl ?? '',
     promoPrice: car?.promoPrice ?? '',
     description: car?.description ?? '',
     isFeatured: car?.isFeatured ?? false,
@@ -355,8 +359,62 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
       alt: image.alt ?? '',
       // Existing uploads can be deleted from disk; bundled placeholders cannot.
       filename: image.url.startsWith('/uploads/') ? image.url.replace('/uploads/', '') : undefined,
+      /*
+       * Back from an id to a name, because that is what the form works in and
+       * what the save sends. The id is only meaningful until the next save.
+       */
+      colorName: image.colorId
+        ? car?.colors.find((colour) => colour.id === image.colorId)?.name
+        : undefined,
+      label: image.label ?? undefined,
+      // Carried back so a 360° frame returns to the slot it was shot from.
+      sortOrder: image.sortOrder,
     })) ?? [],
   );
+
+  /*
+   * The photographs and the 360° set live in one list — they are all rows of
+   * `car_images` — but they are edited by two different controls, so each gets
+   * a view over the part it owns and writes back only that part. Keeping them
+   * in one list is what makes the save path, the ordering and the deletion of
+   * unused files identical for both.
+   */
+  /*
+   * Files this editing session put on the server, and the files the vehicle
+   * already had when the form opened.
+   *
+   * Together they are everything that could end up unreferenced once the save
+   * completes: a photograph the admin removed, or one they uploaded and then
+   * changed their mind about. Reclaiming them is done after the save, never
+   * when the remove button is pressed — the old behaviour deleted the file
+   * immediately, leaving the saved record pointing at a picture that no longer
+   * existed if the admin closed the page or the save failed.
+   */
+  const uploadedThisSession = useRef(new Set<string>());
+  const filesOnOpen = useRef(
+    new Set(
+      (car?.images ?? [])
+        .filter((image) => image.url.startsWith('/uploads/'))
+        .map((image) => image.url.replace('/uploads/', '')),
+    ),
+  );
+
+  const trackUploads = (next: CarImageDraft[]) => {
+    for (const image of next) {
+      if (image.filename) uploadedThisSession.current.add(image.filename);
+    }
+    return next;
+  };
+
+  const photographs = images.filter((image) => image.kind !== 'SPIN' && !image.colorName);
+  const spinSet = images.filter((image) => image.kind === 'SPIN');
+  const colourPhotographs = images.filter((image) => image.kind !== 'SPIN' && image.colorName);
+
+  const setPhotographs = (next: CarImageDraft[]) =>
+    setImages([...trackUploads(next), ...colourPhotographs, ...spinSet]);
+  const setSpinSet = (next: CarImageDraft[]) =>
+    setImages([...photographs, ...colourPhotographs, ...trackUploads(next)]);
+  const setColourImages = (next: CarImageDraft[]) => setImages(trackUploads(next));
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -384,7 +442,7 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
       price: Number(basic.price),
       currency: basic.currency || undefined,
       marketingDescription: basic.marketingDescription || undefined,
-      tiktokUrl: basic.tiktokUrl.trim() || undefined,
+      videoUrl: basic.videoUrl.trim() || undefined,
       // Sent as null to end a promotion, so clearing the field actually clears
       // it rather than leaving the old figure in place.
       promoPrice: String(basic.promoPrice).trim() === '' ? null : num(basic.promoPrice),
@@ -451,7 +509,19 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
           kind: image.kind,
           url: image.url,
           alt: image.alt || undefined,
-          sortOrder: index,
+          // The heading of a free-slot photograph, as the admin named it.
+          label: image.label || undefined,
+          // The colour this photograph shows, resolved server-side by name.
+          colorName: image.colorName || undefined,
+          /*
+           * A photograph's own position wins over its place in this list.
+           *
+           * For a 360° frame the position *is* the angle — frame 7 of 24 is
+           * 90° — and for the two free colour groups it is which of the two
+           * they belong to. Overwriting both with the list index, as this used
+           * to, would scramble a turn and merge the free groups into one.
+           */
+          sortOrder: image.sortOrder ?? index,
         })),
     };
 
@@ -460,6 +530,26 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
       const saved = isEdit
         ? await carsService.update(car!.id, payload, { token })
         : await carsService.create(payload, { token });
+
+      /*
+       * The save is done, so what the vehicle keeps is now known for certain.
+       * Anything this session uploaded, or the vehicle used to have, that the
+       * saved record no longer points at is unreferenced and can go. Doing it
+       * here rather than at the moment of removal is what makes closing the
+       * page without saving harmless.
+       */
+      const kept = new Set(
+        (saved.images ?? [])
+          .filter((image) => image.url.startsWith('/uploads/'))
+          .map((image) => image.url.replace('/uploads/', '')),
+      );
+
+      for (const filename of [...uploadedThisSession.current, ...filesOnOpen.current]) {
+        if (!kept.has(filename)) void uploadsService.deleteImage(filename, token);
+      }
+      uploadedThisSession.current = new Set();
+      filesOnOpen.current = kept;
+
       toast.success(isEdit ? t.admin.editCar : t.admin.addCar);
       router.push(`/admin/cars/${saved.id}/edit`);
     } catch (caught) {
@@ -581,19 +671,10 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
           </div>
 
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="tiktokUrl">TikTok video</Label>
-            <Input
-              id="tiktokUrl"
-              type="url"
-              inputMode="url"
-              placeholder="https://www.tiktok.com/@you/video/…"
-              value={basic.tiktokUrl}
-              onChange={(event) => setBasic({ ...basic, tiktokUrl: event.target.value })}
+            <VideoField
+              value={basic.videoUrl}
+              onChange={(next) => setBasic({ ...basic, videoUrl: next })}
             />
-            <p className="text-muted-foreground text-xs">
-              Paste the link to this car&rsquo;s TikTok. It appears on the vehicle&rsquo;s page; leave
-              it empty and nothing is shown.
-            </p>
           </div>
 
           <div className="space-y-2 sm:col-span-2">
@@ -850,7 +931,7 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
                   */}
                   <div className="w-full">
                     <SettingImageField
-                      label={color.name || `Colour ${index + 1}`}
+                      label={`${color.name || `Colour ${index + 1}`} — the one picture the swatch shows`}
                       value={color.imageUrl}
                       onChange={(next) =>
                         setColors(
@@ -859,6 +940,12 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
                       }
                     />
                   </div>
+
+                  <ColourMedia
+                    colourName={color.name}
+                    images={images}
+                    onChange={setColourImages}
+                  />
                 </div>
               ))}
               <Button
@@ -882,7 +969,20 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
                 Upload real photographs of the vehicle. The main photo is what appears on the
                 listing card and in search results.
               </p>
-              <ImageUploader images={images} onChange={setImages} />
+              <ImageUploader images={photographs} onChange={setPhotographs} />
+            </div>
+
+            <Separator />
+
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium">360° view</h3>
+              <p className="text-muted-foreground text-xs">
+                One turn around the car, so a customer can spin it on the vehicle&apos;s page. Keep
+                the camera at the same height and distance for every shot, and the light and
+                background the same. Optional — a car without a set shows its photographs as
+                usual.
+              </p>
+              <SpinUploader frames={spinSet} onChange={setSpinSet} />
             </div>
           </AccordionContent>
         </AccordionItem>

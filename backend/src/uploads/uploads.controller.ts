@@ -10,12 +10,32 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { resolve } from 'node:path';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UploadsService } from './uploads.service';
 
-/** Image upload for the admin car form (spec §47). Admin only. */
+/*
+ * The video limit is read from the environment here rather than through
+ * ConfigService.
+ *
+ * Not a shortcut: the interceptor below is a decorator, evaluated when this
+ * class is defined, long before any injector exists. The default matches the
+ * one in env.validation.ts, and a mismatch would only ever be more permissive
+ * at the edge — the service checks the file it actually received.
+ */
+const VIDEO_LIMIT_BYTES = Number(process.env.MAX_VIDEO_UPLOAD_MB ?? 80) * 1024 * 1024;
+
+/*
+ * Written into the upload directory itself, under a temporary name, and never
+ * into the system temp directory: renaming across two filesystems fails, and
+ * whether those are the same is a property of the machine, not of this code.
+ */
+const UPLOAD_DIRECTORY = resolve(process.cwd(), process.env.UPLOAD_DIR ?? './uploads');
+
+/** Image and video upload for the admin car form (spec §47). Admin only. */
 @ApiTags('uploads')
 @ApiBearerAuth()
 @Roles(Role.ADMIN)
@@ -44,6 +64,24 @@ export class UploadsController {
   @ApiOperation({ summary: 'Upload up to 20 car images at once (admin)' })
   uploadMany(@UploadedFiles() files: Express.Multer.File[]) {
     return this.uploads.storeMany(files);
+  }
+
+  @Post('video')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      /*
+       * On disk, not in memory. A clip can be eighty megabytes; buffering that
+       * per upload is how a small server runs out of memory. The service checks
+       * the written file's own bytes and removes it if it is not a video.
+       */
+      storage: diskStorage({ destination: (_req, _file, done) => done(null, UPLOAD_DIRECTORY) }),
+      limits: { fileSize: VIDEO_LIMIT_BYTES },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: "Upload a vehicle's video (admin)" })
+  uploadVideo(@UploadedFile() file: Express.Multer.File) {
+    return this.uploads.storeVideo(file);
   }
 
   @Delete(':filename')

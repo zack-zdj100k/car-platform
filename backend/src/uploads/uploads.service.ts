@@ -8,7 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { imageSize } from 'image-size';
 import { randomBytes } from 'node:crypto';
-import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, open, readFile, rename, unlink, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { basename, extname, join, resolve } from 'node:path';
 import type { Configuration } from '../config/configuration';
@@ -35,6 +35,12 @@ export interface StoredImage {
  *   3. The stored name is random. An uploaded name could otherwise traverse
  *      directories or overwrite another file.
  */
+export interface StoredVideo {
+  url: string;
+  filename: string;
+  sizeBytes: number;
+}
+
 @Injectable()
 export class UploadsService {
   private readonly logger = new Logger(UploadsService.name);
@@ -186,6 +192,67 @@ export class UploadsService {
 
     await unlink(target);
     this.logger.log(`Deleted ${safe}`);
+  }
+
+  /**
+   * Stores an uploaded video.
+   *
+   * Written straight to disk rather than held in memory like the photographs.
+   * A video is an order of magnitude larger, and buffering eighty megabytes per
+   * upload — several at once, from an administrator adding a clip to every car
+   * — is a straightforward way to exhaust a small server's memory.
+   *
+   * The consequence is that the file exists before it has been checked, so the
+   * check happens on what was written and a rejected file is deleted again.
+   */
+  async storeVideo(file: Express.Multer.File): Promise<StoredVideo> {
+    if (!file?.path) {
+      throw new BadRequestException('No file was received');
+    }
+
+    const written = resolve(file.path);
+
+    const reject = async (message: string): Promise<never> => {
+      await unlink(written).catch(() => undefined);
+      throw new UnprocessableEntityException(message);
+    };
+
+    // The first bytes decide the format. The declared type and the extension
+    // are both the uploader's to invent.
+    const handle = await open(written, 'r');
+    let head: Buffer;
+    try {
+      head = Buffer.alloc(16);
+      await handle.read(head, 0, 16, 0);
+    } finally {
+      await handle.close();
+    }
+
+    const extension = UploadsService.detectVideoSignature(head);
+    if (!extension) {
+      return reject('That file is not a supported video. Use MP4, MOV or WebM.');
+    }
+
+    const filename = `${Date.now().toString(36)}-${randomBytes(8).toString('hex')}${extension}`;
+    await rename(written, join(this.directory, filename));
+
+    this.logger.log(`Stored video ${filename} (${file.size} bytes)`);
+    return { url: `/uploads/${filename}`, filename, sizeBytes: file.size };
+  }
+
+  /**
+   * Recognises the three accepted video formats from their leading bytes.
+   *
+   * MP4 and QuickTime share the ISOBMFF container: both carry `ftyp` at byte
+   * four, and the brand that follows says which. Both are stored as .mp4
+   * because both are H.264 in practice and every browser plays them from that
+   * extension; a .mov extension makes Firefox refuse a file it can decode.
+   */
+  private static detectVideoSignature(head: Buffer): string | null {
+    if (head.length >= 12 && head.toString('ascii', 4, 8) === 'ftyp') return '.mp4';
+    // WebM/Matroska: the EBML header.
+    if (head.length >= 4 && head.readUInt32BE(0) === 0x1a45dfa3) return '.webm';
+    return null;
   }
 
   /** Used by tests to read a stored file back. */
