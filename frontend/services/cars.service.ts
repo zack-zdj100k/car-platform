@@ -43,6 +43,22 @@ export const carsService = {
     return apiRequest<CarDetail>(`/cars/${encodeURIComponent(idOrSlug)}`, options);
   },
 
+  /**
+   * Reports that this car was looked at.
+   *
+   * Sent from the browser rather than while rendering, because only the browser
+   * knows who is looking: the page is built on the server, where the reader's
+   * token does not exist. Recorded as a side effect of rendering, as it used to
+   * be, every view arrived anonymous — so "recently viewed" stayed empty for
+   * everyone and an administrator counted as a visitor.
+   */
+  recordView(idOrSlug: string, options: RequestOptions = {}) {
+    return apiRequest<void>(`/cars/${encodeURIComponent(idOrSlug)}/view`, {
+      ...options,
+      method: 'POST',
+    });
+  },
+
   // ---- admin ----
   adminList(query: CarQuery = {}, options: RequestOptions = {}) {
     return apiRequest<Paginated<CarListItem>>(

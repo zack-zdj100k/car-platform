@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { ArrowRight, Play } from 'lucide-react';
 import { MediaImage } from '@/components/shared/media-image';
+import { resolveImageUrl } from '@/services/uploads.service';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
@@ -188,7 +189,24 @@ export function InteractiveBentoGallery({
                   animate={reduced ? undefined : { opacity: 1, scale: 1 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 >
-                  {active.image ? (
+                  {/*
+                    * The clip plays in the dialog.
+                    *
+                    * It used to be a button that opened an external tab, back
+                    * when the videos lived on TikTok. They are the seller's own
+                    * files now, so the tile opens and the video plays — nobody
+                    * leaves the catalogue to watch a car in it.
+                    */}
+                  {active.videoUrl ? (
+                    <video
+                      src={resolveImageUrl(active.videoUrl)}
+                      poster={active.image ? resolveImageUrl(active.image) : undefined}
+                      controls
+                      autoPlay
+                      playsInline
+                      className="absolute inset-0 h-full w-full bg-black object-contain"
+                    />
+                  ) : active.image ? (
                     <MediaImage
                       src={active.image}
                       alt=""
@@ -205,14 +223,6 @@ export function InteractiveBentoGallery({
               </AnimatePresence>
 
               <div className="mt-3 flex flex-wrap gap-2">
-                {active.videoUrl && (
-                  <Button asChild>
-                    <a href={active.videoUrl} target="_blank" rel="noreferrer noopener">
-                      <Play className="size-4" aria-hidden="true" />
-                      {labels.watch}
-                    </a>
-                  </Button>
-                )}
                 {active.href && (
                   <Button asChild variant="outline">
                     <Link href={active.href}>

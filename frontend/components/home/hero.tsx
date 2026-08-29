@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { useTheme } from 'next-themes';
 import { useReducedMotion } from 'motion/react';
 import { ArrowRight, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { FacebookIcon, InstagramIcon, TikTokIcon } from '@/components/ui/brand-icons';
+import { useIsClient } from '@/hooks/use-client-store';
 import { useLocale } from '@/providers/locale-provider';
 import { cn } from '@/lib/utils';
 
@@ -20,17 +22,56 @@ import { cn } from '@/lib/utils';
  * Under `prefers-reduced-motion` the video is not rendered at all and its own
  * poster frame is shown instead (spec §8, §65).
  *
- * Replace `public/videos/hero.mp4` and `hero-poster.jpg` to change the footage.
+ * Each theme has its own footage — `hero-light.mp4` by day, `hero.mp4` after
+ * dark — and only the one being shown is ever fetched. Rendering both and
+ * hiding one with CSS would be simpler and would cost every visitor a six
+ * megabyte download they never see.
+ *
+ * Which one cannot be known while rendering on the server, where there is no
+ * theme yet, so the poster stands in until the browser has resolved it. That is
+ * the same moment the video would begin loading anyway.
+ *
+ * Replace the files in `public/videos/` to change the footage.
  */
+
+const FOOTAGE = {
+  light: { video: '/videos/hero-light.mp4', poster: '/videos/hero-light-poster.jpg' },
+  dark: { video: '/videos/hero.mp4', poster: '/videos/hero-poster.jpg' },
+} as const;
+
+/*
+ * The daytime clip is shot in bright sun and sits under a pale scrim, and the
+ * two together read as over-exposed — the car loses its edges into the wash.
+ *
+ * Darkening the footage rather than the scrim is what keeps this a change to
+ * the picture and not to the page: where the wording sits the scrim is 88–90%
+ * white, so the type is barely touched, while the open right-hand side, which
+ * is nearly all video, settles down. A little contrast back afterwards, because
+ * dimming alone flattens a picture.
+ *
+ * Only in light mode. The night clip is already dark and its scrim is black.
+ */
+const LIGHT_FOOTAGE_GRADE = 'brightness-[0.86] contrast-[1.06] saturate-[1.04] dark:filter-none';
 export function Hero({ social }: { social: { tiktok: string; instagram: string; facebook: string } }) {
   const { t } = useLocale();
   const reducedMotion = useReducedMotion();
+  const { resolvedTheme } = useTheme();
+  const mounted = useIsClient();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoReady, setVideoReady] = useState(false);
+
+  const footage = resolvedTheme === 'light' ? FOOTAGE.light : FOOTAGE.dark;
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video || reducedMotion) return;
+
+    /*
+     * A new clip starts hidden and fades in as the old one did. Without this
+     * the swap between themes would show one frozen frame of footage that has
+     * not loaded yet, because the readiness flag survived the element.
+     */
+    setVideoReady(video.readyState >= 3);
 
     // A cached video can already be playable before this effect runs, so
     // `canplay` would never fire again and the fade-in would never start.
@@ -50,7 +91,16 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
 
     observer.observe(video);
     return () => observer.disconnect();
-  }, [reducedMotion]);
+    /*
+     * `mounted` belongs here.
+     *
+     * The video element does not exist until the theme has resolved, so on the
+     * first run this effect finds no element and returns. Without `mounted` in
+     * the dependencies it never runs again, the observer is never attached to
+     * the element that eventually appears, and the hero sits on its first frame
+     * — silently, because the play() rejection is swallowed below.
+     */
+  }, [reducedMotion, mounted, footage.video]);
 
   const socials = [
     { key: 'tiktok', label: t.home.followTikTok, href: social.tiktok, Icon: TikTokIcon },
@@ -67,20 +117,54 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
      */
     <section className="relative isolate -mt-16 flex h-svh min-h-[40rem] items-center overflow-hidden bg-neutral-100 pt-16 md:-mt-20 md:pt-20 dark:bg-neutral-900">
       {/* 1 — the footage */}
-      {reducedMotion ? (
-        <div
-          className="absolute inset-0 bg-cover bg-[58%_center] sm:bg-center"
-          style={{ backgroundImage: 'url(/videos/hero-poster.jpg)' }}
-          aria-hidden="true"
-        />
+      {reducedMotion || !mounted ? (
+        /*
+         * The still frame: shown to anyone who asked for less motion, and to
+         * everybody for the moment before the browser has told us which theme
+         * it is in.
+         *
+         * Both posters are in the markup, and CSS picks between them. This used
+         * to be one element showing the night poster until the theme resolved,
+         * which meant every reload of the daytime site opened on a second of
+         * the wrong car before the right one replaced it. CSS has no such gap:
+         * next-themes puts the theme on the document before the first paint, so
+         * the correct still is the only one ever painted.
+         *
+         * A background image on a hidden element is not fetched, so this costs
+         * nobody the other poster.
+         */
+        <>
+          <div
+            className={cn(
+              'absolute inset-0 bg-cover bg-[58%_center] sm:bg-center dark:hidden',
+              // Graded to match its footage, or the swap would brighten.
+              LIGHT_FOOTAGE_GRADE,
+            )}
+            style={{ backgroundImage: `url(${FOOTAGE.light.poster})` }}
+            aria-hidden="true"
+          />
+          <div
+            className="absolute inset-0 hidden bg-cover bg-[58%_center] sm:bg-center dark:block"
+            style={{ backgroundImage: `url(${FOOTAGE.dark.poster})` }}
+            aria-hidden="true"
+          />
+        </>
       ) : (
         <video
+          /*
+           * Keyed on the file: changing a `<source>` alone does not reload a
+           * video, so switching theme would leave the old footage playing. The
+           * key replaces the element, which is what makes the browser fetch the
+           * other clip.
+           */
+          key={footage.video}
           ref={videoRef}
           className={cn(
             'absolute inset-0 size-full object-cover object-[58%_center] transition-opacity duration-[1400ms] sm:object-center',
+            LIGHT_FOOTAGE_GRADE,
             videoReady ? 'opacity-100' : 'opacity-0',
           )}
-          poster="/videos/hero-poster.jpg"
+          poster={footage.poster}
           muted
           loop
           playsInline
@@ -90,23 +174,40 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
           onCanPlay={() => setVideoReady(true)}
           onLoadedData={() => setVideoReady(true)}
         >
-          <source src="/videos/hero.mp4" type="video/mp4" />
+          <source src={footage.video} type="video/mp4" />
         </video>
       )}
 
       {/*
         2 — light scrim.
+
         A pale wash rather than a dark one, so the section stays airy while the
         type still clears AA. Wide screens fade left-to-right, keeping the copy
         legible and the car clear; narrow screens fade top-to-bottom, since
         there the copy sits over the vehicle rather than beside it.
+
+        Lightened considerably from 90% white down the left edge, which is what
+        made that side of the picture look bleached — it was not the footage,
+        it was this. The strength was set when contrast was being guessed at;
+        measured on real frames the wording had 9.6:1 and 12.9:1 where 4.5:1 is
+        required, so most of that wash was buying nothing but a washed-out
+        picture. The numbers after this change are in the commit that made it.
       */}
       <div
         aria-hidden="true"
         className={cn(
           'absolute inset-0',
-          'bg-[linear-gradient(to_bottom,color-mix(in_oklab,white_88%,transparent)_0%,color-mix(in_oklab,white_74%,transparent)_42%,color-mix(in_oklab,white_34%,transparent)_78%,transparent_100%)]',
-          'sm:bg-[linear-gradient(100deg,color-mix(in_oklab,white_90%,transparent)_0%,color-mix(in_oklab,white_72%,transparent)_38%,color-mix(in_oklab,white_26%,transparent)_66%,transparent_92%)]',
+          /*
+           * A pool of light behind the words, not a wash across the picture.
+           *
+           * The wash was 90% white down the whole left edge, which bleached
+           * half the frame to light four lines of text. This lifts an ellipse
+           * centred on the copy and leaves the rest of the picture alone — the
+           * corners, the sky and the sand come back — with a thin overall veil
+           * so the two do not meet at a visible seam.
+           */
+          'bg-[radial-gradient(120%_75%_at_50%_38%,color-mix(in_oklab,white_86%,transparent)_0%,color-mix(in_oklab,white_60%,transparent)_45%,color-mix(in_oklab,white_18%,transparent)_75%,transparent_100%)]',
+          'sm:bg-[radial-gradient(80%_105%_at_18%_52%,color-mix(in_oklab,white_88%,transparent)_0%,color-mix(in_oklab,white_62%,transparent)_42%,color-mix(in_oklab,white_16%,transparent)_72%,transparent_100%)]',
           'dark:bg-[linear-gradient(to_bottom,color-mix(in_oklab,black_84%,transparent)_0%,color-mix(in_oklab,black_66%,transparent)_42%,color-mix(in_oklab,black_30%,transparent)_78%,transparent_100%)]',
           'dark:sm:bg-[linear-gradient(100deg,color-mix(in_oklab,black_86%,transparent)_0%,color-mix(in_oklab,black_66%,transparent)_38%,color-mix(in_oklab,black_24%,transparent)_66%,transparent_92%)]',
         )}
@@ -121,7 +222,16 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
       {/* 3 — content */}
       <div className="relative z-10 mx-auto w-full max-w-7xl px-6 sm:px-8">
         <div className="max-w-3xl">
-          <p className="rise text-muted-foreground text-sm font-semibold tracking-[0.18em] uppercase">
+          {/*
+            Charcoal rather than the muted grey used elsewhere.
+            
+            This wording sits over moving footage, not over a flat surface, and
+            the footage is now graded darker: measured over the actual frames,
+            the warm grey fell to 4.39:1 — under the 4.5:1 small text needs, and
+            varying frame by frame as the picture moves. The full-strength text
+            colour holds regardless of what the car is doing behind it.
+          */}
+          <p className="rise text-foreground text-sm font-semibold tracking-[0.18em] uppercase">
             {t.home.heroEyebrow}
           </p>
 
@@ -138,7 +248,7 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
               {t.home.heroLine1}
             </span>
             <span
-              className="rise -mt-3 text-6xl leading-none font-normal text-[#202A36] md:text-7xl lg:text-8xl dark:text-neutral-50"
+              className="rise text-foreground -mt-3 text-6xl leading-none font-normal md:text-7xl lg:text-8xl"
               style={{ '--rise-delay': '150ms' } as React.CSSProperties}
             >
               {t.home.heroLine2}
@@ -146,7 +256,7 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
           </h1>
 
           <p
-            className="rise text-muted-foreground mt-6 max-w-2xl text-lg md:text-xl"
+            className="rise text-foreground mt-6 max-w-2xl text-lg md:text-xl"
             style={{ '--rise-delay': '230ms' } as React.CSSProperties}
           >
             {t.home.heroTagline}
@@ -166,10 +276,18 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
               <Link href="/cars">{t.home.heroDiscover}</Link>
             </Button>
 
+            {/*
+              * The main call to action, in champagne.
+              *
+              * It was a hardcoded #202A36 — a blue-grey from a palette this
+              * site left behind two changes ago — turning pure white in dark
+              * mode. Champagne belongs to the palette and is legible on the
+              * dark hero either way: 5.67:1 under a charcoal label.
+              */}
             <Button
               asChild
               size="lg"
-              className="group h-11 rounded-full bg-[#202A36] px-6 font-medium text-white transition-transform duration-300 hover:bg-[#1a2229] motion-safe:hover:-translate-y-0.5 dark:bg-white dark:text-[#202A36] dark:hover:bg-neutral-200"
+              className="group bg-brand-accent text-brand-accent-foreground hover:bg-brand-accent-hover h-11 rounded-full px-6 font-medium transition-transform duration-300 motion-safe:hover:-translate-y-0.5"
             >
               <Link href="/cars">
                 {t.home.heroBook}

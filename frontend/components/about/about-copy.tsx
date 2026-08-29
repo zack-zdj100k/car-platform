@@ -53,11 +53,23 @@ export function AboutCopy({
     { icon: UserRound, title: t.about.builtTitle, body: t.about.builtBody },
   ];
 
+  /*
+   * A story that is still the shipped placeholder counts as no story. The
+   * marker is deliberate and easy to search for; anything an administrator
+   * actually writes will not contain it.
+   */
+  const story = whoWeAre.includes('PLACEHOLDER') ? '' : whoWeAre.trim();
+
+  /*
+   * Quality · Innovation · Transparency · Passion is what every company in the
+   * world writes, and it proves nothing. These four are claims a visitor can
+   * check on the site in the next thirty seconds.
+   */
   const values = [
-    { icon: ShieldCheck, label: t.about.valueQuality },
-    { icon: Lightbulb, label: t.about.valueInnovation },
-    { icon: Eye, label: t.about.valueTransparency },
-    { icon: Heart, label: t.about.valuePassion },
+    { icon: ShieldCheck, label: t.about.valueSpecifications },
+    { icon: Eye, label: t.about.valueColours },
+    { icon: Lightbulb, label: t.about.valueCompare },
+    { icon: Heart, label: t.about.valuePrices },
   ];
 
   return (
@@ -70,11 +82,10 @@ export function AboutCopy({
         portrait={portrait}
         portraitLabel={t.about.portraitLabel}
         portraitAlt={t.about.portraitAlt}
-        portraitEmpty={t.about.portraitEmpty}
         valuesTitle={t.about.valuesTitle}
         values={values.map((value) => value.label)}
         ctaTitle={t.about.finalCtaTitle}
-        ctaBody={t.about.missionStatement}
+        ctaBody={t.about.finalCtaBody}
         ctaLabel={t.about.finalCtaButton}
         ctaHref="/cars"
       >
@@ -89,16 +100,26 @@ export function AboutCopy({
         </div>
       </AboutUsSection>
 
-      {/* Who we are (spec §29) */}
-      <Section id="who-we-are">
-        <div className="grid gap-10 lg:grid-cols-[1fr_1.2fr]">
-          <SectionHeading eyebrow={t.about.whoTitle} title={t.about.whoTitle} />
-          <div className="text-muted-foreground space-y-4 text-base/7">
-            <p className="whitespace-pre-line">{whoWeAre}</p>
-            <p>{t.home.featuresBody}</p>
+      {/*
+        Who we are (spec §29) — shown only when there is a story to tell.
+
+        The setting shipped with the words "PLACEHOLDER — supply the real
+        founding story" in it, and that is what customers read on the page. A
+        section that is missing says nothing; a section that says PLACEHOLDER
+        says the site is unfinished. Until the real text is written in
+        Administration › Settings › about.whoWeAre, this is not rendered.
+      */}
+      {story && (
+        <Section id="who-we-are">
+          <div className="grid gap-10 lg:grid-cols-[1fr_1.2fr]">
+            <SectionHeading eyebrow={t.about.whoTitle} title={t.about.whoTitle} />
+            <div className="text-muted-foreground space-y-4 text-base/7">
+              <p className="whitespace-pre-line">{story}</p>
+              <p>{t.home.featuresBody}</p>
+            </div>
           </div>
-        </div>
-      </Section>
+        </Section>
+      )}
 
       {/* Statistics (spec §33) — configurable marketing content, not analytics */}
       {stats.length > 0 && (

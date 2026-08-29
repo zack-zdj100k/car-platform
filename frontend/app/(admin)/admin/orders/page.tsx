@@ -236,11 +236,12 @@ export default function AdminOrdersPage() {
                   ))}
                 </SelectContent>
               </Select>
-              {transitions.data?.allowed.length === 0 && (
-                <p className="text-muted-foreground text-xs">
-                  {active?.status} is final — no further transitions are permitted.
-                </p>
-              )}
+              {/*
+                * No status is a dead end any more. COMPLETED used to offer an
+                * empty list and a line saying so, which left a real sale that
+                * fell through afterwards impossible to record.
+                */}
+              <p className="text-muted-foreground text-xs">{t.admin.statusFreeEdit}</p>
             </div>
 
             <div className="space-y-2">

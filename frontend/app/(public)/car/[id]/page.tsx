@@ -1,14 +1,20 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { CarDetailView } from '@/components/cars/car-detail-view';
+import { RecordView } from '@/components/cars/record-view';
 import { carsService } from '@/services/cars.service';
 import { ApiError } from '@/services/api-client';
 import type { CarDetail } from '@/types/api';
 
+/**
+ * Reads the car. Nothing else — the view is reported by the browser, which is
+ * the only place that knows who is reading (see `RecordView`).
+ */
 async function loadCar(id: string): Promise<CarDetail | null> {
   try {
-    // no-store: the request records a view, which must not be cached away.
-    return await carsService.detail(id, { cache: 'no-store' });
+    // Short-lived rather than no-store: a price or a photograph changing within
+    // the minute does not matter, and this way two readers share one fetch.
+    return await carsService.detail(id, { next: { revalidate: 30 } });
   } catch (error) {
     if (error instanceof ApiError && error.isNotFound) return null;
     throw error;
@@ -41,5 +47,10 @@ export default async function CarDetailPage({ params }: { params: Promise<{ id: 
   const car = await loadCar(id);
   if (!car) notFound();
 
-  return <CarDetailView car={car} />;
+  return (
+    <>
+      <RecordView slug={car.slug} />
+      <CarDetailView car={car} />
+    </>
+  );
 }

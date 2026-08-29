@@ -61,9 +61,15 @@ export function VideoShowcase() {
               <h2 className="mt-4 text-2xl font-semibold sm:text-3xl">{t.home.showcaseTitle}</h2>
               <p className="text-hero-foreground/75 mt-3 max-w-md text-sm/7">{t.home.showcaseBody}</p>
 
+              {/*
+                * Champagne on the dark panel rather than a white fill with a
+                * hardcoded blue-grey label — the label's colour was left over
+                * from a palette this site no longer uses, and pure white is
+                * not in the light palette at all.
+                */}
               <Button
                 asChild
-                className="mt-6 rounded-full bg-white px-6 text-[#202A36] hover:bg-neutral-200"
+                className="bg-brand-accent text-brand-accent-foreground hover:bg-brand-accent-hover mt-6 rounded-full px-6"
               >
                 <Link href="/cars" className="group">
                   {t.home.viewAllCars}

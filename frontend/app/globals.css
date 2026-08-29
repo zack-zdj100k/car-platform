@@ -13,71 +13,133 @@
 :root {
   --radius: 0.75rem;
 
-  /* Light surfaces */
-  --background: oklch(0.994 0.002 106);
-  --foreground: oklch(0.17 0.008 250);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.17 0.008 250);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.17 0.008 250);
+  /* ------------------------------------------------------------------------
+     LIGHT MODE — warm, premium, no pure white and no bright yellow.
+     Dark mode below is untouched: black page, army green accents.
+
+     The nine specified colours are used as given wherever they carry text or
+     define a surface, and every pair below was measured rather than guessed
+     (4.5:1 is the minimum for small text, 3:1 for a border or focus ring that
+     has to be findable):
+
+       charcoal on beige ............ 15.01:1
+       charcoal on cream ............ 16.48:1
+       warm gray on beige ............ 5.42:1
+       warm gray on cream ............ 5.96:1
+
+     The one colour that cannot be used as written is the champagne. #B08A4A
+     reaches 2.65:1 on the beige and 2.91:1 on a card — well under half of what
+     small text needs — so as a price, a link or a thin detail it would be a
+     colour you could see and not read. It is kept exactly as specified where it
+     is genuinely legible, on the dark hero and the dark premium sections
+     (5.67:1 and 5.44:1), and the champagne family is extended downwards for
+     everything on a light surface. #7A5C28 is the same hue carried far enough
+     to read: 5.14:1 as text on the beige, and 5.65:1 under a cream label when
+     it fills a button.
+     ------------------------------------------------------------------------ */
+
+  /* Surfaces */
+  --background: #f1e9dc; /* warm beige */
+  --foreground: #171614; /* deep charcoal */
+  --card: #f8f4ec; /* cream — replaces the pure white this used to be */
+  --card-foreground: #171614;
+  --popover: #f8f4ec;
+  --popover-foreground: #171614;
+
+  --secondary: #e8dfd1; /* soft sand */
+  --secondary-foreground: #171614;
+  --muted: #e8dfd1;
+  --muted-foreground: #625d54; /* warm gray */
 
   /*
-   * Army green. Deep enough that pale text on a filled button clears AA
-   * (7.53:1) and the green itself reads on white (8.21:1).
+   * The champagne family.
+   *
+   * `--primary` is the one token that has to do both jobs — it fills buttons
+   * and colours text — so it is the deepest member, the only one that passes
+   * both ways. The two lighter steps are for dark surfaces and decoration,
+   * where they measure properly.
    */
-  --primary: #4b5320;
-  --primary-foreground: #f5f5f5;
-
-  --secondary: oklch(0.965 0.004 106);
-  --secondary-foreground: oklch(0.23 0.012 250);
-  --muted: oklch(0.965 0.004 106);
-  /* Darkened from 0.5: at 0.5 this failed the 4.5:1 minimum against
-     white cards in the accessibility audit (spec §65). */
-  --muted-foreground: oklch(0.44 0.012 250);
-
-  /* A green tint for emphasis, drawn from the same hue as the primary */
-  --accent: #eef0e2;
-  --accent-foreground: #3f4a1c;
-  --brand-accent: #6b7f3a;
-
-  --destructive: oklch(0.55 0.19 27);
-  --destructive-foreground: oklch(0.985 0.004 106);
-  --success: oklch(0.55 0.13 155);
-  --warning: oklch(0.72 0.14 75);
-
-  --border: oklch(0.915 0.004 106);
-  --input: oklch(0.915 0.004 106);
-  --ring: #4b5320;
+  --primary: #7a5c28; /* text and fills on light surfaces */
+  --primary-foreground: #f8f4ec;
+  --primary-hover: #664d20; /* darker on hover */
 
   /*
-   * Hero environment (spec §8, §59) — black easing into army green.
-   * `from` is black and `via` carries the green, which is what the radial
-   * gradient reads as.
+   * The champagne itself, for the dark hero and the dark premium panels — the
+   * places it is legible. Its label is charcoal, not cream: charcoal on
+   * champagne is 5.67:1, cream on champagne only 2.91:1.
+   *
+   * Hover brightens rather than darkens. #92713B was specified for it, and
+   * behind a charcoal label it measures 4.00:1 — just under the 4.5:1 a small
+   * label needs, and darkening any further only makes it worse while the label
+   * stays dark. Lifting the gold instead reads as metal catching the light and
+   * measures 8.07:1. #92713B is kept below for borders and rules, where no
+   * text sits on it and it is free to be the deeper tone it was meant to be.
    */
-  --hero-from: #0a0a0a;
-  --hero-via: #3f4a1c;
-  --hero-to: #050505;
-  --hero-foreground: oklch(0.98 0.005 300);
+  --brand-accent: #b08a4a;
+  --brand-accent-hover: #c9a96a;
+  --brand-accent-foreground: #171614;
+  --champagne-deep: #92713b; /* as specified — borders, rules, thin details */
+
+  /* A champagne tint, for the hover state of quiet controls */
+  --accent: #eee2cb;
+  --accent-foreground: #664d20;
+
+  /* Status colours, warmed to sit inside this palette */
+  --destructive: #a32b18;
+  --destructive-foreground: #f8f4ec;
+  --success: #2f6b3e;
+  --warning: #8a6114; /* bronze, deliberately not a bright yellow */
+
+  --border: #d8ccba; /* soft beige — card and divider edges */
+  /*
+   * Form fields are darker than the decorative border on purpose. A card's
+   * edge is decoration and may be faint; the outline of a field a customer has
+   * to find and type into is a control, and WCAG asks for 3:1. The soft beige
+   * gives 1.44:1 — this gives 3.76:1 on a card and 3.42:1 on the page.
+   */
+  --input: #8a7b62;
+  --ring: #7a5c28;
+
+  /*
+   * Hero environment (spec §8, §59) — espresso easing through champagne.
+   * Warm rather than the black-and-green of dark mode, so light mode reads as
+   * one palette; the pale text on it measures 15.01:1 and 9.09:1.
+   */
+  --hero-from: #171614;
+  --hero-via: #4a3a20;
+  --hero-to: #0f0e0c;
+  --hero-foreground: #f1e9dc;
+  /*
+   * The radial backdrop's far end. This used to fall through to a violet
+   * default left over from an earlier palette, because the variable was never
+   * defined in either theme — the gradient really did end in violet.
+   */
+  --brand-radial-end: #4a3a20;
 
   /* Dark premium section, used on light pages */
-  --surface-dark: #101012;
-  --surface-dark-foreground: oklch(0.97 0.004 300);
+  --surface-dark: #1c1a16;
+  --surface-dark-foreground: #f1e9dc;
 
-  /* Data visualisation (admin analytics), keyed to the green */
-  --chart-1: #4b5320;
-  --chart-2: #6b7f3a;
-  --chart-3: #8a9a5b;
-  --chart-4: #3f4a1c;
-  --chart-5: #4f6b52;
+  /*
+   * Analytics. A single champagne ramp from espresso to light bronze, plus one
+   * olive that differs in hue as well as lightness. Every step clears 3:1
+   * against the page, and adjacent steps stay at least 1.4:1 apart so two bars
+   * beside each other are never the same colour twice.
+   */
+  --chart-1: #3b2e15;
+  --chart-2: #5c4520;
+  --chart-3: #7f6231;
+  --chart-4: #9c7940;
+  --chart-5: #4f5b3c;
 
-  --sidebar: oklch(0.985 0.003 106);
-  --sidebar-foreground: oklch(0.17 0.008 250);
-  --sidebar-primary: #4b5320;
-  --sidebar-primary-foreground: #f5f5f5;
-  --sidebar-accent: #eef0e2;
-  --sidebar-accent-foreground: #3f4a1c;
-  --sidebar-border: oklch(0.915 0.004 300);
-  --sidebar-ring: #4b5320;
+  --sidebar: #e8dfd1;
+  --sidebar-foreground: #171614;
+  --sidebar-primary: #7a5c28;
+  --sidebar-primary-foreground: #f8f4ec;
+  --sidebar-accent: #eee2cb;
+  --sidebar-accent-foreground: #664d20;
+  --sidebar-border: #d8ccba;
+  --sidebar-ring: #7a5c28;
 }
 
 .dark {
@@ -101,6 +163,9 @@
 
   --primary: #8a9a5b;
   --primary-foreground: #0a0a0a;
+  /* Lighter on hover here: the label on a filled button is near-black, so
+     brightening the fill raises its contrast rather than lowering it. */
+  --primary-hover: #a8bc6e;
 
   --secondary: #1f1f22;
   --secondary-foreground: #f5f5f5;
@@ -111,6 +176,9 @@
   --accent: #24291a;
   --accent-foreground: #cddba6;
   --brand-accent: #a8bc6e;
+  --brand-accent-hover: #c3d18f;
+  --brand-accent-foreground: #171614;
+  --champagne-deep: #6b7f3a;
 
   --destructive: oklch(0.68 0.17 25);
   --destructive-foreground: #0a0a0a;
@@ -126,6 +194,8 @@
   --hero-via: #3f4a1c;
   --hero-to: #0a0a0a;
   --hero-foreground: #f5f5f5;
+  /* Was falling through to the old violet default. */
+  --brand-radial-end: #3f4a1c;
 
   --surface-dark: #0e0e10;
   --surface-dark-foreground: #f5f5f5;
@@ -156,6 +226,10 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-brand-accent-hover: var(--brand-accent-hover);
+  --color-brand-accent-foreground: var(--brand-accent-foreground);
+  --color-champagne-deep: var(--champagne-deep);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -196,6 +270,7 @@
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-display), var(--font-body), ui-sans-serif, sans-serif;
   --font-arabic: var(--font-arabic), var(--font-body), ui-sans-serif, sans-serif;
+  --font-arabic-display: var(--font-arabic-display), var(--font-arabic), ui-sans-serif, sans-serif;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -204,8 +279,9 @@
   --radius-2xl: calc(var(--radius) + 12px);
 
   /* Consistent elevation across the platform (spec §59) */
-  --shadow-card: 0 1px 2px oklch(0.17 0.008 250 / 4%), 0 8px 24px -12px oklch(0.17 0.008 250 / 12%);
-  --shadow-lifted: 0 2px 4px oklch(0.17 0.008 250 / 5%), 0 20px 40px -20px oklch(0.17 0.008 250 / 22%);
+  /* Warm shadows: a blue-grey shadow over beige reads as grubby, not as depth. */
+  --shadow-card: 0 1px 2px oklch(0.17 0.01 60 / 5%), 0 8px 24px -12px oklch(0.17 0.01 60 / 14%);
+  --shadow-lifted: 0 2px 4px oklch(0.17 0.01 60 / 6%), 0 20px 40px -20px oklch(0.17 0.01 60 / 24%);
 }
 
 @layer base {
@@ -223,6 +299,7 @@
   [dir='rtl'] body {
     @apply font-arabic;
   }
+
 
   h1, h2, h3, h4 {
     @apply font-display tracking-tight;
@@ -255,7 +332,7 @@
     background: radial-gradient(
       125% 125% at 50% 10%,
       var(--hero-from) 40%,
-      var(--brand-radial-end, oklch(0.514 0.254 285.7)) 100%
+      var(--brand-radial-end) 100%
     );
   }
 
@@ -348,4 +425,24 @@
     opacity: 1 !important;
     transform: none !important;
   }
+}
+
+/*
+ * Arabic headings get their own face, as Latin ones do.
+ *
+ * An Arabic heading used to be set in the body face — correctly shaped, but
+ * flat beside the same page in French, whose headings are Sora. Kufi carries
+ * the same geometry at heading size.
+ *
+ * Deliberately outside `@layer`. Headings carry Tailwind's `font-display`
+ * utility, and a utility beats anything in the base layer — written there, as
+ * this was at first, the rule was in the stylesheet and had no effect at all.
+ * Unlayered CSS outranks every layer, which is what makes it apply.
+ *
+ * The line height is raised a little: Arabic ascenders and descenders are
+ * deeper than Latin ones, and Sora's tight heading leading clips them.
+ */
+[dir='rtl'] :is(h1, h2, h3, h4) {
+  font-family: var(--font-arabic-display);
+  line-height: 1.35;
 }

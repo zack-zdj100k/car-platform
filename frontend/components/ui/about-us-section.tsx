@@ -11,7 +11,7 @@ import {
   useTransform,
   type Variants,
 } from 'motion/react';
-import { ArrowRight, ImagePlus, Zap, type LucideIcon } from 'lucide-react';
+import { ArrowRight, Zap, type LucideIcon } from 'lucide-react';
 import { MediaImage } from '@/components/shared/media-image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -64,7 +64,6 @@ export interface AboutUsSectionProps {
   /** Upload id or path for the portrait; empty renders the placeholder. */
   portrait?: string;
   portraitLabel: string;
-  portraitEmpty: string;
   portraitAlt: string;
   /** Counters, when they belong inside the section. */
   stats?: AboutStat[];
@@ -88,7 +87,6 @@ export function AboutUsSection({
   points,
   portrait,
   portraitLabel,
-  portraitEmpty,
   portraitAlt,
   stats,
   statsNote,
@@ -165,14 +163,29 @@ export function AboutUsSection({
           <p className="text-muted-foreground mt-6 max-w-2xl text-base/7">{intro}</p>
         </motion.div>
 
-        <div className="mt-16 grid gap-10 md:grid-cols-3 md:gap-8">
+        {/*
+          * Three columns with the portrait between them, or a plain row of
+          * points when there is no portrait.
+          *
+          * The frame used to be drawn empty, holding a line of instructions
+          * addressed to the administrator — "upload one in Administration ›
+          * Settings" — which every customer read. An empty frame in the middle
+          * of the page also made the four points look like they had come apart
+          * around a hole. With no photograph there is simply nothing there.
+          */}
+        <div
+          className={cn(
+            'mt-16 grid gap-10 md:gap-8',
+            portrait ? 'md:grid-cols-3' : 'md:grid-cols-2',
+          )}
+        >
           <ul className="space-y-12 md:space-y-14">
             {columns[0].map((point) => (
               <PointItem key={point.title} point={point} from="start" variants={item} reduced={reduced} />
             ))}
           </ul>
 
-          {/* The portrait. */}
+          {portrait && (
           <motion.div data-entrance className="order-first flex justify-center md:order-none" variants={item}>
             <figure className="relative w-full max-w-xs">
               <figcaption className="text-primary mb-3 text-center text-xs font-semibold tracking-[0.18em] uppercase">
@@ -180,21 +193,13 @@ export function AboutUsSection({
               </figcaption>
 
               <div className="ring-primary/25 relative aspect-4/5 overflow-hidden rounded-2xl shadow-[var(--shadow-lifted)] ring-1">
-                {portrait ? (
-                  <MediaImage
-                    src={portrait}
-                    alt={portraitAlt}
-                    fill
-                    sizes="(min-width: 48rem) 20rem, 80vw"
-                    className="object-cover"
-                  />
-                ) : (
-                  /* No photograph supplied yet — say so rather than invent one. */
-                  <div className="bg-secondary text-muted-foreground flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
-                    <ImagePlus className="size-8" aria-hidden="true" />
-                    <p className="text-xs/5">{portraitEmpty}</p>
-                  </div>
-                )}
+                <MediaImage
+                  src={portrait}
+                  alt={portraitAlt}
+                  fill
+                  sizes="(min-width: 48rem) 20rem, 80vw"
+                  className="object-cover"
+                />
               </div>
 
               <span
@@ -203,6 +208,7 @@ export function AboutUsSection({
               />
             </figure>
           </motion.div>
+          )}
 
           <ul className="space-y-12 md:space-y-14">
             {columns[1].map((point) => (

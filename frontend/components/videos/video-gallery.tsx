@@ -24,7 +24,7 @@ export function VideoGallery({ cars }: { cars: CarListItem[] }) {
     description: [car.year, car.trim].filter(Boolean).join(' · '),
     image: car.images[0]?.url,
     href: `/car/${car.slug}`,
-    videoUrl: car.tiktokUrl ?? undefined,
+    videoUrl: car.videoUrl ?? undefined,
   }));
 
   return (
@@ -42,7 +42,7 @@ export function VideoGallery({ cars }: { cars: CarListItem[] }) {
           ratio="portrait"
           items={items}
           labels={{
-            watch: t.car.tiktokTitle,
+            watch: t.car.videoTitle,
             view: t.videos.viewCar,
             noImage: t.videos.noImage,
           }}

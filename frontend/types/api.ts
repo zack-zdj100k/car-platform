@@ -11,7 +11,16 @@ export type FuelType = 'PETROL' | 'DIESEL' | 'HYBRID' | 'PLUG_IN_HYBRID' | 'ELEC
 export type Transmission = 'MANUAL' | 'AUTOMATIC' | 'CVT' | 'DCT' | 'AMT' | 'SINGLE_SPEED';
 export type Drivetrain = 'FWD' | 'RWD' | 'AWD' | 'FOUR_WD';
 export type ColorKind = 'EXTERIOR' | 'INTERIOR';
-export type ImageKind = 'MAIN' | 'GALLERY' | 'EXTERIOR' | 'INTERIOR' | 'WHEEL';
+export type ImageKind =
+  | 'MAIN'
+  | 'GALLERY'
+  | 'EXTERIOR'
+  | 'INTERIOR'
+  | 'WHEEL'
+  | 'ENGINE'
+  | 'TRUNK'
+  | 'OTHER'
+  | 'SPIN';
 
 export interface PaginationMeta {
   page: number;
@@ -52,6 +61,8 @@ export interface CarImage {
   kind: ImageKind;
   url: string;
   alt: string | null;
+  /** Heading for an OTHER photograph — what the admin called this slot. */
+  label?: string | null;
   width?: number | null;
   height?: number | null;
   sortOrder?: number;
@@ -211,7 +222,7 @@ export interface CarListItem {
   currency: string;
   marketingDescription: string | null;
   /** Set when this vehicle has a TikTok clip; the card links to it. */
-  tiktokUrl?: string | null;
+  videoUrl?: string | null;
   /** Promotional price while a promotion runs; `price` is then struck through. */
   promoPrice?: string | null;
   isFeatured: boolean;
@@ -245,7 +256,7 @@ export interface CarDetail {
   marketingDescription: string | null;
   description: string | null;
   /** Link to this vehicle's TikTok video, when one has been recorded. */
-  tiktokUrl: string | null;
+  videoUrl: string | null;
   /** Promotional price while a promotion runs; `price` is then struck through. */
   promoPrice: string | null;
   status: CarStatus;
@@ -418,6 +429,8 @@ export interface AnalyticsDashboard {
     favorites: { total: number };
     orders: { total: number; pending: number };
     views: { total: number; last30Days: number };
+    /** Distinct people, not page hits. See the analytics service. */
+    visitors: { total: number; last30Days: number };
     brands: { total: number };
     generatedAt: string;
   };
@@ -429,6 +442,7 @@ export interface AnalyticsDashboard {
     cars: { date: string; count: number }[];
     orders: { date: string; count: number }[];
     views: { date: string; count: number }[];
+    visitors: { date: string; count: number }[];
   };
   orderBreakdown: { status: OrderStatus; count: number }[];
   catalogue: {

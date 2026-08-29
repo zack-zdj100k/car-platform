@@ -110,6 +110,41 @@ const publicPages = [
   ['forgot password', '/forgot-password', 'form'],
 ] as const;
 
+/**
+ * The same pages in light mode.
+ *
+ * The site opens in dark mode, so an audit that only loads a page audits one of
+ * the two palettes — and the warm light palette is the one that changed. Its
+ * champagne accent is the exact colour that cannot be taken on trust: as small
+ * text on beige the specified #B08A4A measures 2.65:1, well under half of what
+ * is required, which is why the light palette uses a deeper member of the same
+ * family for text and keeps the champagne for dark surfaces. This proves that
+ * in the rendered page rather than in a spreadsheet.
+ */
+test.describe('WCAG 2.2 AA — public pages in light mode', () => {
+  for (const [name, path, ready] of publicPages) {
+    test(`${name} has no automatically detectable violations in light mode`, async ({ page }) => {
+      // next-themes reads this before first paint, so the page never renders dark.
+      await page.addInitScript(() => window.localStorage.setItem('theme', 'light'));
+      await page.goto(path);
+      await page.waitForFunction(() => document.documentElement.classList.contains('light'));
+
+      const results = await analyse(page, ready);
+
+      if (results.violations.length > 0) {
+        console.log(
+          `\n${name} (light) violations:\n` +
+            results.violations
+              .map((v) => `  [${v.impact}] ${v.id}: ${v.help}\n    ${v.nodes.map((n) => n.target.join(' ')).join('\n    ')}`)
+              .join('\n'),
+        );
+      }
+
+      expect(results.violations).toEqual([]);
+    });
+  }
+});
+
 test.describe('WCAG 2.2 AA — public pages', () => {
   for (const [name, path, ready] of publicPages) {
     test(`${name} has no automatically detectable violations`, async ({ page }) => {
