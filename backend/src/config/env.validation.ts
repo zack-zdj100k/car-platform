@@ -36,7 +36,7 @@ export const envSchema = z.object({
   MAIL_SECURE: booleanish.default(false),
   MAIL_USER: z.string().default(''),
   MAIL_PASSWORD: z.string().default(''),
-  MAIL_FROM: z.string().default('Car Platform <no-reply@example.com>'),
+  MAIL_FROM: z.string().default('ZODIK CAR <no-reply@example.com>'),
   ADMIN_NOTIFICATION_EMAIL: z.string().email().default('admin@example.com'),
 
   NEXT_PUBLIC_SITE_URL: z.string().default('http://localhost:3000'),

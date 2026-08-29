@@ -111,7 +111,7 @@ export function SiteHeader() {
             <Car className="text-primary size-5" aria-hidden="true" />
           </span>
           <span className="font-display hidden text-base font-semibold tracking-tight sm:inline">
-            Car Platform
+            ZODIK CAR
           </span>
         </Link>
 
@@ -220,7 +220,7 @@ export function SiteHeader() {
             </SheetTrigger>
             <SheetContent side={dir === 'rtl' ? 'left' : 'right'} className="w-[min(20rem,90vw)]">
               <SheetHeader>
-                <SheetTitle className="font-display">Car Platform</SheetTitle>
+                <SheetTitle className="font-display">ZODIK CAR</SheetTitle>
               </SheetHeader>
               <nav aria-label={t.nav.dashboard} className="mt-2 flex flex-col gap-1 px-4">
                 {/*

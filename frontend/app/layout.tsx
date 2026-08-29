@@ -32,15 +32,15 @@ const kufiArabic = Noto_Kufi_Arabic({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Car Platform — Chinese cars: quality & innovation',
-    template: '%s · Car Platform',
+    default: 'ZODIK CAR — Chinese cars: quality & innovation',
+    template: '%s · ZODIK CAR',
   },
   description:
     'A premium catalogue for discovering Chinese vehicles: full specifications, comparison and favourites.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
   openGraph: {
     type: 'website',
-    title: 'Car Platform',
+    title: 'ZODIK CAR',
     description: 'Discover Chinese vehicles with complete specifications.',
   },
   robots: { index: true, follow: true },

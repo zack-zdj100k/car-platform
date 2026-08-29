@@ -30,7 +30,7 @@ export function AuthShell({
             <span className="bg-primary/10 ring-primary/20 grid size-9 place-items-center rounded-lg ring-1 ring-inset">
               <Car className="text-primary size-5" aria-hidden="true" />
             </span>
-            <span className="font-display font-semibold tracking-tight">Car Platform</span>
+            <span className="font-display font-semibold tracking-tight">ZODIK CAR</span>
           </Link>
           <div className="flex items-center gap-1">
             <LanguageSwitcher />

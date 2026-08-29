@@ -15,7 +15,7 @@ export const settings: {
   isPublic: boolean;
   description: string;
 }[] = [
-  { key: 'site.name', value: 'Car Platform', group: 'general', isPublic: true, description: 'Site name shown in the header and metadata. Replace when the final brand name is provided.' },
+  { key: 'site.name', value: 'ZODIK CAR', group: 'general', isPublic: true, description: 'Site name shown in the header and metadata. The brand name, shown in the header, the tab title and the footer.' },
   { key: 'site.tagline', value: 'Chinese cars: The best choice for quality & innovation', group: 'general', isPublic: true, description: 'Home hero headline (spec §8).' },
   { key: 'site.defaultLocale', value: 'EN', group: 'general', isPublic: true, description: 'Fallback locale — EN / FR / AR (spec §7).' },
   { key: 'site.contactEmail', value: 'contact@example.com', group: 'general', isPublic: true, description: 'Placeholder until the real address is provided.' },
