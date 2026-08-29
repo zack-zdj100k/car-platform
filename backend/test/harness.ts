@@ -6,6 +6,7 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { NotificationsService } from '../src/notifications/notifications.service';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter';
 
 export interface TestContext {
@@ -42,6 +43,17 @@ export async function createTestApp(): Promise<TestContext> {
     prisma,
     http: () => request(app.getHttpServer() as App) as unknown as request.SuperTest<request.Test>,
   };
+}
+
+/**
+ * Waits for the emails an order queued.
+ *
+ * Order notifications are sent in the background so the customer is not made
+ * to wait for a mail server, which means a request can return before its
+ * `email_logs` rows exist. A test asserting on them has to say so.
+ */
+export async function flushEmails(context: TestContext): Promise<void> {
+  await context.app.get(NotificationsService).flush();
 }
 
 /** Wipes every table between suites so tests never depend on each other. */

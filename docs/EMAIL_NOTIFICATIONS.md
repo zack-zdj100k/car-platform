@@ -98,6 +98,21 @@ A failed or undeliverable notification never blocks an order. The customer's
 request is saved first and the mail is attempted afterwards, so an outage at
 Google cannot cost you a sale.
 
+## The customer does not wait for the email
+
+Sending happens in the background. The order is saved, the customer is told so
+immediately, and the two messages are handed to Gmail after the answer has
+already gone out.
+
+This was measured, because it used to matter: an order took **3,386 ms** while
+the response waited for the mail server. The same order now returns in **25 ms**,
+and the emails arrive a second or two later. A slow — or completely unreachable
+— mail server costs the customer nothing.
+
+Nothing is dropped on the way out, either. Stopping the server waits for any
+message still in flight before it exits, and every attempt is in `email_logs`
+whatever happens.
+
 ## Another provider
 
 Any SMTP service works — the settings are the same four lines. For a domain of

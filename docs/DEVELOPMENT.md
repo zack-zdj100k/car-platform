@@ -84,6 +84,42 @@ The only commands that touch data are the ones that say so: `npm run db:reset`
 (destroys and rebuilds) and `npm run db:seed` (inserts the demo catalogue).
 Neither runs on its own.
 
+## The figures in the administration are real
+
+Every number under Analyses et rapports is counted from the database. Nothing is
+estimated, and the seed no longer invents activity — it used to write 7,647 car
+views and five orders from people who do not exist, which is why the dashboard
+looked busy for a site that had never been published.
+
+Two numbers, and they are not the same thing:
+
+- **Visitors** — people. One person is one visitor however many pages they open.
+- **Page views** — how many times a car was opened.
+
+What is *not* counted:
+
+- Robots. Search engines, link previewers and uptime monitors announce
+  themselves in the user agent and are left out.
+- You. An administrator browsing their own catalogue is not an audience.
+- The same person opening the same car again within 30 minutes. That is one
+  visit, not two — before this, seven presses of the reload key were seven
+  views.
+
+A signed-out visitor is recognised by `visitor_id`, a random first-party cookie
+set by `frontend/middleware.ts` and sent nowhere but this site's own API. It
+holds no name, no address and no history. If cookies are blocked, the visitor's
+address and browser are hashed together instead — the hash is one-way and salted
+per installation, so the address itself is never stored.
+
+Counting starts the moment the site is reachable by real people; until then the
+Analytics page says so rather than showing zeros that look like a fault.
+
+```bash
+npm run analytics:reset            # show what invented activity is left
+npm run analytics:reset -- --yes   # remove it
+SEED_DEMO_ACTIVITY=1 npm run db:seed   # put it back, for working on the screens
+```
+
 ## Every script
 
 | Command | What it does |
@@ -99,6 +135,7 @@ Neither runs on its own.
 | `npm run prisma:studio` | Browse the database in a GUI |
 | `npm run prisma:deploy` | Apply pending migrations |
 | `npm run db:seed` | Insert the demo catalogue |
+| `npm run analytics:reset` | Remove invented views, favourites and demo orders |
 
 ## Settings live in one file
 

@@ -30,18 +30,25 @@ const orderCarSelect = {
 } satisfies Prisma.CarSelect;
 
 /**
- * Permitted status transitions (spec §25).
+ * Which statuses an order can be moved to: any of them, bar the one it is in.
  *
- * Encoded explicitly so a completed order cannot silently revert to pending,
- * and every move is auditable.
+ * This was a fixed table of permitted moves in which COMPLETED was a dead end
+ * and CANCELLED could only return to PENDING. The intention was that a finished
+ * order could not quietly un-finish itself.
+ *
+ * Real sales do not behave like that. A customer who confirmed changes their
+ * mind, a delivery falls through, an order is marked completed by mistake, or
+ * one that was cancelled comes back weeks later — and the person who has to
+ * record it is the one who was locked out. A rule that forces the owner of the
+ * business to lie about what happened protects nothing.
+ *
+ * The safeguard was never the table. It is the history: every move is written
+ * to `order_status_history` with who made it, when, and any note — so a
+ * correction is visible as a correction, which is exactly what an audit needs.
  */
-const ALLOWED_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  PENDING: [OrderStatus.CONTACTED, OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
-  CONTACTED: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED, OrderStatus.COMPLETED],
-  CONFIRMED: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
-  CANCELLED: [OrderStatus.PENDING],
-  COMPLETED: [],
-};
+function allowedFrom(status: OrderStatus): OrderStatus[] {
+  return Object.values(OrderStatus).filter((candidate) => candidate !== status);
+}
 
 @Injectable()
 export class OrdersService {
@@ -124,8 +131,11 @@ export class OrdersService {
 
     this.logger.log(`Order ${order.reference} created for car ${car.id}`);
 
-    // Spec §26: the order is already committed. Notification failures are
-    // logged in email_logs and never propagate to the customer.
+    /*
+     * Spec §26: the order is already committed. Notification failures are
+     * logged in email_logs and never propagate to the customer — and, since
+     * nothing about the response depends on them, neither does its timing.
+     */
     const siteUrl = this.config.get('app', { infer: true }).siteUrl;
     const notificationData = {
       reference: order.reference,
@@ -139,10 +149,7 @@ export class OrdersService {
       submittedAt: order.createdAt,
     };
 
-    await Promise.allSettled([
-      this.notifications.sendOrderNotification(notificationData, order.id),
-      this.notifications.sendOrderConfirmation(notificationData, order.id),
-    ]);
+    this.notifications.dispatchOrderEmails(notificationData, order.id);
 
     return order;
   }
@@ -260,15 +267,6 @@ export class OrdersService {
       throw new BadRequestException(`This order is already ${dto.status.toLowerCase()}`);
     }
 
-    const allowed = ALLOWED_TRANSITIONS[order.status];
-    if (!allowed.includes(dto.status)) {
-      throw new BadRequestException(
-        allowed.length === 0
-          ? `A ${order.status.toLowerCase()} order can no longer change status.`
-          : `Cannot move an order from ${order.status} to ${dto.status}. Allowed: ${allowed.join(', ')}.`,
-      );
-    }
-
     const [updated] = await this.prisma.$transaction([
       this.prisma.order.update({
         where: { id },
@@ -290,9 +288,9 @@ export class OrdersService {
     return updated;
   }
 
-  /** Valid next statuses, so the admin UI can offer only legal transitions. */
+  /** Every status the order is not already in — see `allowedFrom`. */
   allowedTransitions(status: OrderStatus): OrderStatus[] {
-    return ALLOWED_TRANSITIONS[status];
+    return allowedFrom(status);
   }
 
   async countForUser(userId: string): Promise<number> {

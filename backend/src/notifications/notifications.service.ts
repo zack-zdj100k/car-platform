@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EmailStatus } from '@prisma/client';
 import * as nodemailer from 'nodemailer';
@@ -34,9 +34,24 @@ interface SendArgs {
  * which is the development default.
  */
 @Injectable()
-export class NotificationsService implements OnModuleInit {
+export class NotificationsService implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger(NotificationsService.name);
   private transporter: Transporter | null = null;
+
+  /*
+   * Sends still in flight.
+   *
+   * An order used to wait for Gmail before it was confirmed: the customer sat
+   * in front of a spinner for three and a half seconds while two messages were
+   * handed to a mail server, which is no business of theirs. The order is
+   * committed before any of it starts and a delivery failure was never allowed
+   * to affect it, so there was nothing in that wait for them.
+   *
+   * What the wait did buy was the guarantee that a message had left before the
+   * process could. That is kept, in the only place it belongs: `flush()`
+   * settles everything outstanding, and shutdown calls it.
+   */
+  private readonly pending = new Set<Promise<unknown>>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -122,6 +137,75 @@ export class NotificationsService implements OnModuleInit {
       });
       return false;
     }
+  }
+
+  /** Runs a send in the background, tracked until it settles. */
+  private track(work: Promise<unknown>): void {
+    const tracked = work
+      .catch((error) => {
+        /*
+         * `send` records and swallows its own failures, so this catches only
+         * something unforeseen — and it has to catch it, because an unhandled
+         * rejection with no caller left to receive it would take the process
+         * down and every other request with it.
+         */
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.error(`Background notification failed: ${message}`);
+      })
+      .finally(() => {
+        this.pending.delete(tracked);
+      });
+
+    this.pending.add(tracked);
+  }
+
+  /**
+   * Both order emails, queued rather than awaited.
+   *
+   * Returns the moment the work is scheduled, so the customer's confirmation
+   * appears at once. Anything needing certainty that delivery finished — the
+   * tests, and shutdown — calls `flush()`.
+   */
+  dispatchOrderEmails(data: OrderNotificationData, orderId: string): void {
+    this.track(
+      Promise.allSettled([
+        this.sendOrderNotification(data, orderId),
+        this.sendOrderConfirmation(data, orderId),
+      ]),
+    );
+  }
+
+  /** Waits for every queued notification to settle, bounded by a deadline. */
+  async flush(timeoutMs = 10_000): Promise<void> {
+    const deadline = Date.now() + timeoutMs;
+
+    while (this.pending.size > 0 && Date.now() < deadline) {
+      let timer: NodeJS.Timeout | undefined;
+      const expiry = new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, Math.max(0, deadline - Date.now()));
+      });
+
+      // Whichever comes first: the outstanding sends, or the deadline. The
+      // timer is cleared either way, so a test never waits on it.
+      await Promise.race([Promise.all([...this.pending]), expiry]);
+      if (timer) clearTimeout(timer);
+    }
+
+    if (this.pending.size > 0) {
+      this.logger.warn(`${this.pending.size} notification(s) unfinished after ${timeoutMs}ms`);
+    }
+  }
+
+  /**
+   * Stopping the server does not abandon a message half-sent.
+   *
+   * Requires `enableShutdownHooks()` in main.ts, which is why it is there.
+   */
+  async onApplicationShutdown(): Promise<void> {
+    if (this.pending.size > 0) {
+      this.logger.log(`Finishing ${this.pending.size} notification(s) before shutdown`);
+    }
+    await this.flush(5_000);
   }
 
   /** Spec §26 — administrator notification for a new order. */

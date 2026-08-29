@@ -6,8 +6,19 @@ import { PrismaService } from '../prisma/prisma.service';
  * Admin analytics (spec §45, §68).
  *
  * Every figure here is a database aggregate. Nothing is hard-coded, estimated
- * or padded — spec §45 explicitly forbids fake analytics. The §33 marketing
- * figures are separate, editable settings; see docs/DECISIONS.md D-2.1.
+ * or padded — spec §45 explicitly forbids fake analytics.
+ *
+ * That was always true of this file and still left the dashboard misleading,
+ * because the rows it aggregated were invented: the development seed wrote
+ * 7,647 car views and five orders from people who do not exist, and every view
+ * was stored with no identity, so "views" counted requests — robots and
+ * reloads included — and the number of people behind them could not be
+ * recovered at all. Honest arithmetic over dishonest rows is still a lie.
+ *
+ * The rows are real now (see `CarsService.recordView` for what is and is not
+ * counted), the seed no longer invents them, and `npm run analytics:reset`
+ * removes what it invented before. The §33 marketing figures shown to
+ * customers are counted from the same data; see `SettingsService`.
  */
 @Injectable()
 export class AnalyticsService {
@@ -55,15 +66,45 @@ export class AnalyticsService {
       this.prisma.brand.count(),
     ]);
 
+    const [visitorsTotal, visitorsLast30] = await Promise.all([
+      this.uniqueVisitors(),
+      this.uniqueVisitors(thirtyDaysAgo),
+    ]);
+
     return {
       cars: { total: totalCars, published: publishedCars, draft: draftCars, archived: archivedCars, demo: demoCars },
       users: { total: totalUsers, newLast30Days: newUsers },
       favorites: { total: totalFavorites },
       orders: { total: totalOrders, pending: pendingOrders },
       views: { total: totalViews, last30Days: viewsLast30 },
+      visitors: { total: visitorsTotal, last30Days: visitorsLast30 },
       brands: { total: brandCount },
       generatedAt: new Date(),
     };
+  }
+
+  /**
+   * How many different people looked at a car, rather than how many times.
+   *
+   * A signed-in visitor is counted by their account and a signed-out one by
+   * their anonymous identity, so the same person on one device is one visitor
+   * whether or not they were signed in at the time.
+   *
+   * A row with neither — a request that arrived with no account, no cookie and
+   * no address — is deliberately left out. It is a real view and is counted as
+   * one, but there is no honest way to say which person it belonged to, and
+   * inventing one per row is how a handful of requests turns into a crowd.
+   */
+  private async uniqueVisitors(since?: Date): Promise<number> {
+    const rows = since
+      ? await this.prisma.$queryRaw<{ count: bigint }[]>`
+          SELECT COUNT(DISTINCT COALESCE(user_id, anonymous_id))::bigint AS count
+          FROM car_views WHERE viewed_at >= ${since}`
+      : await this.prisma.$queryRaw<{ count: bigint }[]>`
+          SELECT COUNT(DISTINCT COALESCE(user_id, anonymous_id))::bigint AS count
+          FROM car_views`;
+
+    return Number(rows[0]?.count ?? 0);
   }
 
   /** Spec §45 — most viewed cars, from real view rows. */
@@ -139,7 +180,7 @@ export class AnalyticsService {
   async growth(days = 30) {
     const since = this.since(days);
 
-    const [users, cars, orders, views] = await Promise.all([
+    const [users, cars, orders, views, visitors] = await Promise.all([
       this.prisma.$queryRaw<{ day: Date; count: bigint }[]>`
         SELECT date_trunc('day', created_at) AS day, COUNT(*)::bigint AS count
         FROM users WHERE created_at >= ${since} AND role = 'CUSTOMER'
@@ -156,6 +197,13 @@ export class AnalyticsService {
         SELECT date_trunc('day', viewed_at) AS day, COUNT(*)::bigint AS count
         FROM car_views WHERE viewed_at >= ${since}
         GROUP BY 1 ORDER BY 1 ASC`,
+      // Distinct *per day*: someone who returns on Tuesday and Thursday is one
+      // visitor on each, which is what a daily chart is asking.
+      this.prisma.$queryRaw<{ day: Date; count: bigint }[]>`
+        SELECT date_trunc('day', viewed_at) AS day,
+               COUNT(DISTINCT COALESCE(user_id, anonymous_id))::bigint AS count
+        FROM car_views WHERE viewed_at >= ${since}
+        GROUP BY 1 ORDER BY 1 ASC`,
     ]);
 
     const toSeries = (rows: { day: Date; count: bigint }[]) =>
@@ -167,6 +215,7 @@ export class AnalyticsService {
       cars: toSeries(cars),
       orders: toSeries(orders),
       views: toSeries(views),
+      visitors: toSeries(visitors),
     };
   }
 
