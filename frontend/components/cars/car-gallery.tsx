@@ -59,7 +59,14 @@ export function CarGallery({
     setIndex((current) => (hasSpin && current === 0 ? 0 : hasSpin ? 1 : 0));
   }, [signature, hasSpin]);
 
-  if (images.length === 0) {
+  /*
+   * Nothing to show at all — no photographs *and* nothing to turn.
+   *
+   * This used to check the photographs alone, so a car with a 360° set and no
+   * pictures yet showed an empty grey box and no viewer. That is exactly the
+   * state a car is in the minute after it is created.
+   */
+  if (images.length === 0 && !hasSpin) {
     return (
       <div className="bg-secondary text-muted-foreground grid aspect-16/10 place-items-center rounded-xl text-sm">
         —
@@ -81,7 +88,7 @@ export function CarGallery({
       <div className="bg-secondary relative aspect-16/10 overflow-hidden rounded-xl">
         {showingSpin ? (
           <CarSpin frames={spinFrames} alt={alt} className="absolute inset-0" />
-        ) : (
+        ) : current ? (
           /*
            * Cross-faded rather than swapped.
            *
@@ -109,7 +116,7 @@ export function CarGallery({
               />
             </motion.div>
           </AnimatePresence>
-        )}
+        ) : null}
 
         {/*
           * The colour's name, and what this particular picture is.

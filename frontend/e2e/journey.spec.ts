@@ -70,8 +70,16 @@ test.describe('Public site', () => {
   });
 
   test('car detail shows every specification group', async ({ page }) => {
-    await page.goto('/cars');
-    await page.getByTestId('car-card').first().getByRole('link').first().click();
+    /*
+     * A car known to have every group filled in, rather than whichever card
+     * happens to be first.
+     *
+     * The catalogue is ordered newest first, so "the first card" is whatever
+     * was added most recently — and a car added a minute ago has no engine,
+     * safety or dimension figures yet. The page was right; the test was reading
+     * a car that had nothing to show.
+     */
+    await page.goto('/car/byd-seal-2024');
 
     await expect(page).toHaveURL(/\/car\//);
     await expect(page.getByRole('heading', { name: 'Specifications' })).toBeVisible();

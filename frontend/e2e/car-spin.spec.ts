@@ -34,7 +34,27 @@ test.describe('360° viewer', () => {
     await expect(viewer(page)).toBeVisible();
   });
 
-  test('the tab and the viewer always agree, on every car', async ({ page }) => {
+  test('a car with no photographs at all still turns', async ({ page, request }) => {
+    /*
+     * The state every car is in for the first minutes of its life. The gallery
+     * used to give up before it looked at the frames — "no photographs" meant an
+     * empty grey box, and the viewer that was there never rendered.
+     *
+     * No thumbnail strip here, and that is right: with nothing to switch
+     * between there is nothing to switch with.
+     */
+    const api = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+    const cars = await (await request.get(`${api}/cars?pageSize=100`)).json();
+    const bare = (cars.data as { slug: string; images: unknown[] }[]).find(
+      (car) => car.images.length === 0,
+    );
+    test.skip(!bare, 'no car without photographs in the catalogue');
+
+    await page.goto(`/car/${bare!.slug}`);
+    await expect(viewer(page)).toBeVisible();
+  });
+
+  test('a 360 tab is never offered without a viewer behind it', async ({ page }) => {
     /*
      * Asserted as a rule rather than against one particular car.
      *
@@ -61,10 +81,21 @@ test.describe('360° viewer', () => {
 
       const tabs = await page.getByRole('tab', { name: /360/i }).count();
       const viewers = await viewer(page).count();
-      expect(tabs, `${href} — tab and viewer must agree`).toBe(viewers);
 
-      // The photograph gallery is there either way.
-      await expect(page.getByRole('tablist')).toBeVisible();
+      /*
+       * A tab is never offered without a viewer behind it.
+       *
+       * Not the other way round: a car with no photographs yet has a viewer and
+       * no thumbnail strip, because with a single slide there is nothing to
+       * switch between.
+       */
+      expect(tabs, `${href} — a 360° tab must have a viewer behind it`).toBeLessThanOrEqual(viewers);
+
+      /*
+       * The thumbnail strip appears only when there is more than one slide.
+       * A car with no photographs shows the viewer alone, which is right.
+       */
+      if (tabs > 0) await expect(page.getByRole('tablist')).toBeVisible();
     }
   });
 

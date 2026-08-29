@@ -14,10 +14,13 @@
  * wheels, rotated about the vertical axis and drawn from a slightly raised
  * camera, with faces shaded by how they catch a fixed light.
  *
- *   node scripts/make-spin-placeholders.mjs <slug> [frames]
+ * There is one shared set, under `_placeholder`, used by every car that has
+ * no photographs of its own — including a car added a minute ago.
+ *
+ *   node scripts/make-spin-placeholders.mjs _placeholder 24
  */
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const slug = process.argv[2] ?? 'jetour-x70-plus-2024';
@@ -157,21 +160,4 @@ for (let index = 0; index < FRAMES; index += 1) {
   writeFileSync(join(directory, `frame-${String(index + 1).padStart(2, '0')}.svg`), frame(index));
 }
 
-/*
- * A manifest, so the site knows which cars have a set without asking the
- * filesystem at request time. A client component cannot read the disk, and a
- * database column would be the wrong price to pay for a trial — this file is
- * generated here and imported directly.
- */
-const manifestPath = join('frontend', 'lib', 'spin-sets.json');
-let manifest = {};
-try {
-  manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-} catch {
-  // First run; the manifest is created below.
-}
-manifest[slug] = FRAMES;
-writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
-
 console.log(`${FRAMES} placeholder frames written to ${directory}`);
-console.log(`manifest updated: ${manifestPath}`);
