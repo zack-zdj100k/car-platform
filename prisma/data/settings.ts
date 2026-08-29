@@ -26,9 +26,9 @@ export const settings: {
   { key: 'social.facebook', value: '', group: 'social', isPublic: true, description: 'Official Facebook URL (spec §27) — intentionally empty.' },
   { key: 'social.github', value: '', group: 'social', isPublic: true, description: 'Project repository URL (spec §10) — set once the GitHub repo exists.' },
 
-  { key: 'stats.carsListed', value: { label: '500+', caption: 'Cars Listed' }, group: 'marketing-stats', isPublic: true, description: 'MARKETING CONTENT (spec §33), editable in admin settings. Not live analytics.' },
-  { key: 'stats.brands', value: { label: '50+', caption: 'Brands' }, group: 'marketing-stats', isPublic: true, description: 'MARKETING CONTENT (spec §33), editable in admin settings. Not live analytics.' },
-  { key: 'stats.visitors', value: { label: '10K+', caption: 'Visitors' }, group: 'marketing-stats', isPublic: true, description: 'MARKETING CONTENT (spec §33), editable in admin settings. Not live analytics.' },
+  { key: 'stats.carsListed', value: { label: '0', caption: 'Cars Listed' }, group: 'marketing-stats', isPublic: true, description: 'Counted from the database when the page is built (published cars, brands, visitors in 30 days). Only the caption is used; a zero is hidden.' },
+  { key: 'stats.brands', value: { label: '0', caption: 'Brands' }, group: 'marketing-stats', isPublic: true, description: 'Counted from the database when the page is built (published cars, brands, visitors in 30 days). Only the caption is used; a zero is hidden.' },
+  { key: 'stats.visitors', value: { label: '0', caption: 'Visitors' }, group: 'marketing-stats', isPublic: true, description: 'Counted from the database when the page is built (published cars, brands, visitors in 30 days). Only the caption is used; a zero is hidden.' },
   { key: 'stats.availability', value: { label: '24/7', caption: 'Platform Access' }, group: 'marketing-stats', isPublic: true, description: 'MARKETING CONTENT (spec §33), editable in admin settings. Not live analytics.' },
 
   { key: 'orders.requireAuth', value: true, group: 'orders', isPublic: true, description: 'When true a customer must be signed in to submit an order (system graph). Falls back to the REQUIRE_AUTH_FOR_ORDERS env value on first boot.' },
@@ -77,6 +77,6 @@ export const settings: {
   { key: 'legal.privacy', value: '', group: 'legal', isPublic: true, description: 'Privacy notice shown at /privacy.' },
   { key: 'legal.terms', value: '', group: 'legal', isPublic: true, description: 'Terms shown at /terms.' },
 
-  { key: 'about.whoWeAre', value: 'PLACEHOLDER — supply the real founding story. Spec §29 forbids inventing facts about the owners.', group: 'about', isPublic: true, description: 'About page "Who We Are" copy (spec §29).' },
+  { key: 'about.whoWeAre', value: '', group: 'about', isPublic: true, description: 'About page "Who We Are" copy (spec §29). Empty by design — the section is not rendered until a real story is written here. It used to ship with the word PLACEHOLDER in it, which customers read on the page.' },
   { key: 'about.mission', value: 'To make discovering the right car simple, visual, and inspiring.', group: 'about', isPublic: true, description: 'Mission statement, verbatim from spec §30.' },
 ];

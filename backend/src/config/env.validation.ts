@@ -45,6 +45,8 @@ export const envSchema = z.object({
 
   UPLOAD_DIR: z.string().default('./uploads'),
   MAX_UPLOAD_MB: z.coerce.number().int().positive().default(8),
+  /** Videos are an order of magnitude larger than photographs. */
+  MAX_VIDEO_UPLOAD_MB: z.coerce.number().int().positive().default(80),
 
   THROTTLE_TTL: z.coerce.number().int().positive().default(60),
   THROTTLE_LIMIT: z.coerce.number().int().positive().default(120),

@@ -47,12 +47,12 @@ export class CreateCarDto {
   @Min(0)
   promoPrice?: number;
 
-  @ApiPropertyOptional({ description: 'Link to this vehicle\'s TikTok video' })
+  @ApiPropertyOptional({ description: 'Path of this vehicle\'s uploaded clip, e.g. /uploads/abc.mp4' })
   @IsOptional()
   @IsString()
   @MaxLength(500)
   @Transform(trim)
-  tiktokUrl?: string;
+  videoUrl?: string;
 
   @ApiProperty({ example: 'Tiggo 8 Pro Max' })
   @IsString()

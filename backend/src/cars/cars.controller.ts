@@ -74,29 +74,57 @@ export class CarsController {
     return this.cars.findOneForAdmin(idOrSlug);
   }
 
-  @OptionalAuth()
+  @Public()
   @Get(':idOrSlug')
-  @ApiOperation({ summary: 'Vehicle detail. Records a view and, when signed in, view history' })
-  async findOne(
+  @ApiOperation({ summary: 'Vehicle detail' })
+  findOne(@Param('idOrSlug') idOrSlug: string) {
+    /*
+     * Reading a car no longer records anything.
+     *
+     * It used to, and it could not work: this page is rendered on the site's
+     * server, and the reader's token lives in their browser — so every request
+     * arrived here anonymous, whoever was signed in. Two things followed.
+     * "Recently viewed" never recorded a single row, and an administrator
+     * browsing their own catalogue was counted as a visitor, because nothing
+     * here could tell it was them.
+     *
+     * The browser reports the view itself now, through the endpoint below,
+     * where the identity actually exists. A GET that quietly writes to the
+     * database was the wrong shape for this in any case.
+     */
+    return this.cars.findOne(idOrSlug);
+  }
+
+  /**
+   * Records that somebody looked at this car.
+   *
+   * Sent by the reader's own browser, which is the only place that knows who
+   * they are: their access token when signed in, and their anonymous visitor
+   * cookie when not. Never fails the caller — a view that cannot be recorded is
+   * not worth an error on a page that has already rendered (spec §72).
+   */
+  @OptionalAuth()
+  @Post(':idOrSlug/view')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Record a view of this vehicle' })
+  async recordView(
     @Param('idOrSlug') idOrSlug: string,
     @CurrentUser() user: AuthenticatedUser | undefined,
     @Req() request: Request,
-  ) {
+  ): Promise<void> {
     const car = await this.cars.findOne(idOrSlug);
 
-    // View tracking must never break the page: a failure here is logged by the
-    // service layer and swallowed (spec §72).
-    const anonymousId = request.get('x-anonymous-id') ?? undefined;
     await Promise.allSettled([
       this.cars.recordView(car.id, {
         userId: user?.id,
-        anonymousId,
-        referrer: request.get('referer') ?? undefined,
+        role: user?.role,
+        anonymousId: request.get('x-visitor-id') ?? undefined,
+        userAgent: request.get('user-agent') ?? undefined,
+        ip: request.ip,
+        referrer: request.get('x-visitor-referrer') ?? request.get('referer') ?? undefined,
       }),
       user ? this.recentlyViewed.record(user.id, car.id) : Promise.resolve(),
     ]);
-
-    return car;
   }
 
   @Post()

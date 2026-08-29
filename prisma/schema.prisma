@@ -102,6 +102,13 @@ enum ImageKind {
   EXTERIOR
   INTERIOR
   WHEEL
+  ENGINE
+  TRUNK
+  /// Anything the fixed groups do not cover — damage, the roof, a detail.
+  /// What it is goes in `CarImage.label`.
+  OTHER
+  /// One frame of a 360° set. Ordered by `sortOrder`; see docs/SPIN_360.md.
+  SPIN
 }
 
 /// Spec §7 — FR / AR / EN language support
@@ -241,7 +248,9 @@ model Car {
   /// A TikTok video for this vehicle, shown on its page. One per car: the
   /// catalogue links to the clip rather than embedding a third-party player,
   /// which would load their scripts on a page we control.
-  tiktokUrl            String? @map("tiktok_url")
+  /// An uploaded clip of this car, served from /uploads. Replaces the TikTok
+  /// link the catalogue used to carry: the videos are the seller's own now.
+  videoUrl             String? @map("video_url")
 
   /// Spec §23 — concise copy for cards and promo sections
   marketingDescription String? @map("marketing_description")
@@ -517,6 +526,9 @@ model CarImage {
   kind      ImageKind @default(GALLERY)
   url       String
   alt       String?
+  /// Heading for an OTHER photograph — "Roof", "Scratch on the rear bumper".
+  /// Distinct from `alt`, which describes the picture for a screen reader.
+  label     String?
   width     Int?
   height    Int?
   sortOrder Int       @default(0) @map("sort_order")
