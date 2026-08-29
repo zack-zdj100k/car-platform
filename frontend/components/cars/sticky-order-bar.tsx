@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useState, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
+import { useIsClient } from '@/hooks/use-client-store';
 import Link from 'next/link';
 import { ShoppingCart } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
@@ -34,7 +36,9 @@ export function StickyOrderBar({
   const { t } = useLocale();
   const reduced = useReducedMotion();
   const [show, setShow] = useState(false);
-  const seen = useRef(false);
+  // `document` does not exist while rendering on the server, and a portal needs
+  // it. The project's own hook reports this without an effect or a re-render.
+  const mounted = useIsClient();
 
   useEffect(() => {
     const element = watch.current;
@@ -43,19 +47,20 @@ export function StickyOrderBar({
     const observer = new IntersectionObserver(
       ([entry]) => {
         /*
-         * Only after the price has been seen and passed.
+         * Above the viewport, not merely out of it.
          *
-         * Without the `seen` guard the bar appears immediately on a phone,
-         * where the price starts below the fold — announcing a price the reader
-         * has not reached yet, over the photograph they are still looking at.
+         * `top < 0` is the whole condition: the price has scrolled off the top,
+         * so the reader has passed it. On a phone the price starts *below* the
+         * fold, where `top` is positive — and announcing a price they have not
+         * reached yet, over the photograph they are still looking at, is
+         * backwards.
+         *
+         * This used to also require having seen the price intersect at least
+         * once, which sounded equivalent and was not: a reader who scrolls
+         * immediately after the page loads never produces that first event, and
+         * the pill then never appeared again for the rest of the page.
          */
-        if (entry.isIntersecting) {
-          seen.current = true;
-          setShow(false);
-          return;
-        }
-        // Gone upwards, not merely not-yet-arrived.
-        setShow(seen.current && entry.boundingClientRect.top < 0);
+        setShow(!entry.isIntersecting && entry.boundingClientRect.top < 0);
       },
       { threshold: 0 },
     );
@@ -64,7 +69,18 @@ export function StickyOrderBar({
     return () => observer.disconnect();
   }, [watch]);
 
-  return (
+  if (!mounted) return null;
+
+  /*
+   * Rendered into the body.
+   *
+   * `position: fixed` is not always relative to the window: any ancestor with a
+   * transform, a filter or a backdrop-filter becomes its containing block
+   * instead, and this page has several. In Safari the pill was caught by one of
+   * them and appeared halfway up the page, under the gallery, rather than in the
+   * corner. A portal removes the question entirely.
+   */
+  return createPortal(
     <AnimatePresence>
       {show && (
         <motion.div
@@ -83,7 +99,11 @@ export function StickyOrderBar({
            * `bottom-28` on small screens clears the floating navigation dock;
            * from `sm` up that dock is gone and it can sit lower.
            */
-          className="border-border/70 bg-background/95 shadow-[var(--shadow-lifted)] fixed end-4 bottom-28 z-40 flex items-center gap-3 rounded-full border py-2 ps-4 pe-2 backdrop-blur-lg sm:bottom-6 sm:end-6"
+          /*
+           * Bottom right, in every language. `end-*` would flip it to the
+           * left in Arabic, and this was asked for as the right-hand corner.
+           */
+          className="border-border/70 bg-background/95 shadow-[var(--shadow-lifted)] fixed right-4 bottom-28 z-50 flex items-center gap-3 rounded-full border py-2 ps-4 pe-2 backdrop-blur-lg sm:right-6 sm:bottom-6"
         >
           <div className="min-w-0">
             <Price price={car.price} promoPrice={car.promoPrice} currency={car.currency} size="sm" />
@@ -99,6 +119,7 @@ export function StickyOrderBar({
           </Button>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
