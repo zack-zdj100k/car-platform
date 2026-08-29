@@ -3,6 +3,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 /**
  * Gives every visitor one anonymous identity, so analytics can count people.
  *
+ * Named `proxy` and living in `proxy.ts`: Next 16 renamed the middleware
+ * convention and warns on every start while the old name is used.
+ *
  * The catalogue pages are rendered on the server, which means the API sees one
  * request per page from this server and nothing distinguishing the person who
  * asked for it. Before this cookie existed every signed-out view was stored
@@ -19,7 +22,7 @@ export const VISITOR_COOKIE = 'visitor_id';
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
-export function middleware(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const existing = request.cookies.get(VISITOR_COOKIE)?.value;
   if (existing) return NextResponse.next();
 

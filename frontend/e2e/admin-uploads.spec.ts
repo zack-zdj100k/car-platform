@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { adminTokenOrSkip } from './admin-session';
 
 /**
  * Uploading, in the browser, through the same service the admin form uses.
@@ -29,14 +30,7 @@ const MAKE_FILES = `async (count) => {
 }`;
 
 test('a 24-frame set uploads completely and in order', async ({ page, request }) => {
-  const login = await request.post(`${API}/auth/login`, {
-    data: {
-      email: process.env.SEED_ADMIN_EMAIL ?? 'admin@carplatform.dev',
-      password: process.env.SEED_ADMIN_PASSWORD ?? '',
-    },
-  });
-  test.skip(!login.ok(), 'needs admin credentials in the environment');
-  const { accessToken } = await login.json();
+  const accessToken = await adminTokenOrSkip(request);
 
   await page.goto('/');
 

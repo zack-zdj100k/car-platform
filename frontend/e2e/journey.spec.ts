@@ -222,6 +222,28 @@ test.describe('Administrator', () => {
     const adminPassword = process.env.SEED_ADMIN_PASSWORD;
     test.skip(!adminEmail || !adminPassword, 'Seed admin credentials are not configured');
 
+    /*
+     * The seeded account may no longer be an administrator. The owner can
+     * promote their own account and demote this one — that is what
+     * `npm run make:admin` is for — and when they do, signing in still works
+     * while the administration is closed. Failing here would report a broken
+     * site for a deliberate change to who runs it.
+     */
+    const api = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+    const login = await page.request.post(`${api}/auth/login`, {
+      data: { email: adminEmail, password: adminPassword },
+    });
+    if (login.ok()) {
+      const { accessToken } = await login.json();
+      const allowed = await page.request.get(`${api}/analytics/overview`, {
+        headers: { authorization: `Bearer ${accessToken}` },
+      });
+      test.skip(
+        !allowed.ok(),
+        `${adminEmail} is no longer an administrator — point SEED_ADMIN_EMAIL at one that is`,
+      );
+    }
+
     await signIn(page, adminEmail!, adminPassword!);
     await expect(page).toHaveURL(/\/admin\/dashboard$/);
 

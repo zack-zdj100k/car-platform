@@ -6,6 +6,7 @@ import {
   type ConsoleMessage,
   type Page,
 } from '@playwright/test';
+import { adminTokenOrSkip } from './admin-session';
 
 /**
  * Whole-site bug sweep.
@@ -180,6 +181,7 @@ test.describe('Every admin page is error-free', () => {
     test.skip(!email || !password, 'Seed admin credentials are not configured');
 
     const context = await browser.newContext();
+    await adminTokenOrSkip(context.request);
     page = await context.newPage();
     problems = collect(page);
 

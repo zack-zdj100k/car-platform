@@ -11,9 +11,10 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "node scripts/dev-preflight.mjs && concurrently --kill-others --names FRONTEND,BACKEND --prefix-colors cyan.bold,magenta.bold --prefix \"[{name}]\" \"npm:dev:frontend\" \"npm:dev:backend\"",
+    "dev": "node scripts/dev-preflight.mjs && concurrently --kill-others-on-fail --names FRONTEND,BACKEND,READY --prefix-colors cyan.bold,magenta.bold,green.bold --prefix \"[{name}]\" \"npm:dev:frontend\" \"npm:dev:backend\" \"npm:dev:ready\"",
     "dev:frontend": "npm run dev --workspace frontend",
     "dev:backend": "npm run start:dev --workspace backend",
+    "dev:ready": "node scripts/dev-ready.mjs",
     "doctor": "node scripts/dev-preflight.mjs",
     "build": "npm run build --workspace backend && npm run build --workspace frontend",
     "start": "concurrently --kill-others --names FRONTEND,BACKEND --prefix-colors cyan.bold,magenta.bold --prefix \"[{name}]\" \"npm:start:frontend\" \"npm:start:backend\"",

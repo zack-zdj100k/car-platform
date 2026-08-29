@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { adminTokenOrSkip } from './admin-session';
 
 /**
  * "Recently viewed", from the browser.
@@ -15,11 +16,9 @@ const EMAIL = process.env.SEED_ADMIN_EMAIL ?? 'admin@carplatform.dev';
 const PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? '';
 
 test('a signed-in reader sees the car they opened in their history', async ({ page, request }) => {
-  const api = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
-  const login = await request.post(`${api}/auth/login`, {
-    data: { email: EMAIL, password: PASSWORD },
-  });
-  test.skip(!login.ok(), 'needs admin credentials in the environment');
+  // Only to establish that this account may administer; the browser signs in
+  // for itself below, exactly as a customer's would.
+  await adminTokenOrSkip(request);
 
   // Sign in through the site itself, so the browser holds the session the same
   // way a customer's would.
@@ -54,11 +53,8 @@ test('a signed-in reader sees the car they opened in their history', async ({ pa
 
 test('an administrator browsing is not counted as a visitor', async ({ page, request }) => {
   const api = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
-  const login = await request.post(`${api}/auth/login`, {
-    data: { email: EMAIL, password: PASSWORD },
-  });
-  test.skip(!login.ok(), 'needs admin credentials in the environment');
-  const { accessToken } = await login.json();
+  const probe = await adminTokenOrSkip(request);
+  const accessToken = probe;
 
   const before = await request.get(`${api}/analytics/overview`, {
     headers: { authorization: `Bearer ${accessToken}` },

@@ -21,6 +21,20 @@ Ready.  site http://localhost:3000   api http://localhost:4000/api
 [BACKEND]  API listening on http://localhost:4000/api [development]
 ```
 
+The last thing printed, once both are answering, is where to go:
+
+```
+[READY] Both running.
+[READY]
+[READY]   Open this   http://localhost:3000
+[READY]   The API     http://localhost:4000/api   — not a page; docs at /api/docs
+```
+
+That line exists because the address left at the bottom of the terminal used to
+be the API's own, so that is the one people opened — and it answered 404,
+because it is an API and not a web page. Opening it now sends you to the
+documentation.
+
 `Ctrl+C` stops both. Running `npm run dev` again picks up where you left off —
 nothing in the database is touched by starting or stopping.
 
