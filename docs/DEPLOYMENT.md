@@ -60,15 +60,33 @@ and nothing explains why.
 While in Vercel's settings, check **Deployment Protection**. With Vercel
 Authentication on, every visitor gets Vercel's login page instead of the site.
 
-### 4. Sign in
+### 4. Sign in, and put the settings in
 
-The seed does not run against the production database. Register through the
-site, then promote that account once, from a machine with `DATABASE_URL`
-pointing at Neon:
+The seed does not run against the production database, so it starts with the
+tables and nothing in them. Two commands from a machine with `DATABASE_URL`
+pointing at Neon — quote it, and it overrides the `.env` value rather than the
+other way round:
 
 ```bash
-npm run make:admin -- you@example.com
+DATABASE_URL="postgresql://..." npm run seed:settings
 ```
+
+Without this, "Website Settings" in the administration is an empty page. The
+settings are not created there on purpose — the API rejects a key it does not
+recognise, so a typo cannot invent one — which means an empty table cannot be
+filled from the outside. This writes the forty-three the site reads, and is
+safe to run again later: an existing key keeps its value.
+
+Then register through the site and promote that account:
+
+```bash
+DATABASE_URL="postgresql://..." npm run make:admin -- you@example.com
+```
+
+The catalogue stays empty until vehicles are added through the administration,
+and some of the home page waits for it: the specification diagram and the
+featured row are drawn from real vehicles and are not rendered while there are
+none.
 
 ### What is still not solved by this
 
