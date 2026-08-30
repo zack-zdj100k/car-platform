@@ -40,6 +40,13 @@ services:
     region: frankfurt # closest of Render's regions to Algeria
     branch: work/august-29
 
+    # `--include=dev`, and it is not optional. NODE_ENV is production here, and
+    # npm reads that as "omit devDependencies" — which takes away the compiler
+    # and the CLIs the build is made of: `nest`, `typescript`, `tsx`, and the
+    # `dotenv` that prisma.config.ts imports on its first line. The first deploy
+    # died there, on `prisma generate`, with a missing module. Built with them,
+    # run without them: the compiled output needs none of it.
+    #
     # Only the API's workspace and the root, which is where Prisma and argon2
     # live. Installing everything would pull Next, sharp and the browser test
     # tooling as well — hundreds of megabytes this service never runs, on an
@@ -49,7 +56,7 @@ services:
     # migration then fails the deploy instead of leaving a running instance
     # talking to a schema it does not match. (Render's separate pre-deploy step
     # is a paid feature; this works on any plan.)
-    buildCommand: npm ci --include-workspace-root --workspace backend && npm run prisma:generate && npm run prisma:deploy && npm run build --workspace backend
+    buildCommand: npm ci --include=dev --include-workspace-root --workspace backend && npm run prisma:generate && npm run prisma:deploy && npm run build --workspace backend
 
     startCommand: node backend/dist/main.js
 
