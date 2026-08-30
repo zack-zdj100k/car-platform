@@ -77,6 +77,11 @@ export const settings: {
   { key: 'legal.privacy', value: '', group: 'legal', isPublic: true, description: 'Privacy notice shown at /privacy.' },
   { key: 'legal.terms', value: '', group: 'legal', isPublic: true, description: 'Terms shown at /terms.' },
 
+  // Where the showroom is (home page). Empty until the owner supplies it: an
+  // invented address on a car dealer's site is worse than none.
+  { key: 'location.name', value: '', group: 'location', isPublic: true, description: 'What to call the place — "ZODIC CAR, Algiers". Shown on the home page card.' },
+  { key: 'location.address', value: '', group: 'location', isPublic: true, description: 'The address line shown under the name when the card opens.' },
+  { key: 'location.mapUrl', value: '', group: 'location', isPublic: true, description: 'Link to the place on Google Maps. Without it the card is not shown at all.' },
   { key: 'about.whoWeAre', value: '', group: 'about', isPublic: true, description: 'About page "Who We Are" copy (spec §29). Empty by design — the section is not rendered until a real story is written here. It used to ship with the word PLACEHOLDER in it, which customers read on the page.' },
   { key: 'about.mission', value: 'To make discovering the right car simple, visual, and inspiring.', group: 'about', isPublic: true, description: 'Mission statement, verbatim from spec §30.' },
 ];

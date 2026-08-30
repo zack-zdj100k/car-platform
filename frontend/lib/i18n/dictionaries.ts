@@ -46,6 +46,9 @@ const en: {
     featuresTitle: 'Engineered in detail',
     featuresBody:
       'Every vehicle in the catalogue is documented across nine specification groups — from driver assistance to tyre sizing — so you compare facts, not adjectives.',
+    locationEyebrow: 'Come and see them',
+    locationTitle: 'Where to find us',
+    locationOpen: 'Open in Maps',
     bestEyebrow: 'Hand picked',
     bestTitle: 'The best of our cars',
     bestBody: 'A short selection, chosen and photographed by us.',
@@ -424,6 +427,9 @@ const fr: DeepPartial<Dictionary> = {
     featuresTitle: 'Conçues dans le détail',
     featuresBody:
       'Chaque véhicule du catalogue est documenté selon neuf groupes de spécifications — des aides à la conduite au dimensionnement des pneus — pour comparer des faits, pas des adjectifs.',
+    locationEyebrow: 'Venez les voir',
+    locationTitle: 'Où nous trouver',
+    locationOpen: 'Ouvrir dans Maps',
     bestEyebrow: 'Sélection',
     bestTitle: 'Le meilleur de nos voitures',
     bestBody: 'Une courte sélection, choisie et photographiée par nous.',
@@ -799,6 +805,9 @@ const ar: DeepPartial<Dictionary> = {
     featuresTitle: 'هندسة في التفاصيل',
     featuresBody:
       'كل سيارة في الكتالوج موثّقة عبر تسع مجموعات من المواصفات — من أنظمة مساعدة السائق إلى مقاسات الإطارات — لتقارن الحقائق لا الأوصاف.',
+    locationEyebrow: 'تعال وشاهدها',
+    locationTitle: 'أين تجدنا',
+    locationOpen: 'افتح في الخرائط',
     bestEyebrow: 'اختيارنا',
     bestTitle: 'أفضل سياراتنا',
     bestBody: 'مجموعة قصيرة، اخترناها وصوّرناها بأنفسنا.',

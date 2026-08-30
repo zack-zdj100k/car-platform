@@ -3,6 +3,7 @@ import { BestOfGallery } from '@/components/home/best-of-gallery';
 import { CarOrbit } from '@/components/home/car-orbit';
 import { VideoShowcase } from '@/components/home/video-showcase';
 import { FeaturedCars } from '@/components/home/featured-cars';
+import { ShowroomLocation } from '@/components/home/showroom-location';
 import { StatsBento } from '@/components/ui/stats-bento';
 import { fetchFeaturedCars, fetchPublicSettings, readMarketingStats, readSetting } from '@/lib/server-api';
 
@@ -53,6 +54,12 @@ export default async function HomePage() {
             .filter((url): url is string => Boolean(url))}
         />
       ) : null}
+      {/* Between the diagram above and the cars below: where to come and see them. */}
+      <ShowroomLocation
+        name={readSetting(settings, 'location', 'location.name')}
+        address={readSetting(settings, 'location', 'location.address')}
+        mapUrl={readSetting(settings, 'location', 'location.mapUrl')}
+      />
       <VideoShowcase />
       <FeaturedCars cars={featured} />
       <StatsBento stats={stats} note={marketingNote} />

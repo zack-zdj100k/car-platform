@@ -37,7 +37,15 @@ export async function fetchCarsWithVideo(): Promise<CarListItem[]> {
 
 export async function fetchPublicSettings(): Promise<Record<string, Record<string, unknown>>> {
   try {
-    return await settingsService.public({ next: { revalidate: 300 } });
+    /*
+     * Thirty seconds, not five minutes.
+     *
+     * These are the values an administrator edits and then looks at the site to
+     * check — the site name, the address, the marketing figures. Five minutes of
+     * staring at the old value is long enough to conclude the save did not work
+     * and to save it again.
+     */
+    return await settingsService.public({ next: { revalidate: 30 } });
   } catch (error) {
     logFailure('public settings', error);
     return {};
