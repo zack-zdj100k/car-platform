@@ -72,16 +72,23 @@ const nextConfig: NextConfig = {
      */
     dangerouslyAllowLocalIP: apiIsLocal,
 
-    remotePatterns: apiUrl
-      ? [
-          {
-            protocol: apiUrl.protocol.replace(':', '') as 'http' | 'https',
-            hostname: apiUrl.hostname,
-            port: apiUrl.port || undefined,
-            pathname: '/uploads/**',
-          },
-        ]
-      : [],
+    remotePatterns: [
+      /*
+       * Photographs kept at the image host. Narrowed to the delivery path, so
+       * this cannot be used to fetch anything else through the optimiser.
+       */
+      { protocol: 'https' as const, hostname: 'res.cloudinary.com', pathname: '/**' },
+      ...(apiUrl
+        ? [
+            {
+              protocol: apiUrl.protocol.replace(':', '') as 'http' | 'https',
+              hostname: apiUrl.hostname,
+              port: apiUrl.port || undefined,
+              pathname: '/uploads/**',
+            },
+          ]
+        : []),
+    ],
   },
 
   /*

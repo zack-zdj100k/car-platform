@@ -5,6 +5,7 @@ import { memoryStorage } from 'multer';
 import type { Configuration } from '../config/configuration';
 import { UploadsController } from './uploads.controller';
 import { UploadsService } from './uploads.service';
+import { CloudinaryStorage } from './cloudinary.storage';
 
 @Module({
   imports: [
@@ -20,7 +21,7 @@ import { UploadsService } from './uploads.service';
     }),
   ],
   controllers: [UploadsController],
-  providers: [UploadsService],
+  providers: [UploadsService, CloudinaryStorage],
   exports: [UploadsService],
 })
 export class UploadsModule implements OnModuleInit {

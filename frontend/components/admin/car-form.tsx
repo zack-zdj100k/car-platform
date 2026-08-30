@@ -391,17 +391,22 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
    * existed if the admin closed the page or the save failed.
    */
   const uploadedThisSession = useRef(new Set<string>());
+  /*
+   * Tracked by URL, not by filename. Photographs may be kept on the API's own
+   * disk or at an image host, and the filename is only known to the session
+   * that uploaded them — the URL is what the vehicle carries either way, and
+   * what is still there after a reload. Bundled placeholders under /images/
+   * are not ours to delete.
+   */
+  const deletable = (url: string) => Boolean(url) && !url.startsWith('/images/');
+
   const filesOnOpen = useRef(
-    new Set(
-      (car?.images ?? [])
-        .filter((image) => image.url.startsWith('/uploads/'))
-        .map((image) => image.url.replace('/uploads/', '')),
-    ),
+    new Set((car?.images ?? []).map((image) => image.url).filter(deletable)),
   );
 
   const trackUploads = (next: CarImageDraft[]) => {
     for (const image of next) {
-      if (image.filename) uploadedThisSession.current.add(image.filename);
+      if (deletable(image.url)) uploadedThisSession.current.add(image.url);
     }
     return next;
   };
@@ -538,14 +543,10 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
        * here rather than at the moment of removal is what makes closing the
        * page without saving harmless.
        */
-      const kept = new Set(
-        (saved.images ?? [])
-          .filter((image) => image.url.startsWith('/uploads/'))
-          .map((image) => image.url.replace('/uploads/', '')),
-      );
+      const kept = new Set((saved.images ?? []).map((image) => image.url).filter(deletable));
 
-      for (const filename of [...uploadedThisSession.current, ...filesOnOpen.current]) {
-        if (!kept.has(filename)) void uploadsService.deleteImage(filename, token);
+      for (const url of [...uploadedThisSession.current, ...filesOnOpen.current]) {
+        if (!kept.has(url)) void uploadsService.deleteImage(url, token);
       }
       uploadedThisSession.current = new Set();
       filesOnOpen.current = kept;

@@ -118,7 +118,19 @@ services:
       - key: TRUST_PROXY_HOPS
         value: '2'
 
-      # Where uploads are written. With the disk below attached, use /var/data.
+      # Photographs go to Cloudinary, not to this container's filesystem, which
+      # is recreated on every deploy and every wake from idle — a catalogue kept
+      # there is a catalogue of broken pictures by the end of the week.
+      - key: UPLOAD_DRIVER
+        value: cloudinary
+
+      # cloudinary://<key>:<secret>@<cloud name>, from the Cloudinary console.
+      # The API refuses to start without it once the driver is cloudinary,
+      # rather than accepting photographs and quietly dropping them.
+      - key: CLOUDINARY_URL
+        sync: false
+
+      # Only used by the local driver, and only if it is switched back on.
       - key: UPLOAD_DIR
         value: ./uploads
 

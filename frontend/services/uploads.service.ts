@@ -162,8 +162,16 @@ export const uploadsService = {
     });
   },
 
-  async deleteImage(filename: string, token: string | null): Promise<void> {
-    await fetch(`${API_URL}/uploads/${encodeURIComponent(filename)}`, {
+  /**
+   * Removes a stored file, by the URL it is served from.
+   *
+   * The URL rather than the filename it was uploaded under: once a file can be
+   * kept somewhere other than the API's own disk, the filename is only known to
+   * the session that uploaded it, while the URL is what the vehicle carries and
+   * what is still true after a reload. The API works out which file that is.
+   */
+  async deleteImage(reference: string, token: string | null): Promise<void> {
+    await fetch(`${API_URL}/uploads?ref=${encodeURIComponent(reference)}`, {
       method: 'DELETE',
       headers: token ? { authorization: `Bearer ${token}` } : undefined,
     });

@@ -50,6 +50,8 @@ export const ordersConfig = (env: Env) => ({
 });
 
 export const uploadConfig = (env: Env) => ({
+  driver: env.UPLOAD_DRIVER,
+  cloudinaryUrl: env.CLOUDINARY_URL,
   dir: env.UPLOAD_DIR,
   maxBytes: env.MAX_UPLOAD_MB * 1024 * 1024,
   maxVideoBytes: env.MAX_VIDEO_UPLOAD_MB * 1024 * 1024,
