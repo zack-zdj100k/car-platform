@@ -40,13 +40,16 @@ services:
     region: frankfurt # closest of Render's regions to Algeria
     branch: work/august-29
 
-    # Installed from the workspace root: the API imports the Prisma client that
-    # is generated from prisma/schema.prisma, which lives above backend/.
+    # Only the API's workspace and the root, which is where Prisma and argon2
+    # live. Installing everything would pull Next, sharp and the browser test
+    # tooling as well — hundreds of megabytes this service never runs, on an
+    # instance with 512MB of memory to build in.
+    #
     # Migrations are applied during the build rather than on boot: a failed
     # migration then fails the deploy instead of leaving a running instance
     # talking to a schema it does not match. (Render's separate pre-deploy step
     # is a paid feature; this works on any plan.)
-    buildCommand: npm ci && npm run prisma:generate && npm run prisma:deploy && npm run build --workspace backend
+    buildCommand: npm ci --include-workspace-root --workspace backend && npm run prisma:generate && npm run prisma:deploy && npm run build --workspace backend
 
     startCommand: node backend/dist/main.js
 
@@ -57,6 +60,14 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+
+      # The repository's .nvmrc says 25, which is what this was developed on.
+      # That is a current release rather than an LTS one: hosts do not always
+      # carry it, and native modules — argon2 here — ship prebuilt binaries per
+      # Node ABI, so an unexpected version means compiling from source on a
+      # machine with no compiler. 22 is the LTS the API is happy on.
+      - key: NODE_VERSION
+        value: '22'
 
       # Render hands the process its port in PORT, which the API now prefers
       # over BACKEND_PORT — nothing to set here.
