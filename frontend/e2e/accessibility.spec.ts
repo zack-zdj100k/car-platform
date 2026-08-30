@@ -272,29 +272,36 @@ test.describe('Reduced motion (spec §8, §65)', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
 
-    /*
-     * Wait for styles to actually be applied before measuring.
-     *
-     * `getComputedStyle` returns an empty string for a property when no
-     * stylesheet has attached yet, and `Number('')` is 0 — which read as a
-     * hidden headline when the page was merely still loading.
-     */
-    await page.waitForFunction(() => {
-      const heading = document.querySelector('h1');
-      return Boolean(heading) && getComputedStyle(heading!).opacity !== '';
-    });
     await page.evaluate(() => document.fonts.ready);
 
-    // The two headline lines are what carry the entrance animation, so they are
-    // what must be fully opaque once it is suppressed.
-    const opacities = await page
-      .getByRole('heading', { level: 1 })
-      .evaluate((el) => [
-        getComputedStyle(el).opacity,
-        ...[...el.querySelectorAll('span')].map((span) => getComputedStyle(span).opacity),
-      ]);
-
-    expect(opacities.every((value) => Number(value) === 1)).toBe(true);
+    /*
+     * Polled, not sampled once.
+     *
+     * `getComputedStyle` returns an empty string for every property while the
+     * element is detached or before a stylesheet has attached — and the hero
+     * re-renders once the browser has resolved the theme, so a single reading
+     * can land on the node from before that and report nothing at all.
+     * `Number('')` is 0, which reads as a hidden headline when the page was
+     * merely mid-hydration. Waiting for the value to settle asserts the same
+     * thing without racing the page.
+     *
+     * The two headline lines are what carry the entrance animation, so they are
+     * what must be fully opaque once it is suppressed.
+     */
+    await expect
+      .poll(
+        async () =>
+          page.getByRole('heading', { level: 1 }).evaluate((el) => {
+            const values = [
+              getComputedStyle(el).opacity,
+              ...[...el.querySelectorAll('span')].map((span) => getComputedStyle(span).opacity),
+            ];
+            // An empty string means "not measurable yet", not "transparent".
+            return values.every((value) => value !== '' && Number(value) === 1);
+          }),
+        { message: 'the headline never became fully opaque under reduced motion' },
+      )
+      .toBe(true);
   });
 });
 

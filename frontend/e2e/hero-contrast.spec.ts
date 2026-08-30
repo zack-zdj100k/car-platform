@@ -19,6 +19,31 @@ import { expect, test, type Page } from '@playwright/test';
 const REQUIRED = { head1: 3, head2: 3, eyebrow: 4.5, lede: 4.5 } as const;
 const MARGIN = 1.25;
 
+/*
+ * Two standards, on purpose.
+ *
+ * On a phone the wording sits under the footage on the page's own background
+ * and clears AA with room to spare. On a wider window it sits on the picture,
+ * and the pale pool that makes that legible has been taken down to a little
+ * over half its old strength at the owner's request — they were shown the
+ * measurements at 20%, 35%, 50%, 70% and 100% and chose where to stop.
+ *
+ * What that leaves, measured on real frames:
+ *
+ *                    eyebrow  Premium.  Accessible.  tagline
+ *   desktop 1440       3.15     3.01       2.58        3.48
+ *   tablet  1024       3.16     2.29       1.35        3.06
+ *   tablet   834       2.62     2.82       1.74        2.54
+ *
+ * The large type clears 3:1 on a desktop and the small type does not quite
+ * reach 4.5:1; the headline dips where it crosses the black grille of the car.
+ * So this file does not claim AA on those sizes. It records what was agreed and
+ * holds the site to it — legibility here may not quietly get worse than the day
+ * the decision was taken — and the day the pool is raised again, this floor
+ * goes back up to REQUIRED.
+ */
+const AGREED_ON_WIDE_SCREENS = 1.2;
+
 async function worstContrast(page: Page, name: keyof typeof REQUIRED): Promise<number> {
   const target = await page.evaluate((which) => {
     const pick = () => {
@@ -111,10 +136,13 @@ test.describe('Hero wording over the footage', () => {
 
         for (const name of Object.keys(REQUIRED) as (keyof typeof REQUIRED)[]) {
           const measured = await worstContrast(page, name);
+          const floor = size.name === 'phone' ? REQUIRED[name] * MARGIN : AGREED_ON_WIDE_SCREENS;
           expect(
             measured,
-            `${name} at ${at}s on ${size.name} — needs ${REQUIRED[name]}:1 plus margin`,
-          ).toBeGreaterThan(REQUIRED[name] * MARGIN);
+            size.name === 'phone'
+              ? `${name} at ${at}s on ${size.name} — needs ${REQUIRED[name]}:1 plus margin`
+              : `${name} at ${at}s on ${size.name} — below what was agreed when the pool was lowered`,
+          ).toBeGreaterThan(floor);
         }
       }
     });

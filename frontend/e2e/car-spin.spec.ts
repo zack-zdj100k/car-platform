@@ -27,20 +27,25 @@ async function angle(page: Page): Promise<number> {
 }
 
 /**
- * The angle once it has stopped moving on its own.
+ * The angle once nothing is turning it but us.
  *
  * The viewer turns a few frames by itself when it first appears, and that only
  * begins once every frame is cached — which under a full parallel run can be a
- * second or two in. A fixed wait therefore measured mid-turn, and the reading
- * moved underneath the test between two key presses.
+ * second or two in, so waiting for the picture to be still is not enough on its
+ * own: it may not have started yet. A key press is what stops it for good (the
+ * viewer treats any input as "the reader has seen it move"), so the caller
+ * presses one first and this waits for the last tick to land.
  */
 async function settledAngle(page: Page): Promise<number> {
   let last = await angle(page);
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    await page.waitForTimeout(200);
+  let stable = 0;
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    await page.waitForTimeout(150);
     const now = await angle(page);
-    if (now === last) return now;
+    stable = now === last ? stable + 1 : 0;
     last = now;
+    // Half a second of stillness: the opening turn steps every 90ms.
+    if (stable >= 4) return now;
   }
   return last;
 }
@@ -174,7 +179,11 @@ test.describe('360° viewer', () => {
     await spin.focus();
     await expect(spin).toBeFocused();
 
+    // This press is not the one under test: it is what tells the viewer the
+    // reader has arrived, which is what cancels the opening turn.
+    await page.keyboard.press('ArrowRight');
     const before = await settledAngle(page);
+
     await page.keyboard.press('ArrowRight');
     const right = await angle(page);
     expect(right).not.toBe(before);

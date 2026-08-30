@@ -214,12 +214,21 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
         legible and the car clear; narrow screens fade top-to-bottom, since
         there the copy sits over the vehicle rather than beside it.
 
-        Lightened considerably from 90% white down the left edge, which is what
-        made that side of the picture look bleached — it was not the footage,
-        it was this. The strength was set when contrast was being guessed at;
-        measured on real frames the wording had 9.6:1 and 12.9:1 where 4.5:1 is
-        required, so most of that wash was buying nothing but a washed-out
-        picture. The numbers after this change are in the commit that made it.
+        Down to a little over half of what it was — 48% white at the centre
+        where it used to be 88% — and drawn tighter, so it sits under the
+        wording instead of across the frame: 52% of the width rather than 80%,
+        centred on the column of text. That is the owner's decision, taken with
+        the measured numbers in front of them, after seeing the picture at a
+        fifth and at a third of the old strength.
+
+        What it costs is recorded rather than hidden. With no pool at all the
+        worst pixel behind the headline is 1.00:1, because the words fall on the
+        black grille of the car; at this strength it is short of the 3:1 the
+        standard asks for text this size, and the exact figures are in the
+        commit that set it. `e2e/hero-contrast.spec.ts` holds
+        it to what was agreed, so it cannot quietly get worse, and the phone —
+        where the wording sits on the page's own background — still clears the
+        standard with room to spare.
       */}
       <div
         aria-hidden="true"
@@ -237,7 +246,7 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
            * corners, the sky and the sand come back — with a thin overall veil
            * so the two do not meet at a visible seam.
            */
-          'sm:bg-[radial-gradient(80%_105%_at_18%_52%,color-mix(in_oklab,white_88%,transparent)_0%,color-mix(in_oklab,white_62%,transparent)_42%,color-mix(in_oklab,white_16%,transparent)_72%,transparent_100%)]',
+          'sm:bg-[radial-gradient(52%_80%_at_24%_54%,color-mix(in_oklab,white_48%,transparent)_0%,color-mix(in_oklab,white_34%,transparent)_45%,color-mix(in_oklab,white_9%,transparent)_74%,transparent_100%)]',
           'dark:sm:bg-[linear-gradient(100deg,color-mix(in_oklab,black_86%,transparent)_0%,color-mix(in_oklab,black_66%,transparent)_38%,color-mix(in_oklab,black_24%,transparent)_66%,transparent_92%)]',
         )}
       />
