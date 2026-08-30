@@ -20,6 +20,23 @@ async function bootstrap(): Promise<void> {
 
   app.setGlobalPrefix(appConfig.apiPrefix);
 
+  /*
+   * Who the request came from, when it did not come from here.
+   *
+   * Behind a host's proxy every request arrives from the proxy's address, so
+   * the rate limiter counted the whole internet as one caller — 120 requests a
+   * minute shared by every visitor — and the anonymous visitor identity was the
+   * same for all of them. This makes Express read the address from
+   * X-Forwarded-For instead, believing exactly as many entries as there are
+   * proxies and no more: trusting the whole header would let a caller write
+   * their own address into it and start a fresh quota per request.
+   *
+   * Zero by default, which is the truth on a laptop.
+   */
+  if (appConfig.trustProxyHops > 0) {
+    app.set('trust proxy', appConfig.trustProxyHops);
+  }
+
   // Secure headers (spec §67).
   app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
   app.use(cookieParser());

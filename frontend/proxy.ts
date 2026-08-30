@@ -63,5 +63,5 @@ export const config = {
    * visits, and running middleware for them would cost every image a
    * round trip through this function for nothing.
    */
-  matcher: ['/((?!_next/static|_next/image|uploads/|images/|favicon.ico|robots.txt|sitemap.xml).*)'],
+  matcher: ['/((?!_next/static|_next/image|backend/|uploads/|images/|favicon.ico|robots.txt|sitemap.xml).*)'],
 };

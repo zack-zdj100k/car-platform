@@ -25,6 +25,17 @@ export const envSchema = z.object({
   API_PREFIX: z.string().default('api'),
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
 
+  /**
+   * How many proxies sit in front of this process.
+   *
+   * Express reads the client's address from X-Forwarded-For, and it will only
+   * believe as many entries as it is told to trust — trusting the whole header
+   * would let a caller write their own address into it and walk past the rate
+   * limiter. One for a single hosting proxy; two when the site forwards the
+   * browser's requests through its own origin as well.
+   */
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
+
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
   JWT_ACCESS_TTL: z.string().default('15m'),
