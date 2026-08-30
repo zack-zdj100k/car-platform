@@ -21,6 +21,23 @@ export default async function HomePage() {
   // catalogue, so no placeholder path is hard-coded into the component.
   const showcaseSlug = featured[0]?.slug;
 
+  /*
+   * The specification diagram is drawn from the photographs an administrator
+   * uploads for it, and it used to be rendered only when a vehicle was marked
+   * as featured. On a new site that meant uploading six photographs into
+   * "Home Images" and watching nothing appear, with no way to tell whether the
+   * upload had failed or the section did not exist.
+   */
+  const homeImages = {
+    safety: readSetting(settings, 'home-images', 'home.image.safety'),
+    engine: readSetting(settings, 'home-images', 'home.image.engine'),
+    wheels: readSetting(settings, 'home-images', 'home.image.wheels'),
+    tyres: readSetting(settings, 'home-images', 'home.image.tyres'),
+    exterior: readSetting(settings, 'home-images', 'home.image.exterior'),
+    interior: readSetting(settings, 'home-images', 'home.image.interior'),
+  };
+  const showOrbit = Boolean(showcaseSlug) || Object.values(homeImages).some(Boolean);
+
   return (
     <>
       <Hero
@@ -38,17 +55,10 @@ export default async function HomePage() {
         }))}
       />
 
-      {showcaseSlug ? (
+      {showOrbit ? (
         <CarOrbit
           slug={showcaseSlug}
-          images={{
-            safety: readSetting(settings, 'home-images', 'home.image.safety'),
-            engine: readSetting(settings, 'home-images', 'home.image.engine'),
-            wheels: readSetting(settings, 'home-images', 'home.image.wheels'),
-            tyres: readSetting(settings, 'home-images', 'home.image.tyres'),
-            exterior: readSetting(settings, 'home-images', 'home.image.exterior'),
-            interior: readSetting(settings, 'home-images', 'home.image.interior'),
-          }}
+          images={homeImages}
           fallbackImages={featured
             .map((car) => car.images[0]?.url)
             .filter((url): url is string => Boolean(url))}

@@ -27,6 +27,7 @@
     "prisma:format": "prisma format",
     "prisma:validate": "prisma validate",
     "db:seed": "prisma db seed",
+    "seed:settings": "tsx scripts/seed-settings.ts",
     "db:reset": "prisma migrate reset",
     "analytics:reset": "node scripts/reset-analytics.mjs",
     "make:admin": "node scripts/make-admin.mjs",

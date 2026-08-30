@@ -17,12 +17,25 @@ export type HomeImageKey = 'safety' | 'engine' | 'wheels' | 'tyres' | 'exterior'
  * Pictures come from the settings the administrator edits, so a real photograph
  * of a cabin or a wheel replaces the catalogue placeholder without a deploy.
  */
+/*
+ * Shown when a group has no picture, no catalogue photograph to borrow and no
+ * vehicle to take one from — a new site, in other words, before anything has
+ * been uploaded. Bundled with the site, so it always resolves.
+ */
+const BLANK = '/images/spin/_placeholder/frame-01.svg';
+
 export function CarOrbit({
   slug,
   images,
   fallbackImages = [],
 }: {
-  slug: string;
+  /**
+   * A vehicle to borrow a photograph from. Optional: this section is about the
+   * specification groups, not about one car, and it used to disappear entirely
+   * when no vehicle was marked as featured — taking six uploaded photographs
+   * with it, with nothing to say why.
+   */
+  slug?: string;
   images: Partial<Record<HomeImageKey, string>>;
   /** Catalogue photographs, used for any group without a picture of its own. */
   fallbackImages?: string[];
@@ -36,7 +49,9 @@ export function CarOrbit({
    * times.
    */
   const picture = (own: string | undefined, index: number) =>
-    own || fallbackImages[index % Math.max(fallbackImages.length, 1)] || `/images/cars/${slug}/main.svg`;
+    own ||
+    fallbackImages[index % Math.max(fallbackImages.length, 1)] ||
+    (slug ? `/images/cars/${slug}/main.svg` : BLANK);
 
   const items: OrbitalItem[] = [
     {
@@ -115,7 +130,7 @@ export function CarOrbit({
       <RadialOrbitalTimeline
         className="mt-12"
         items={items}
-        centerImage={images.exterior || `/images/cars/${slug}/main.svg`}
+        centerImage={images.exterior || (slug ? `/images/cars/${slug}/main.svg` : BLANK)}
         centerLabel=""
         labels={{
           hint: t.features.orbitHint,

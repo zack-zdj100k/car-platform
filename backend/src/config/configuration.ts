@@ -7,7 +7,7 @@ import type { Env } from './env.validation';
 export const appConfig = (env: Env) => ({
   env: env.NODE_ENV,
   isProduction: env.NODE_ENV === 'production',
-  port: env.BACKEND_PORT,
+  port: env.PORT ?? env.BACKEND_PORT,
   apiPrefix: env.API_PREFIX,
   corsOrigins: env.CORS_ORIGINS.split(',')
     .map((origin) => origin.trim())
@@ -20,8 +20,10 @@ export const authConfig = (env: Env) => ({
   refreshSecret: env.JWT_REFRESH_SECRET,
   accessTtl: env.JWT_ACCESS_TTL,
   refreshTtl: env.JWT_REFRESH_TTL,
-  cookieDomain: env.COOKIE_DOMAIN,
+  /** Empty means "no Domain attribute": the cookie belongs to the API's host. */
+  cookieDomain: env.COOKIE_DOMAIN || undefined,
   cookieSecure: env.COOKIE_SECURE,
+  cookieSameSite: env.COOKIE_SAME_SITE,
   google: {
     clientId: env.GOOGLE_CLIENT_ID,
     clientSecret: env.GOOGLE_CLIENT_SECRET,
