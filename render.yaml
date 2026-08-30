@@ -1,0 +1,110 @@
+# The API, on Render.
+#
+# Point Render at this repository as a Blueprint (New → Blueprint) and it reads
+# this file: build command, start command, health check and the list of
+# variables it must ask for. Everything marked `sync: false` is typed into
+# Render's dashboard once and never committed — secrets do not belong in git.
+#
+# The database is not declared here. It lives on Neon, which gives a managed
+# Postgres on its free plan; paste its connection string into DATABASE_URL.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# UPLOADED PHOTOGRAPHS — read this before going live.
+#
+# Car photographs, 360° frames and clips are written to disk by the API. A
+# Render instance has no permanent disk unless one is attached, and a free
+# instance cannot have one at all: every deploy, and every wake from sleep,
+# starts from the image as built. The database keeps pointing at files that are
+# no longer there, so the catalogue fills with broken pictures.
+#
+# Two ways out, and the choice is about money, not code:
+#
+#   1. Render Starter ($7/month) plus the `disk` block below, uncommented. Ten
+#      gigabytes holds a few thousand photographs. Nothing in the application
+#      changes — set UPLOAD_DIR to the mount path.
+#
+#   2. Object storage (Cloudflare R2, Supabase Storage, S3). Cheaper at volume
+#      and survives anything, but the upload service has to learn to write
+#      there instead of to a local directory. That is a day's work, not a
+#      setting.
+#
+# A free instance also sleeps after fifteen minutes of quiet: the first visitor
+# afterwards waits about thirty seconds for the first page.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  - type: web
+    name: zodic-api
+    runtime: node
+    plan: free # starter — required if you attach the disk below
+    region: frankfurt # closest of Render's regions to Algeria
+    branch: work/august-29
+
+    # Installed from the workspace root: the API imports the Prisma client that
+    # is generated from prisma/schema.prisma, which lives above backend/.
+    # Migrations are applied during the build rather than on boot: a failed
+    # migration then fails the deploy instead of leaving a running instance
+    # talking to a schema it does not match. (Render's separate pre-deploy step
+    # is a paid feature; this works on any plan.)
+    buildCommand: npm ci && npm run prisma:generate && npm run prisma:deploy && npm run build --workspace backend
+
+    startCommand: node backend/dist/main.js
+
+    # Returns 503 while the database is unreachable, so a broken deploy is not
+    # promoted over a working one.
+    healthCheckPath: /api/health
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Render hands the process its port in PORT, which the API now prefers
+      # over BACKEND_PORT — nothing to set here.
+
+      # Neon's connection string. Keep `?sslmode=require` on the end.
+      - key: DATABASE_URL
+        sync: false
+
+      # Two different values. Generate each with: openssl rand -base64 48
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+
+      # Every origin the browser will call this API from, comma separated.
+      # e.g. https://car-platform-zack-zdj100k.vercel.app
+      - key: CORS_ORIGINS
+        sync: false
+
+      # The site's own address, used in the links inside emails.
+      - key: NEXT_PUBLIC_SITE_URL
+        sync: false
+
+      # The site and the API are on different domains here (vercel.app and
+      # onrender.com), so the session cookie has to be `none` — a `lax` cookie
+      # is never sent across sites and nobody would stay signed in. `none`
+      # requires Secure, which the API refuses to start without.
+      - key: COOKIE_SAME_SITE
+        value: none
+      - key: COOKIE_SECURE
+        value: true
+      # Left empty on purpose: the cookie belongs to this API's own host. Set a
+      # shared parent (.zodic.dz) only once both sides live under one domain.
+      - key: COOKIE_DOMAIN
+        value: ''
+
+      # Where uploads are written. With the disk below attached, use /var/data.
+      - key: UPLOAD_DIR
+        value: ./uploads
+
+      # Order emails. `console` only logs them; set smtp when the mailbox is ready.
+      - key: MAIL_PROVIDER
+        value: console
+      - key: ADMIN_NOTIFICATION_EMAIL
+        sync: false
+
+    # Uncomment together with `plan: starter` to keep uploaded photographs.
+    # disk:
+    #   name: uploads
+    #   mountPath: /var/data
+    #   sizeGB: 10

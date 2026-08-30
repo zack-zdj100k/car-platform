@@ -52,7 +52,7 @@ export class AuthController {
     response.cookie(REFRESH_COOKIE, result.tokens.refreshToken, {
       httpOnly: true,
       secure: auth.cookieSecure,
-      sameSite: 'lax',
+      sameSite: auth.cookieSameSite,
       domain: auth.cookieDomain,
       path: '/',
       expires: result.tokens.refreshTokenExpiresAt,
@@ -64,7 +64,7 @@ export class AuthController {
     response.clearCookie(REFRESH_COOKIE, {
       httpOnly: true,
       secure: auth.cookieSecure,
-      sameSite: 'lax',
+      sameSite: auth.cookieSameSite,
       domain: auth.cookieDomain,
       path: '/',
     });

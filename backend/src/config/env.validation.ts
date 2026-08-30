@@ -16,6 +16,12 @@ export const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
 
   BACKEND_PORT: z.coerce.number().int().positive().default(4000),
+  /**
+   * Set by the host, not by us: Render, Railway and Heroku all hand the process
+   * a port and route to it. It wins over BACKEND_PORT, which is the one a
+   * developer sets on their own machine.
+   */
+  PORT: z.coerce.number().int().positive().optional(),
   API_PREFIX: z.string().default('api'),
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
 
@@ -23,8 +29,20 @@ export const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('30d'),
-  COOKIE_DOMAIN: z.string().default('localhost'),
+  /**
+   * Left empty the cookie is bound to the host that set it, which is what a
+   * deployment with the API and the site on unrelated domains needs. Set it to
+   * a shared parent — `.example.com` — only when they are subdomains of one.
+   */
+  COOKIE_DOMAIN: z.string().default(''),
   COOKIE_SECURE: booleanish.default(false),
+  /**
+   * `lax` while the site and the API share a site, as they do on one machine.
+   * A browser will not send a `lax` cookie on a request to another site at all,
+   * so a site on Vercel talking to an API on Render — different registrable
+   * domains — needs `none`, which browsers only honour over HTTPS.
+   */
+  COOKIE_SAME_SITE: z.enum(['lax', 'strict', 'none']).default('lax'),
 
   GOOGLE_CLIENT_ID: z.string().default(''),
   GOOGLE_CLIENT_SECRET: z.string().default(''),
@@ -50,7 +68,12 @@ export const envSchema = z.object({
 
   THROTTLE_TTL: z.coerce.number().int().positive().default(60),
   THROTTLE_LIMIT: z.coerce.number().int().positive().default(120),
-});
+})
+  .refine((env) => env.COOKIE_SAME_SITE !== 'none' || env.COOKIE_SECURE, {
+    message:
+      'COOKIE_SAME_SITE=none requires COOKIE_SECURE=true — a browser silently drops a cross-site cookie that is not Secure, and nobody would stay signed in',
+    path: ['COOKIE_SAME_SITE'],
+  });
 
 export type Env = z.infer<typeof envSchema>;
 

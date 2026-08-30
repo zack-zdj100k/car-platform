@@ -14,6 +14,7 @@ Copy `.env.example` to `.env`. Never commit `.env` (§67, §70).
 | Variable | Default | Description |
 | -------- | ------- | ----------- |
 | `NODE_ENV` | `development` | **Do not set this in `.env`.** The runtime supplies it: `next dev` and `next build` set it themselves, and a deployment sets it for the API. Exporting it from `.env` and then running a production build makes Next resolve a development React runtime and the build fails while prerendering. |
+| `PORT` | Set by the host (Render, Railway, Heroku) and preferred over `BACKEND_PORT` when present |
 | `BACKEND_PORT` | `4000` | NestJS listen port |
 | `API_PREFIX` | `api` | Global route prefix |
 | `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated allowed origins |
@@ -26,8 +27,9 @@ Copy `.env.example` to `.env`. Never commit `.env` (§67, §70).
 | `JWT_REFRESH_SECRET` | Refresh-token signing secret. Must differ from the access secret |
 | `JWT_ACCESS_TTL` | Access-token lifetime, e.g. `15m` |
 | `JWT_REFRESH_TTL` | Refresh-token lifetime, e.g. `30d` |
-| `COOKIE_DOMAIN` | Cookie domain for refresh tokens |
+| `COOKIE_DOMAIN` | Domain for the refresh cookie. Empty binds it to the API's own host — right when the API and site are on unrelated domains. Use a shared parent (`.zodic.dz`) when they are subdomains of one |
 | `COOKIE_SECURE` | `true` in production (HTTPS only) |
+| `COOKIE_SAME_SITE` | `lax` (default) when the site and API share a site; `none` when they do not, as with Vercel and Render — a `lax` cookie is never sent across sites. `none` requires `COOKIE_SECURE=true` and is refused at boot without it |
 
 ## Google OAuth
 
