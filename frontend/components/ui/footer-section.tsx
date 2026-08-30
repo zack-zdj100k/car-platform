@@ -4,10 +4,11 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { ComponentProps, ReactNode } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
-import { Car, Mail, Phone } from 'lucide-react';
+import { Mail, Phone } from 'lucide-react';
 import { FacebookIcon, GitHubIcon, InstagramIcon, TikTokIcon } from '@/components/ui/brand-icons';
 import { useLocale } from '@/providers/locale-provider';
 import { settingsService } from '@/services/admin.service';
+import { BrandLogo } from '@/components/ui/brand-logo';
 import { cn } from '@/lib/utils';
 
 /**
@@ -117,10 +118,14 @@ export function FooterSection({ className }: { className?: string }) {
             href="/"
             className="inline-flex items-center gap-2.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4"
           >
-            <span className="bg-primary/10 ring-primary/20 grid size-9 place-items-center rounded-lg ring-1 ring-inset">
-              <Car className="text-primary size-5" aria-hidden="true" />
-            </span>
-            <span className="font-display text-lg font-semibold tracking-tight">{siteName}</span>
+            {/*
+              Large here on purpose. The footer is where somebody checks who
+              they have been dealing with, and a mark they have to lean in to
+              read is not doing that job. The name is carried by the artwork, so
+              it is not repeated in text beside it.
+            */}
+            <BrandLogo height={56} animated />
+            <span className="sr-only">{siteName}</span>
           </Link>
 
           <p className="text-muted-foreground max-w-sm text-sm/6">{t.about.heroSubtitle}</p>

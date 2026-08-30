@@ -115,8 +115,25 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
      * clears the navigation. Without this the header sat on a strip of page
      * background, which read as a solid bar across the top.
      */
-    <section className="relative isolate -mt-16 flex h-svh min-h-[40rem] items-center overflow-hidden bg-neutral-100 pt-16 md:-mt-20 md:pt-20 dark:bg-neutral-900">
-      {/* 1 — the footage */}
+    <section className="bg-background relative isolate -mt-16 flex min-h-svh flex-col overflow-hidden sm:h-svh sm:min-h-[40rem] sm:flex-row sm:items-center sm:pt-16 md:-mt-20 md:pt-20">
+      {/*
+        1 — the footage.
+
+        On a phone it is a band across the top, at the clip's own shape, and the
+        wording sits underneath it. Full-bleed footage in a portrait window is
+        cropped to a strip about a quarter of the frame wide — neither car was
+        recognisable, which is a strange thing for a page selling them: the
+        daytime clip is square and the night one is 4:3, so a 9:19 window throws
+        most of both away. From `sm` up the footage fills the section as before.
+
+        WATERMARK. Both clips carry their generator's mark in the bottom-right
+        corner. Whether `cover` happens to crop it away depends on the shape of
+        the window — it survived on a tablet held upright, in the bottom right
+        of the page — so from `sm` up the picture is zoomed a twelfth from its
+        top edge, which pushes that corner out of frame at every size. On a
+        phone the band's ratio does the same job.
+      */}
+      <div className="hero-band relative w-full shrink-0 overflow-hidden sm:absolute sm:inset-0">
       {reducedMotion || !mounted ? (
         /*
          * The still frame: shown to anyone who asked for less motion, and to
@@ -136,7 +153,8 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
         <>
           <div
             className={cn(
-              'absolute inset-0 bg-cover bg-[58%_center] sm:bg-center dark:hidden',
+              'absolute inset-0 bg-cover bg-top sm:bg-center dark:hidden',
+              'sm:origin-top sm:scale-[1.08]',
               // Graded to match its footage, or the swap would brighten.
               LIGHT_FOOTAGE_GRADE,
             )}
@@ -144,7 +162,7 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
             aria-hidden="true"
           />
           <div
-            className="absolute inset-0 hidden bg-cover bg-[58%_center] sm:bg-center dark:block"
+            className="absolute inset-0 hidden bg-cover bg-top sm:origin-top sm:scale-[1.08] sm:bg-center dark:block"
             style={{ backgroundImage: `url(${FOOTAGE.dark.poster})` }}
             aria-hidden="true"
           />
@@ -160,7 +178,9 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
           key={footage.video}
           ref={videoRef}
           className={cn(
-            'absolute inset-0 size-full object-cover object-[58%_center] transition-opacity duration-[1400ms] sm:object-center',
+            'absolute inset-0 size-full object-cover object-top transition-opacity duration-[1400ms] sm:object-center',
+            // See WATERMARK above.
+            'sm:origin-top sm:scale-[1.08]',
             LIGHT_FOOTAGE_GRADE,
             videoReady ? 'opacity-100' : 'opacity-0',
           )}
@@ -177,6 +197,14 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
           <source src={footage.video} type="video/mp4" />
         </video>
       )}
+
+      {/* On a phone the band's lower edge is dissolved into the page rather
+          than cut, since the wording begins directly under it. */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 bottom-0 h-20 bg-[linear-gradient(to_top,var(--background),transparent)] sm:hidden"
+      />
+      </div>
 
       {/*
         2 — light scrim.
@@ -196,7 +224,10 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
       <div
         aria-hidden="true"
         className={cn(
-          'absolute inset-0',
+          // Hidden on a phone: there the wording is under the band, on the
+          // page's own background, so lightening the footage buys nothing and
+          // only washes the car out.
+          'absolute inset-0 hidden sm:block',
           /*
            * A pool of light behind the words, not a wash across the picture.
            *
@@ -206,9 +237,7 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
            * corners, the sky and the sand come back — with a thin overall veil
            * so the two do not meet at a visible seam.
            */
-          'bg-[radial-gradient(120%_75%_at_50%_38%,color-mix(in_oklab,white_86%,transparent)_0%,color-mix(in_oklab,white_60%,transparent)_45%,color-mix(in_oklab,white_18%,transparent)_75%,transparent_100%)]',
           'sm:bg-[radial-gradient(80%_105%_at_18%_52%,color-mix(in_oklab,white_88%,transparent)_0%,color-mix(in_oklab,white_62%,transparent)_42%,color-mix(in_oklab,white_16%,transparent)_72%,transparent_100%)]',
-          'dark:bg-[linear-gradient(to_bottom,color-mix(in_oklab,black_84%,transparent)_0%,color-mix(in_oklab,black_66%,transparent)_42%,color-mix(in_oklab,black_30%,transparent)_78%,transparent_100%)]',
           'dark:sm:bg-[linear-gradient(100deg,color-mix(in_oklab,black_86%,transparent)_0%,color-mix(in_oklab,black_66%,transparent)_38%,color-mix(in_oklab,black_24%,transparent)_66%,transparent_92%)]',
         )}
       />
@@ -220,7 +249,7 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
       />
 
       {/* 3 — content */}
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-6 sm:px-8">
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-6 pt-8 pb-28 sm:px-8 sm:pt-0 sm:pb-0">
         <div className="max-w-3xl">
           {/*
             Charcoal rather than the muted grey used elsewhere.

@@ -380,6 +380,98 @@
     );
   }
 
+  /*
+   * A slow highlight travelling across the brand mark.
+   *
+   * Masked to the artwork, so what lights up is the crest and the letters. An
+   * unmasked band lays a pale rectangle over whatever sits behind the mark,
+   * which reads as a rendering fault rather than as a shine.
+   *
+   * Six seconds apart rather than continuous: a logo that shines every second
+   * is a distraction on a page somebody is trying to read. It stops entirely
+   * for anyone who asked for less movement.
+   */
+  @keyframes brand-shine {
+    0%,
+    72% {
+      background-position: -55% 0;
+    }
+    88%,
+    100% {
+      background-position: 155% 0;
+    }
+  }
+
+  .brand-shine {
+    /* White over the graphite mark; warm gold over the platinum one, which is
+       already too light for a white sweep to show against. */
+    --brand-shine-tint: rgb(255 255 255 / 0.85);
+  }
+
+  .dark .brand-shine {
+    /* The brand gold, near full strength: over a near-white mark a paler tint
+       makes no visible difference at all. */
+    --brand-shine-tint: rgb(176 138 74 / 0.9);
+  }
+
+  .brand-shine::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image: linear-gradient(
+      100deg,
+      transparent 44%,
+      var(--brand-shine-tint) 50%,
+      transparent 56%
+    );
+    background-size: 220% 100%;
+    background-repeat: no-repeat;
+    background-position: -55% 0;
+    -webkit-mask-image: var(--brand-mask);
+    mask-image: var(--brand-mask);
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    animation: brand-shine 6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .brand-shine::after {
+      content: none;
+    }
+  }
+
+  /*
+   * The hero footage band on a phone, at the shape of the clip being shown:
+   * the daytime car is filmed square and the night one 4:3, and cropping either
+   * into a portrait window leaves a strip of bodywork nobody can identify. From
+   * `sm` up the band is stretched over the whole section instead, so the ratio
+   * is dropped.
+   */
+  .hero-band {
+    /* A tenth wider than the square clip, with the picture pinned to the top of
+       the band: that trims the strip along the bottom where the footage carries
+       its generator's watermark, which the old full-bleed crop cut off and this
+       one would otherwise put on the front page. */
+    aspect-ratio: 1.12 / 1;
+  }
+
+  .dark .hero-band {
+    /* The same trim, from a 4:3 clip. */
+    aspect-ratio: 1.5 / 1;
+  }
+
+  @media (width >= 40rem) {
+    .hero-band,
+    .dark .hero-band {
+      aspect-ratio: auto;
+    }
+  }
+
   .text-balance-tight {
     text-wrap: balance;
   }

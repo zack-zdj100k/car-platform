@@ -26,6 +26,25 @@ async function angle(page: Page): Promise<number> {
   return Number(await viewer(page).getAttribute('aria-valuenow'));
 }
 
+/**
+ * The angle once it has stopped moving on its own.
+ *
+ * The viewer turns a few frames by itself when it first appears, and that only
+ * begins once every frame is cached — which under a full parallel run can be a
+ * second or two in. A fixed wait therefore measured mid-turn, and the reading
+ * moved underneath the test between two key presses.
+ */
+async function settledAngle(page: Page): Promise<number> {
+  let last = await angle(page);
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    await page.waitForTimeout(200);
+    const now = await angle(page);
+    if (now === last) return now;
+    last = now;
+  }
+  return last;
+}
+
 test.describe('360° viewer', () => {
   test('appears as the first slide on a car that has a frame set', async ({ page }) => {
     await page.goto(CAR_WITH_SPIN);
@@ -151,12 +170,11 @@ test.describe('360° viewer', () => {
 
   test('turns with the arrow keys, for anyone without a mouse', async ({ page }) => {
     const spin = await openSpin(page);
-    await page.waitForTimeout(700);
 
     await spin.focus();
     await expect(spin).toBeFocused();
 
-    const before = await angle(page);
+    const before = await settledAngle(page);
     await page.keyboard.press('ArrowRight');
     const right = await angle(page);
     expect(right).not.toBe(before);

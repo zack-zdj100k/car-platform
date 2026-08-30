@@ -270,7 +270,14 @@ export function RadialOrbitalTimeline({
         </Button>
       </div>
 
-      <div className="mt-6 grid items-center gap-6 md:grid-cols-[minmax(0,1fr)_20rem]">
+      {/*
+        On a wide screen the reading column takes more room than the ring needs
+        to give up: the card is where the substance is, and at 20rem its
+        paragraph broke every four or five words. Below that the older, tighter
+        card is the right one — a tablet splitting 26rem off the ring leaves the
+        diagram cramped, and a phone stacks the two anyway.
+      */}
+      <div className="mt-6 grid items-center gap-6 md:grid-cols-[minmax(0,1fr)_20rem] lg:grid-cols-[minmax(0,1fr)_30rem]">
       <div
         ref={ringRef}
         className="relative mx-auto flex h-[24rem] w-full max-w-5xl items-center justify-center sm:h-[38rem] lg:h-[46rem]"
@@ -445,25 +452,31 @@ function OrbitalDetail({
     >
       {item.image && (
         <div className="bg-secondary relative aspect-16/9 w-full">
-          <MediaImage src={item.image} alt="" fill sizes="18rem" className="object-cover" />
+          <MediaImage
+            src={item.image}
+            alt=""
+            fill
+            sizes="(min-width: 64rem) 30rem, (min-width: 48rem) 20rem, 100vw"
+            className="object-cover"
+          />
         </div>
       )}
 
-      <CardHeader className="gap-2 px-4 pt-4">
+      <CardHeader className="gap-2 px-4 pt-4 lg:px-6 lg:pt-6">
         <div className="flex items-center justify-between gap-2">
           {item.badge && (
-            <Badge variant="secondary" className="text-[10px]">
+            <Badge variant="secondary" className="text-[10px] lg:text-xs">
               {item.badge}
             </Badge>
           )}
-          <span className="text-muted-foreground font-mono text-[10px]">
+          <span className="text-muted-foreground font-mono text-[10px] lg:text-xs">
             {String(item.id).padStart(2, '0')}
           </span>
         </div>
-        <CardTitle className="text-sm">{item.title}</CardTitle>
+        <CardTitle className="text-sm lg:text-lg">{item.title}</CardTitle>
       </CardHeader>
 
-      <CardContent className="text-muted-foreground px-4 pt-3 pb-5 text-xs/5">
+      <CardContent className="text-muted-foreground px-4 pt-3 pb-5 text-xs/5 lg:px-6 lg:pb-6 lg:text-sm/6">
         <p>{item.content}</p>
 
         {item.tags && item.tags.length > 0 && (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'motion/react';
 import { ArrowUpRight, Map } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -51,6 +51,27 @@ export function LocationMap({ location, detail, href, openLabel, className }: Lo
   const [expanded, setExpanded] = useState(false);
   const container = useRef<HTMLAnchorElement>(null);
 
+  /*
+   * A phone gets the card at the width of its column, already open.
+   *
+   * The fixed 380px was wider than a 390px screen once the section's padding
+   * was taken off, so the page itself scrolled sideways. And opening on hover
+   * is a mouse idea: on a touch screen the first tap follows the link, so the
+   * address and the map behind it were never shown at all — the card said the
+   * name of the place and nothing else.
+   */
+  const [compact, setCompact] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 639px), (hover: none)');
+    const apply = () => setCompact(query.matches);
+    apply();
+    query.addEventListener('change', apply);
+    return () => query.removeEventListener('change', apply);
+  }, []);
+
+  const isOpen = compact || expanded;
+
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   const rotateX = useSpring(useTransform(mouseY, [-60, 60], [6, -6]), { stiffness: 300, damping: 30 });
@@ -77,7 +98,7 @@ export function LocationMap({ location, detail, href, openLabel, className }: Lo
       target="_blank"
       rel="noreferrer noopener"
       aria-label={`${location}${detail ? ` — ${detail}` : ''} · ${openLabel}`}
-      className={cn('group relative block w-fit max-w-full select-none', className)}
+      className={cn('group relative block max-w-full select-none', compact ? 'w-full' : 'w-fit', className)}
       style={{ perspective: 1000 }}
       onMouseMove={(event) => {
         if (reduced || !container.current) return;
@@ -96,15 +117,19 @@ export function LocationMap({ location, detail, href, openLabel, className }: Lo
         /*
          * Roughly double the reference's footprint. At 240×140 the card was a
          * label rather than a place — the address wrapped onto three lines and
-         * the pin had nowhere to sit. These are capped to the viewport on the
-         * wrapper below so a phone is not made to scroll sideways.
+         * the pin had nowhere to sit. A phone gets the width of its column
+         * instead of either fixed size, so nothing scrolls sideways.
          */
-        animate={{ width: expanded ? 560 : 380, height: expanded ? 400 : 220 }}
+        animate={
+          compact
+            ? { width: '100%', height: 320 }
+            : { width: expanded ? 560 : 380, height: expanded ? 400 : 220 }
+        }
         transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 400, damping: 35 }}
       >
         {/* Decoration, and read as such: a plan of streets, not of this street. */}
         <AnimatePresence>
-          {expanded && (
+          {isOpen && (
             <motion.div
               aria-hidden="true"
               className="pointer-events-none absolute inset-0"
@@ -230,7 +255,7 @@ export function LocationMap({ location, detail, href, openLabel, className }: Lo
             </motion.h3>
 
             <AnimatePresence>
-              {expanded && detail && (
+              {isOpen && detail && (
                 <motion.p
                   className="text-muted-foreground text-sm"
                   initial={{ opacity: 0, y: -6, height: 0 }}
@@ -247,7 +272,7 @@ export function LocationMap({ location, detail, href, openLabel, className }: Lo
               aria-hidden="true"
               className="from-primary/60 via-primary/25 block h-px bg-gradient-to-r to-transparent"
               initial={{ scaleX: 0.3, originX: 0 }}
-              animate={{ scaleX: hovered || expanded ? 1 : 0.3 }}
+              animate={{ scaleX: hovered || isOpen ? 1 : 0.3 }}
               transition={{ duration: reduced ? 0 : 0.4, ease: 'easeOut' }}
             />
           </div>

@@ -18,6 +18,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { NavBar, type NavItem } from '@/components/ui/tubelight-navbar';
 import { LanguageSwitcher } from './language-switcher';
 import { ThemeToggle } from './theme-toggle';
+import { BrandLogo } from '@/components/ui/brand-logo';
 import { useLocale } from '@/providers/locale-provider';
 import { useAuth } from '@/providers/auth-provider';
 import { revealHeader, useHeaderRetreated, useScrolledPast } from '@/hooks/use-client-store';
@@ -97,22 +98,28 @@ export function SiteHeader() {
         impossible at any width or in any language.
       */}
       <div className="relative mx-auto grid h-16 w-full max-w-7xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-5 sm:px-8 md:h-20">
-        {/* Logo placeholder (spec §7 — do not invent the final logo) */}
+        {/* The mark itself now, rather than the placeholder icon and wordmark. */}
         <Link
           href="/"
           className={cn(
-            'group/brand flex w-fit items-center gap-2.5 justify-self-start rounded-full transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-4',
+            'group/brand flex w-fit items-center justify-self-start rounded-full transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-4',
             floatingSurface,
-            'ps-1.5 pe-4 py-1',
+            'px-4 py-1.5',
           )}
           aria-label={t.nav.home}
         >
-          <span className="bg-primary/10 ring-primary/20 grid size-9 place-items-center rounded-lg ring-1 ring-inset transition-transform duration-300 motion-safe:group-hover/brand:-translate-y-0.5">
-            <Car className="text-primary size-5" aria-hidden="true" />
-          </span>
-          <span className="font-display hidden text-base font-semibold tracking-tight sm:inline">
-            ZODIC CAR
-          </span>
+          {/* The crest alone below `sm`, where the full mark would be a smear. */}
+          <BrandLogo
+            symbolOnly
+            height={30}
+            animated
+            className="transition-transform duration-300 motion-safe:group-hover/brand:-translate-y-0.5 sm:hidden"
+          />
+          <BrandLogo
+            height={26}
+            animated
+            className="hidden transition-transform duration-300 motion-safe:group-hover/brand:-translate-y-0.5 sm:inline-block"
+          />
         </Link>
 
         {/*
