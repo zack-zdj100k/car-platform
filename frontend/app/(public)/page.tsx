@@ -54,13 +54,16 @@ export default async function HomePage() {
             .filter((url): url is string => Boolean(url))}
         />
       ) : null}
-      {/* Between the diagram above and the cars below: where to come and see them. */}
+      <VideoShowcase />
+      {/*
+        Between the film and the cars: having watched one move, the next
+        question is where to go and see it.
+      */}
       <ShowroomLocation
         name={readSetting(settings, 'location', 'location.name')}
         address={readSetting(settings, 'location', 'location.address')}
         mapUrl={readSetting(settings, 'location', 'location.mapUrl')}
       />
-      <VideoShowcase />
       <FeaturedCars cars={featured} />
       <StatsBento stats={stats} note={marketingNote} />
     </>

@@ -77,7 +77,7 @@ export function LocationMap({ location, detail, href, openLabel, className }: Lo
       target="_blank"
       rel="noreferrer noopener"
       aria-label={`${location}${detail ? ` — ${detail}` : ''} · ${openLabel}`}
-      className={cn('group relative block w-fit select-none', className)}
+      className={cn('group relative block w-fit max-w-full select-none', className)}
       style={{ perspective: 1000 }}
       onMouseMove={(event) => {
         if (reduced || !container.current) return;
@@ -93,7 +93,13 @@ export function LocationMap({ location, detail, href, openLabel, className }: Lo
       <motion.div
         className="bg-card border-border relative overflow-hidden rounded-2xl border shadow-[var(--shadow-card)]"
         style={reduced ? undefined : { rotateX, rotateY, transformStyle: 'preserve-3d' }}
-        animate={{ width: expanded ? 360 : 260, height: expanded ? 260 : 150 }}
+        /*
+         * Roughly double the reference's footprint. At 240×140 the card was a
+         * label rather than a place — the address wrapped onto three lines and
+         * the pin had nowhere to sit. These are capped to the viewport on the
+         * wrapper below so a phone is not made to scroll sideways.
+         */
+        animate={{ width: expanded ? 560 : 380, height: expanded ? 400 : 220 }}
         transition={reduced ? { duration: 0 } : { type: 'spring', stiffness: 400, damping: 35 }}
       >
         {/* Decoration, and read as such: a plan of streets, not of this street. */}
@@ -192,7 +198,7 @@ export function LocationMap({ location, detail, href, openLabel, className }: Lo
                   reduced ? { duration: 0 } : { type: 'spring', stiffness: 400, damping: 20, delay: 0.25 }
                 }
               >
-                <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                <svg width="42" height="42" viewBox="0 0 24 24" fill="none">
                   <path
                     d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"
                     className="fill-primary"
@@ -206,17 +212,17 @@ export function LocationMap({ location, detail, href, openLabel, className }: Lo
           )}
         </AnimatePresence>
 
-        <div className="relative z-10 flex h-full flex-col justify-between p-5">
+        <div className="relative z-10 flex h-full flex-col justify-between p-6">
           <div className="flex items-start justify-between gap-3">
-            <Map className="text-primary size-[18px]" aria-hidden="true" />
-            <span className="border-border bg-background/60 text-muted-foreground rounded-full border px-2 py-1 text-[10px] font-medium tracking-wide uppercase backdrop-blur-sm">
+            <Map className="text-primary size-6" aria-hidden="true" />
+            <span className="border-border bg-background/60 text-muted-foreground rounded-full border px-2.5 py-1 text-[11px] font-medium tracking-wide uppercase backdrop-blur-sm">
               {openLabel}
             </span>
           </div>
 
           <div className="space-y-1">
             <motion.h3
-              className="text-foreground text-sm font-semibold tracking-tight"
+              className="text-foreground text-lg font-semibold tracking-tight"
               animate={{ x: hovered && !reduced ? 3 : 0 }}
               transition={{ type: 'spring', stiffness: 400, damping: 25 }}
             >
@@ -226,7 +232,7 @@ export function LocationMap({ location, detail, href, openLabel, className }: Lo
             <AnimatePresence>
               {expanded && detail && (
                 <motion.p
-                  className="text-muted-foreground text-xs"
+                  className="text-muted-foreground text-sm"
                   initial={{ opacity: 0, y: -6, height: 0 }}
                   animate={{ opacity: 1, y: 0, height: 'auto' }}
                   exit={{ opacity: 0, y: -6, height: 0 }}
