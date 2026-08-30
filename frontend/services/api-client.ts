@@ -6,7 +6,26 @@ import type { ApiErrorBody } from '@/types/api';
  * Nothing else may call `fetch` against the backend — that keeps loading,
  * empty, error and expiry handling consistent everywhere.
  */
+/**
+ * The API's real address. Used by the server, and to build the URL of an
+ * uploaded file, which is served by the API itself.
+ */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+
+/**
+ * What the browser calls, which is not the same thing.
+ *
+ * Requests from the page go to this site's own origin and are forwarded to the
+ * API by the rewrite in next.config.ts. That is not a detail of taste: the
+ * session lives in a cookie, and a cookie set by a different site is a
+ * third-party cookie. Safari refuses those outright, Chrome is retiring them,
+ * and the symptom is the worst kind — signing in works, and the next page load
+ * is signed out again, with nothing in the console to say why.
+ *
+ * Through the rewrite the cookie comes from the same host as the page, so it is
+ * kept and sent like any other first-party cookie.
+ */
+export const REQUEST_BASE = typeof window === 'undefined' ? API_URL : '/backend';
 
 /** Structured failure carrying the status so callers can branch on 401/403/404. */
 export class ApiError extends Error {
@@ -92,7 +111,7 @@ async function parseError(response: Response): Promise<ApiError> {
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, token, cache, next, credentials, headers = {}, signal } = options;
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(`${REQUEST_BASE}${path}`, {
     method,
     headers: {
       ...(body !== undefined ? { 'content-type': 'application/json' } : {}),

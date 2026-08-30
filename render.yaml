@@ -111,6 +111,13 @@ services:
       - key: COOKIE_DOMAIN
         value: ''
 
+      # Two proxies stand in front of this: Render's own, and the site's origin,
+      # which forwards the browser's API calls so the session cookie stays
+      # first-party. Without this the rate limiter sees one caller for the whole
+      # internet and every visitor shares a single quota.
+      - key: TRUST_PROXY_HOPS
+        value: '2'
+
       # Where uploads are written. With the disk below attached, use /var/data.
       - key: UPLOAD_DIR
         value: ./uploads

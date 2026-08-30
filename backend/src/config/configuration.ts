@@ -13,6 +13,7 @@ export const appConfig = (env: Env) => ({
     .map((origin) => origin.trim())
     .filter(Boolean),
   siteUrl: env.NEXT_PUBLIC_SITE_URL,
+  trustProxyHops: env.TRUST_PROXY_HOPS,
 });
 
 export const authConfig = (env: Env) => ({

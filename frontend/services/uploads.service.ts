@@ -1,5 +1,15 @@
 import { API_URL, ApiError } from './api-client';
 
+/*
+ * `API_URL`, not the same-origin base the rest of the browser code uses.
+ *
+ * Everything else is forwarded through this site's own origin so the session
+ * cookie stays first-party — but a file is not a cookie. Forwarding a video
+ * through the site's serverless functions would put it through a 4.5MB request
+ * limit and a short timeout, so uploads talk to the API directly. They carry a
+ * bearer token rather than a cookie, which is what makes that safe.
+ */
+
 export interface UploadedVideo {
   url: string;
   filename: string;

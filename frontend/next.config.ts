@@ -84,6 +84,29 @@ const nextConfig: NextConfig = {
       : [],
   },
 
+  /*
+   * The API, served from this site's own origin.
+   *
+   * Everything the page requests goes to /backend/... here and is forwarded to
+   * the API. The session cookie then belongs to this host rather than to the
+   * API's, which is the only way it survives: Safari discards third-party
+   * cookies entirely and Chrome is retiring them, so signing in on one domain
+   * and reading the cookie from another no longer works anywhere.
+   *
+   * Server-side fetches still call the API directly — no cookie, no browser,
+   * and no reason to make the round trip twice.
+   */
+  async rewrites() {
+    if (!apiUrl) return [];
+
+    return [
+      {
+        source: '/backend/:path*',
+        destination: `${apiUrl.origin}${apiUrl.pathname.replace(/\/$/, '')}/:path*`,
+      },
+    ];
+  },
+
   poweredByHeader: false,
 
   async headers() {
