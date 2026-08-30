@@ -11,7 +11,16 @@ export type FuelType = 'PETROL' | 'DIESEL' | 'HYBRID' | 'PLUG_IN_HYBRID' | 'ELEC
 export type Transmission = 'MANUAL' | 'AUTOMATIC' | 'CVT' | 'DCT' | 'AMT' | 'SINGLE_SPEED';
 export type Drivetrain = 'FWD' | 'RWD' | 'AWD' | 'FOUR_WD';
 export type ColorKind = 'EXTERIOR' | 'INTERIOR';
-export type ImageKind = 'MAIN' | 'GALLERY' | 'EXTERIOR' | 'INTERIOR' | 'WHEEL';
+export type ImageKind =
+  | 'MAIN'
+  | 'GALLERY'
+  | 'EXTERIOR'
+  | 'INTERIOR'
+  | 'WHEEL'
+  | 'ENGINE'
+  | 'TRUNK'
+  | 'OTHER'
+  | 'SPIN';
 
 export interface PaginationMeta {
   page: number;
@@ -52,6 +61,8 @@ export interface CarImage {
   kind: ImageKind;
   url: string;
   alt: string | null;
+  /** Heading for an OTHER photograph — what the admin called this slot. */
+  label?: string | null;
   width?: number | null;
   height?: number | null;
   sortOrder?: number;
@@ -210,6 +221,10 @@ export interface CarListItem {
   price: string;
   currency: string;
   marketingDescription: string | null;
+  /** Set when this vehicle has a TikTok clip; the card links to it. */
+  videoUrl?: string | null;
+  /** Promotional price while a promotion runs; `price` is then struck through. */
+  promoPrice?: string | null;
   isFeatured: boolean;
   isDemoData: boolean;
   status: CarStatus;
@@ -218,7 +233,8 @@ export interface CarListItem {
   brand: Pick<Brand, 'id' | 'name' | 'slug' | 'logoUrl'>;
   engine: Pick<CarEngine, 'fuelType' | 'transmission' | 'drivetrain' | 'powerHp' | 'displacementL'> | null;
   images: Pick<CarImage, 'url' | 'alt'>[];
-  colors: Pick<CarColor, 'id' | 'name' | 'hexCode' | 'finish' | 'isDefault'>[];
+  // `imageUrl` lets the card swap its photograph when a colour is chosen.
+  colors: Pick<CarColor, 'id' | 'name' | 'hexCode' | 'finish' | 'isDefault' | 'imageUrl'>[];
   _count?: { favorites: number };
 }
 
@@ -239,6 +255,10 @@ export interface CarDetail {
   currency: string;
   marketingDescription: string | null;
   description: string | null;
+  /** Link to this vehicle's TikTok video, when one has been recorded. */
+  videoUrl: string | null;
+  /** Promotional price while a promotion runs; `price` is then struck through. */
+  promoPrice: string | null;
   status: CarStatus;
   isFeatured: boolean;
   isDemoData: boolean;
@@ -349,6 +369,23 @@ export interface OrderSummary {
   car: Pick<CarListItem, 'id' | 'slug' | 'model' | 'year' | 'price' | 'currency' | 'brand' | 'images'>;
 }
 
+/**
+ * A row from the admin order list.
+ *
+ * Deliberately separate from OrderDetail: the list query does not load status
+ * history, and typing it as the fuller shape caused a crash when the dialog
+ * read `statusHistory.length` on a value that was never sent.
+ */
+export interface AdminOrderRow extends OrderSummary {
+  buyerName: string;
+  buyerEmail: string;
+  buyerPhone: string;
+  message: string | null;
+  adminNote: string | null;
+  userId: string | null;
+  user: { id: string; fullName: string; email: string } | null;
+}
+
 export interface OrderDetail extends OrderSummary {
   buyerName: string;
   buyerEmail: string;
@@ -392,6 +429,8 @@ export interface AnalyticsDashboard {
     favorites: { total: number };
     orders: { total: number; pending: number };
     views: { total: number; last30Days: number };
+    /** Distinct people, not page hits. See the analytics service. */
+    visitors: { total: number; last30Days: number };
     brands: { total: number };
     generatedAt: string;
   };
@@ -403,6 +442,7 @@ export interface AnalyticsDashboard {
     cars: { date: string; count: number }[];
     orders: { date: string; count: number }[];
     views: { date: string; count: number }[];
+    visitors: { date: string; count: number }[];
   };
   orderBreakdown: { status: OrderStatus; count: number }[];
   catalogue: {

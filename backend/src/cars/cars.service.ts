@@ -1,9 +1,13 @@
 import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { CarStatus, Prisma, ColorKind, ImageKind } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
+import { CarStatus, Prisma, ColorKind, ImageKind, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { paginate, type PaginatedResult } from '../common/dto/paginated-result';
 import { slugify } from '../common/utils/slug';
+import { anonymousIdentity, isRobot } from '../common/utils/visitor';
+import type { Configuration } from '../config/configuration';
 import { CarSort, QueryCarsDto } from './dto/query-cars.dto';
+import type { CarImageDto } from './dto/car-spec-groups.dto';
 import type { CreateCarDto } from './dto/create-car.dto';
 import type { UpdateCarDto } from './dto/update-car.dto';
 
@@ -16,8 +20,11 @@ const listSelect = {
   trim: true,
   bodyType: true,
   price: true,
+  promoPrice: true,
   currency: true,
   marketingDescription: true,
+  // Cards show a TikTok badge for the cars that have a clip.
+  videoUrl: true,
   isFeatured: true,
   isDemoData: true,
   status: true,
@@ -33,7 +40,7 @@ const listSelect = {
   },
   colors: {
     where: { kind: ColorKind.EXTERIOR },
-    select: { id: true, name: true, hexCode: true, finish: true, isDefault: true },
+    select: { id: true, name: true, hexCode: true, finish: true, isDefault: true, imageUrl: true },
     orderBy: { sortOrder: 'asc' },
   },
   _count: { select: { favorites: true } },
@@ -59,7 +66,10 @@ const detailInclude = {
 export class CarsService {
   private readonly logger = new Logger(CarsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService<Configuration, true>,
+  ) {}
 
   /** Only published, non-deleted vehicles are ever visible to the public. */
   private get publicScope(): Prisma.CarWhereInput {
@@ -104,6 +114,12 @@ export class CarsService {
         throw new BadRequestException('priceMin cannot be greater than priceMax');
       }
       and.push({ price: { gte: query.priceMin, lte: query.priceMax } });
+    }
+
+    // The videos page asks for the cars that actually have a clip, rather than
+    // fetching the catalogue and discarding most of it in the browser.
+    if (query.hasVideo) {
+      and.push({ videoUrl: { not: null } });
     }
 
     return { AND: and };
@@ -259,8 +275,29 @@ export class CarsService {
     return candidate;
   }
 
+  /**
+   * A promotion has to be a reduction.
+   *
+   * The vehicle page strikes the normal price through and shows this one
+   * instead, so a promotional price at or above the normal one would read as a
+   * discount while charging more. Refused with a clear message rather than
+   * displayed.
+   */
+  private assertPromotionIsADiscount(promoPrice: number | undefined, price: Prisma.Decimal | number) {
+    if (promoPrice === undefined || promoPrice === null) return;
+
+    const normal = new Prisma.Decimal(price);
+    if (new Prisma.Decimal(promoPrice).greaterThanOrEqualTo(normal)) {
+      throw new BadRequestException(
+        `The promotional price must be below the normal price of ${normal.toString()}.`,
+      );
+    }
+  }
+
   /** Spec §46, §47 — create a vehicle with all specification groups. */
   async create(dto: CreateCarDto, adminId: string) {
+    this.assertPromotionIsADiscount(dto.promoPrice, dto.price);
+
     const slug = await this.uniqueSlug(dto.brandId, dto.model, dto.year, dto.trim);
     const status = dto.status ?? CarStatus.DRAFT;
 
@@ -278,8 +315,16 @@ export class CarsService {
         doors: dto.doors ?? null,
         seats: dto.seats ?? null,
         price: new Prisma.Decimal(dto.price),
+        /*
+         * `!= null` rather than `!== undefined`: the form sends null for an
+         * empty promotional price, and `new Decimal(null)` throws — so creating
+         * any car without a promotion failed with "an unexpected error", while
+         * editing one worked, because the edit path already handled null.
+         */
+        promoPrice: dto.promoPrice != null ? new Prisma.Decimal(dto.promoPrice) : null,
         currency: dto.currency ?? 'USD',
         marketingDescription: dto.marketingDescription ?? null,
+        videoUrl: dto.videoUrl ?? null,
         description: dto.description ?? null,
         status,
         isFeatured: dto.isFeatured ?? false,
@@ -308,38 +353,96 @@ export class CarsService {
               },
             }
           : {}),
-        ...(dto.images?.length
-          ? {
-              images: {
-                create: dto.images.map((image, index) => ({
-                  kind: image.kind ?? ImageKind.GALLERY,
-                  url: image.url,
-                  alt: image.alt ?? null,
-                  width: image.width ?? null,
-                  height: image.height ?? null,
-                  sortOrder: image.sortOrder ?? index,
-                })),
-              },
-            }
-          : {}),
       },
       include: detailInclude,
     });
 
+    /*
+     * The photographs are written next, not alongside, so each can be attached
+     * to the colour it shows — see `writeImages`. One transaction, so a car is
+     * never left half-photographed.
+     */
+    if (dto.images?.length) {
+      const withImages = await this.prisma.$transaction(async (tx) => {
+        await this.writeImages(tx, car.id, dto.images!);
+        return tx.car.findUniqueOrThrow({ where: { id: car.id }, include: detailInclude });
+      });
+
+      this.logger.log(`Car ${car.id} (${car.slug}) created by admin ${adminId}`);
+      return withImages;
+    }
+
     this.logger.log(`Car ${car.id} (${car.slug}) created by admin ${adminId}`);
     return car;
+  }
+
+  /**
+   * Writes the car's photographs, attaching each to the colour it shows.
+   *
+   * Separate from the car write, and after it, because of an ordering problem
+   * that cannot be solved inside a single nested write: supplying colours
+   * replaces them, so the colours this car will have do not exist — and have no
+   * ids — until that write has happened. An image can therefore only be linked
+   * to a colour by reading the colours back afterwards, which is what this does.
+   *
+   * A name that matches no colour leaves the image attached to the car alone.
+   * That is deliberate: a mistyped colour should cost a photograph its grouping,
+   * not its existence.
+   */
+  private async writeImages(
+    tx: Prisma.TransactionClient,
+    carId: string,
+    images: CarImageDto[],
+  ): Promise<void> {
+    await tx.carImage.deleteMany({ where: { carId } });
+    if (images.length === 0) return;
+
+    const colors = await tx.carColor.findMany({
+      where: { carId },
+      select: { id: true, name: true },
+    });
+
+    // Matched case-insensitively: "Basalt Grey" and "basalt grey" are one colour
+    // to everyone except a string comparison.
+    const byName = new Map(colors.map((color) => [color.name.trim().toLowerCase(), color.id]));
+
+    await tx.carImage.createMany({
+      data: images.map((image, index) => ({
+        carId,
+        colorId: image.colorName ? (byName.get(image.colorName.trim().toLowerCase()) ?? null) : null,
+        kind: image.kind ?? ImageKind.GALLERY,
+        url: image.url,
+        alt: image.alt ?? null,
+        label: image.label?.trim() || null,
+        width: image.width ?? null,
+        height: image.height ?? null,
+        sortOrder: image.sortOrder ?? index,
+      })),
+    });
   }
 
   /** Spec §46 — edit. Spec groups are upserted so partial edits are safe. */
   async update(id: string, dto: UpdateCarDto, adminId: string) {
     const existing = await this.prisma.car.findUnique({
       where: { id },
-      select: { id: true, status: true, publishedAt: true, brandId: true, model: true, year: true, trim: true },
+      select: {
+        id: true,
+        status: true,
+        publishedAt: true,
+        brandId: true,
+        model: true,
+        year: true,
+        trim: true,
+        price: true,
+      },
     });
 
     if (!existing) {
       throw new NotFoundException('Vehicle not found');
     }
+
+    // Compared against whatever the normal price will be after this edit.
+    this.assertPromotionIsADiscount(dto.promoPrice, dto.price ?? existing.price);
 
     const identityChanged =
       (dto.brandId !== undefined && dto.brandId !== existing.brandId) ||
@@ -362,8 +465,12 @@ export class CarsService {
       ...(dto.doors !== undefined ? { doors: dto.doors } : {}),
       ...(dto.seats !== undefined ? { seats: dto.seats } : {}),
       ...(dto.price !== undefined ? { price: new Prisma.Decimal(dto.price) } : {}),
+      ...(dto.promoPrice !== undefined
+        ? { promoPrice: dto.promoPrice === null ? null : new Prisma.Decimal(dto.promoPrice) }
+        : {}),
       ...(dto.currency !== undefined ? { currency: dto.currency } : {}),
       ...(dto.marketingDescription !== undefined ? { marketingDescription: dto.marketingDescription } : {}),
+      ...(dto.videoUrl !== undefined ? { videoUrl: dto.videoUrl || null } : {}),
       ...(dto.description !== undefined ? { description: dto.description } : {}),
       ...(dto.status !== undefined ? { status: dto.status } : {}),
       ...(dto.isFeatured !== undefined ? { isFeatured: dto.isFeatured } : {}),
@@ -388,11 +495,20 @@ export class CarsService {
       ...(dto.dimensions ? { dimensions: { upsert: { create: dto.dimensions, update: dto.dimensions } } } : {}),
     };
 
-    // Supplying a collection replaces it; omitting it leaves it alone. Colours
-    // referenced by an order keep that order's snapshot column intact.
+    /*
+     * Supplying a collection replaces it; omitting it leaves it alone. Colours
+     * referenced by an order keep that order's snapshot column intact.
+     *
+     * Only the kinds actually supplied are replaced. The admin form edits
+     * exterior colours and sends those alone, and a blanket `deleteMany` then
+     * destroyed every interior colour on the car each time it was saved — with
+     * no way to notice, since the form never showed them in the first place.
+     */
     if (dto.colors) {
+      const kinds = [...new Set(dto.colors.map((color) => color.kind ?? ColorKind.EXTERIOR))];
+
       data.colors = {
-        deleteMany: {},
+        deleteMany: { kind: { in: kinds } },
         create: dto.colors.map((color, index) => ({
           kind: color.kind ?? ColorKind.EXTERIOR,
           name: color.name,
@@ -406,21 +522,18 @@ export class CarsService {
       };
     }
 
-    if (dto.images) {
-      data.images = {
-        deleteMany: {},
-        create: dto.images.map((image, index) => ({
-          kind: image.kind ?? ImageKind.GALLERY,
-          url: image.url,
-          alt: image.alt ?? null,
-          width: image.width ?? null,
-          height: image.height ?? null,
-          sortOrder: image.sortOrder ?? index,
-        })),
-      };
-    }
 
-    const car = await this.prisma.car.update({ where: { id }, data, include: detailInclude });
+    const car = await this.prisma.$transaction(async (tx) => {
+      await tx.car.update({ where: { id }, data });
+
+      // After the colours have been replaced, so an image can find its colour.
+      if (dto.images) {
+        await this.writeImages(tx, id, dto.images);
+      }
+
+      return tx.car.findUniqueOrThrow({ where: { id }, include: detailInclude });
+    });
+
     this.logger.log(`Car ${id} updated by admin ${adminId}`);
     return car;
   }
@@ -487,13 +600,80 @@ export class CarsService {
     return { id, slug: car.slug, archived: false, message: 'Vehicle deleted.' };
   }
 
-  /** Spec §68 — records a real view, used by analytics and "most viewed". */
-  async recordView(carId: string, viewer: { userId?: string; anonymousId?: string; referrer?: string }) {
+  /**
+   * Spec §68 — records one view by one person.
+   *
+   * "By one person" is the whole of the change. This used to write a row for
+   * every request, with no user and no anonymous id attached, which made the
+   * figures wrong in both directions at once: seven refreshes by one visitor
+   * were seven views (measured, not supposed), robots were customers, and
+   * because nothing identified the viewer, the number of *people* behind the
+   * total could never be recovered from it.
+   *
+   * Three rules now, in order:
+   *
+   *   1. Robots are not an audience.
+   *   2. Neither are you. An administrator browsing their own catalogue is not
+   *      a visitor, and counting them makes a quiet site look busy to the one
+   *      person who most needs the truth from it.
+   *   3. The same person opening the same car again inside the dedupe window
+   *      is the same visit. A second look an hour later is a new one.
+   */
+  async recordView(
+    carId: string,
+    viewer: {
+      userId?: string;
+      role?: Role;
+      anonymousId?: string;
+      referrer?: string;
+      userAgent?: string;
+      ip?: string;
+    },
+  ) {
+    if (isRobot(viewer.userAgent)) return;
+    if (viewer.role === Role.ADMIN) return;
+
+    const { visitorSalt, viewDedupeMinutes: dedupeMinutes } = this.config.get('analytics', {
+      infer: true,
+    });
+
+    const anonymousId = viewer.userId
+      ? null
+      : anonymousIdentity({
+          cookieId: viewer.anonymousId,
+          ip: viewer.ip,
+          userAgent: viewer.userAgent,
+          salt: visitorSalt,
+        });
+
+    const identity: Prisma.CarViewWhereInput = viewer.userId
+      ? { userId: viewer.userId }
+      : { anonymousId };
+
+    /*
+     * A viewer we cannot identify at all — no account, no cookie, no address —
+     * is still counted, because they are still a visit. They simply cannot be
+     * deduplicated, and `COUNT(DISTINCT …)` leaves them out of the visitor
+     * figure rather than inventing a person for each row.
+     */
+    if (viewer.userId || anonymousId) {
+      const recent = await this.prisma.carView.findFirst({
+        where: {
+          carId,
+          ...identity,
+          viewedAt: { gte: new Date(Date.now() - dedupeMinutes * 60 * 1000) },
+        },
+        select: { id: true },
+      });
+
+      if (recent) return;
+    }
+
     await this.prisma.carView.create({
       data: {
         carId,
         userId: viewer.userId ?? null,
-        anonymousId: viewer.userId ? null : (viewer.anonymousId ?? null),
+        anonymousId,
         referrer: viewer.referrer?.slice(0, 255) ?? null,
       },
     });

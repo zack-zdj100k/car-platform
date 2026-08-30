@@ -102,6 +102,13 @@ enum ImageKind {
   EXTERIOR
   INTERIOR
   WHEEL
+  ENGINE
+  TRUNK
+  /// Anything the fixed groups do not cover — damage, the roof, a detail.
+  /// What it is goes in `CarImage.label`.
+  OTHER
+  /// One frame of a 360° set. Ordered by `sortOrder`; see docs/SPIN_360.md.
+  SPIN
 }
 
 /// Spec §7 — FR / AR / EN language support
@@ -115,6 +122,11 @@ enum Locale {
 enum EmailStatus {
   QUEUED
   SENT
+  /// Rendered and recorded, but no mail provider is configured, so nothing left
+  /// the building. Distinct from SENT on purpose: an administrator reading the
+  /// log has to be able to tell a delivered message from one that only reached
+  /// the console.
+  LOGGED
   FAILED
 }
 
@@ -227,7 +239,18 @@ model Car {
 
   /// Spec §12, §13 — displayed price. Never a floating-point type.
   price    Decimal @db.Decimal(12, 2)
+  /// A promotional price. While set, this is what the customer pays and `price`
+  /// is shown struck through beside it. Decimal for the same reason as `price`:
+  /// money is never a float.
+  promoPrice Decimal? @map("promo_price") @db.Decimal(12, 2)
   currency String  @default("USD")
+
+  /// A TikTok video for this vehicle, shown on its page. One per car: the
+  /// catalogue links to the clip rather than embedding a third-party player,
+  /// which would load their scripts on a page we control.
+  /// An uploaded clip of this car, served from /uploads. Replaces the TikTok
+  /// link the catalogue used to carry: the videos are the seller's own now.
+  videoUrl             String? @map("video_url")
 
   /// Spec §23 — concise copy for cards and promo sections
   marketingDescription String? @map("marketing_description")
@@ -503,6 +526,9 @@ model CarImage {
   kind      ImageKind @default(GALLERY)
   url       String
   alt       String?
+  /// Heading for an OTHER photograph — "Roof", "Scratch on the rear bumper".
+  /// Distinct from `alt`, which describes the picture for a screen reader.
+  label     String?
   width     Int?
   height    Int?
   sortOrder Int       @default(0) @map("sort_order")

@@ -20,9 +20,17 @@ export class OrdersController {
    * Optional auth: the service decides whether a signed-in account is required,
    * based on the `orders.requireAuth` setting (docs/DECISIONS.md D-1.2).
    */
+  /**
+   * Anti-spam, per IP address.
+   *
+   * Five an hour was too tight for honest use: someone comparing several
+   * vehicles may well enquire about three or four, and a household or office
+   * shares one address. Ten still stops bulk submission, and each order also
+   * costs the sender a real email address and phone number.
+   */
   @OptionalAuth()
   @Post()
-  @Throttle({ default: { limit: 5, ttl: 3_600_000 } })
+  @Throttle({ default: { limit: 10, ttl: 3_600_000 } })
   @ApiOperation({ summary: 'Submit an order request for a vehicle' })
   create(@Body() dto: CreateOrderDto, @CurrentUser() user: AuthenticatedUser | undefined) {
     return this.orders.create(dto, user);

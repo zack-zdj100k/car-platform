@@ -23,18 +23,21 @@ test.describe('Public site', () => {
   test('home page shows the hero, features and featured vehicles', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Chinese cars');
-    // The hero headline must be visible without waiting on a JS animation.
+    // The headline is set as two overlapping lines inside one <h1>.
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Premium.');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Accessible.');
+    // It must be visible without waiting on a JS animation.
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
-    await expect(page.getByRole('link', { name: /EXPLORE NOW/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Explore Cars' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Discover' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Featured vehicles' })).toBeVisible();
-    await expect(page.locator('article').first()).toBeVisible();
+    await expect(page.getByTestId('car-card').first()).toBeVisible();
   });
 
   test('the explore call to action leads to the cars page', async ({ page }) => {
     await page.goto('/');
-    await page.getByRole('link', { name: /EXPLORE NOW/i }).click();
+    await page.getByRole('link', { name: 'Explore Cars' }).click();
 
     await expect(page).toHaveURL(/\/cars$/);
     await expect(page.getByRole('heading', { name: 'Cars', level: 1 })).toBeVisible();
@@ -42,8 +45,11 @@ test.describe('Public site', () => {
 
   test('cars page filters by brand and keeps the filter in the URL', async ({ page }) => {
     await page.goto('/cars');
-    await expect(page.locator('article')).not.toHaveCount(0);
+    await expect(page.getByTestId('car-card')).not.toHaveCount(0);
 
+    // The controls open on request at every width now, rather than standing in
+    // a column of their own.
+    await page.getByRole('button', { name: /Filters/i }).click();
     const brandCheckbox = page.locator('[id^="brand-"]').first();
     const brandSlug = (await brandCheckbox.getAttribute('id'))!.replace('brand-', '');
     await brandCheckbox.click();
@@ -56,15 +62,24 @@ test.describe('Public site', () => {
 
   test('search narrows the catalogue', async ({ page }) => {
     await page.goto('/cars');
+    await page.getByRole('button', { name: /Filters/i }).click();
     await page.getByLabel('Search', { exact: true }).fill('tiggo');
 
     await expect(page).toHaveURL(/search=tiggo/);
-    await expect(page.locator('article').first()).toContainText(/Tiggo/i);
+    await expect(page.getByTestId('car-card').first()).toContainText(/Tiggo/i);
   });
 
   test('car detail shows every specification group', async ({ page }) => {
-    await page.goto('/cars');
-    await page.locator('article a').first().click();
+    /*
+     * A car known to have every group filled in, rather than whichever card
+     * happens to be first.
+     *
+     * The catalogue is ordered newest first, so "the first card" is whatever
+     * was added most recently — and a car added a minute ago has no engine,
+     * safety or dimension figures yet. The page was right; the test was reading
+     * a car that had nothing to show.
+     */
+    await page.goto('/car/byd-seal-2024');
 
     await expect(page).toHaveURL(/\/car\//);
     await expect(page.getByRole('heading', { name: 'Specifications' })).toBeVisible();
@@ -80,6 +95,21 @@ test.describe('Public site', () => {
 
     await page.goto('/sign-up');
     await expect(page).toHaveURL(/\/signup$/);
+  });
+
+  test('the forgot-password link reaches a working page', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByRole('link', { name: 'Forgot password?' }).click();
+
+    // This link used to 404: the page had never been built.
+    await expect(page).toHaveURL(/\/forgot-password$/);
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Reset your password');
+
+    await page.getByLabel('Email address').fill('someone@example.com');
+    await page.getByRole('button', { name: 'Send reset link' }).click();
+
+    // The same confirmation regardless of whether the address exists.
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Check your email');
   });
 
   test('about page renders the mission and values', async ({ page }) => {
@@ -148,7 +178,7 @@ test.describe('Customer journey', () => {
 
     // ---- browse and open a car ----
     await page.goto('/cars');
-    await page.locator('article a').first().click();
+    await page.getByTestId('car-card').first().getByRole('link').first().click();
     await expect(page).toHaveURL(/\/car\//);
     const carHeading = await page.getByRole('heading', { level: 1 }).textContent();
 
@@ -166,7 +196,7 @@ test.describe('Customer journey', () => {
 
     // ---- order it ----
     await page.goto('/cars');
-    await page.locator('article a').first().click();
+    await page.getByTestId('car-card').first().getByRole('link').first().click();
     await page.getByRole('link', { name: 'Order this car' }).click();
 
     await expect(page).toHaveURL(/\/order/);
@@ -191,6 +221,28 @@ test.describe('Administrator', () => {
     const adminEmail = process.env.SEED_ADMIN_EMAIL;
     const adminPassword = process.env.SEED_ADMIN_PASSWORD;
     test.skip(!adminEmail || !adminPassword, 'Seed admin credentials are not configured');
+
+    /*
+     * The seeded account may no longer be an administrator. The owner can
+     * promote their own account and demote this one — that is what
+     * `npm run make:admin` is for — and when they do, signing in still works
+     * while the administration is closed. Failing here would report a broken
+     * site for a deliberate change to who runs it.
+     */
+    const api = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+    const login = await page.request.post(`${api}/auth/login`, {
+      data: { email: adminEmail, password: adminPassword },
+    });
+    if (login.ok()) {
+      const { accessToken } = await login.json();
+      const allowed = await page.request.get(`${api}/analytics/overview`, {
+        headers: { authorization: `Bearer ${accessToken}` },
+      });
+      test.skip(
+        !allowed.ok(),
+        `${adminEmail} is no longer an administrator — point SEED_ADMIN_EMAIL at one that is`,
+      );
+    }
 
     await signIn(page, adminEmail!, adminPassword!);
     await expect(page).toHaveURL(/\/admin\/dashboard$/);

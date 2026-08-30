@@ -187,6 +187,12 @@ async function seedCars(brandIds: Map<string, string>, adminId: string): Promise
       status: CarStatus.PUBLISHED,
       isFeatured: car.isFeatured ?? false,
       isDemoData: true,
+      /*
+       * Cleared explicitly so re-seeding restores a catalogue that testing or
+       * experimentation has archived. Without this, a soft-deleted vehicle
+       * stayed invisible even after a reseed, and the only fix was SQL.
+       */
+      deletedAt: null,
       publishedAt,
       createdById: adminId,
       createdAt: publishedAt,
@@ -403,7 +409,29 @@ async function main(): Promise<void> {
   const brandIds = await seedBrands();
   const { adminId, customerIds } = await seedUsers();
   const carIds = await seedCars(brandIds, adminId);
-  await seedActivity(customerIds, carIds, adminId);
+
+  /*
+   * Invented activity is off unless it is asked for.
+   *
+   * This block used to write 7,647 car views, favourites, browsing history and
+   * five orders from people who do not exist, and the administration reported
+   * all of it as though it had happened. On a site that has never been
+   * published, the true number of visitors is zero, and a dashboard that says
+   * anything else cannot be used to make a decision.
+   *
+   * It is still available for working on the customer and analytics screens,
+   * where something has to be on the page:
+   *
+   *   SEED_DEMO_ACTIVITY=1 npm run db:seed
+   *
+   * `npm run analytics:reset` removes it again.
+   */
+  if (process.env.SEED_DEMO_ACTIVITY === '1') {
+    await seedActivity(customerIds, carIds, adminId);
+  } else {
+    console.log('  activity ......... skipped (SEED_DEMO_ACTIVITY=1 to invent views and orders)');
+  }
+
   console.log('\nDone. Demo vehicles are flagged isDemoData=true.\n');
 }
 

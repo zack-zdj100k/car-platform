@@ -23,7 +23,7 @@ const schema = z.object({
 });
 
 /** Sign in (spec §37). Redirects by role: customer → dashboard, admin → admin. */
-export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
+export function LoginForm() {
   const { t } = useLocale();
   const { login } = useAuth();
   const router = useRouter();
@@ -83,6 +83,18 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
       }
     >
       <form onSubmit={(event) => void handleSubmit(event)} className="space-y-5" noValidate>
+        {/*
+          Google sends failures back here as `?error=google`. Without this the
+          visitor was returned to a blank sign-in form with no idea that
+          anything had gone wrong, or that it was not their fault.
+        */}
+        {params.get('error') === 'google' && !formError && (
+          <Alert variant="destructive" role="alert">
+            <AlertCircle className="size-4" aria-hidden="true" />
+            <AlertDescription>{t.auth.googleFailed}</AlertDescription>
+          </Alert>
+        )}
+
         {formError && (
           <Alert variant="destructive" role="alert">
             <AlertCircle className="size-4" aria-hidden="true" />
@@ -165,7 +177,7 @@ export function LoginForm({ googleEnabled }: { googleEnabled: boolean }) {
         <Separator className="flex-1" />
       </div>
 
-      <GoogleButton enabled={googleEnabled} />
+      <GoogleButton />
     </AuthShell>
   );
 }

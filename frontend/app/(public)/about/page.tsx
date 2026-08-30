@@ -16,6 +16,7 @@ export default async function AboutPage() {
       stats={readMarketingStats(settings)}
       whoWeAre={readSetting(settings, 'about', 'about.whoWeAre')}
       mission={readSetting(settings, 'about', 'about.mission')}
+      portrait={readSetting(settings, 'about-images', 'about.image.portrait')}
     />
   );
 }

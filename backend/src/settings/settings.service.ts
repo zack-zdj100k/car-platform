@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { CarStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import type { UpdateSettingDto, UpdateSettingsDto } from './dto/update-setting.dto';
 
@@ -30,7 +30,73 @@ export class SettingsService {
       grouped[row.group][row.key] = row.value;
     }
 
+    if (grouped['marketing-stats']) {
+      grouped['marketing-stats'] = await this.withRealFigures(grouped['marketing-stats']);
+    }
+
     return grouped;
+  }
+
+  /**
+   * Replaces the headline figures on the public pages with the true ones.
+   *
+   * These four numbers were stored as text and said "500+ Cars Listed", "50+
+   * Brands" and "10K+ Visitors" on a catalogue of seventeen cars that had never
+   * been published to anyone. A customer reading that is being told something
+   * untrue, and it is the first thing they read.
+   *
+   * The counts are now taken from the database at the moment the page is built.
+   * The wording beside each number stays editable in Administration › Settings,
+   * so the labels can be translated or reworded; the number itself is no longer
+   * something anybody has to remember to update.
+   *
+   * A figure of zero is dropped rather than displayed. On the day the site
+   * opens there will genuinely have been no visitors, and "0 Visitors" is a
+   * true statement that helps nobody — it returns on its own with the first
+   * real one.
+   */
+  private async withRealFigures(
+    stored: Record<string, Prisma.JsonValue>,
+  ): Promise<Record<string, Prisma.JsonValue>> {
+    const publishedScope = { status: CarStatus.PUBLISHED, deletedAt: null };
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+    const [cars, brands, visitors] = await Promise.all([
+      this.prisma.car.count({ where: publishedScope }),
+      this.prisma.brand.count({ where: { cars: { some: publishedScope } } }),
+      this.prisma.$queryRaw<{ count: bigint }[]>`
+        SELECT COUNT(DISTINCT COALESCE(user_id, anonymous_id))::bigint AS count
+        FROM car_views WHERE viewed_at >= ${thirtyDaysAgo}`,
+    ]);
+
+    const real: Record<string, number> = {
+      'stats.carsListed': cars,
+      'stats.brands': brands,
+      'stats.visitors': Number(visitors[0]?.count ?? 0),
+    };
+
+    const result: Record<string, Prisma.JsonValue> = {};
+
+    for (const [key, value] of Object.entries(stored)) {
+      const count = real[key];
+
+      // Not a counted figure — "24/7 Platform Access" and the like. Kept as written.
+      if (count === undefined) {
+        result[key] = value;
+        continue;
+      }
+
+      if (count === 0) continue;
+
+      const caption =
+        typeof value === 'object' && value !== null && !Array.isArray(value)
+          ? (value as Record<string, unknown>).caption
+          : undefined;
+
+      result[key] = { label: String(count), caption: typeof caption === 'string' ? caption : key };
+    }
+
+    return result;
   }
 
   async findAllForAdmin() {

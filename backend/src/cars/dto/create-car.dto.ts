@@ -40,6 +40,20 @@ export class CreateCarDto {
   @MinLength(1)
   brandId: string;
 
+  @ApiPropertyOptional({ description: 'Promotional price; must be below the normal price' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  promoPrice?: number;
+
+  @ApiPropertyOptional({ description: 'Path of this vehicle\'s uploaded clip, e.g. /uploads/abc.mp4' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  @Transform(trim)
+  videoUrl?: string;
+
   @ApiProperty({ example: 'Tiggo 8 Pro Max' })
   @IsString()
   @MinLength(1)

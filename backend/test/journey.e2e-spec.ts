@@ -1,4 +1,12 @@
-import { createAdmin, createTestApp, resetDatabase, seedCar, strongPassword, type TestContext } from './harness';
+import {
+  createAdmin,
+  createTestApp,
+  flushEmails,
+  resetDatabase,
+  seedCar,
+  strongPassword,
+  type TestContext,
+} from './harness';
 
 /**
  * The complete journey spec §71 specifies:
@@ -90,6 +98,19 @@ describe('End-to-end customer journey (spec §71)', () => {
       .get(`/api/cars/${carSlug}`)
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
+
+    /*
+     * Reading the car and reporting the view are two calls now. They have to
+     * be: the page is rendered on the site's server, where the reader's token
+     * does not exist, so a view recorded while reading was always anonymous —
+     * "recently viewed" stayed empty for everyone, and an administrator counted
+     * as a visitor.
+     */
+    await context
+      .http()
+      .post(`/api/cars/${carSlug}/view`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(204);
 
     expect(response.body.id).toBe(carId);
     expect(response.body.engine).toBeTruthy();
@@ -189,6 +210,7 @@ describe('End-to-end customer journey (spec §71)', () => {
   });
 
   it('11. a notification was recorded for the administrator (spec §26)', async () => {
+    await flushEmails(context);
     const emails = await context.prisma.emailLog.findMany({ where: { orderId } });
 
     expect(emails.some((entry) => entry.template === 'admin-order-notification')).toBe(true);

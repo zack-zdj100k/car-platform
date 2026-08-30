@@ -5,6 +5,5 @@ export const metadata: Metadata = { title: 'Sign Up', robots: { index: false, fo
 
 /** Route per the final route map: /signup (with /sign-up redirecting here). */
 export default function SignupPage() {
-  const googleEnabled = Boolean(process.env.GOOGLE_CLIENT_ID);
-  return <SignupForm googleEnabled={googleEnabled} />;
+  return <SignupForm />;
 }

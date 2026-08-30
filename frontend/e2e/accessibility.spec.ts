@@ -22,19 +22,128 @@ async function analyse(page: Page, readySelector?: string) {
   if (readySelector) {
     await page.waitForSelector(readySelector);
   }
+
+  /*
+   * Wait until the palette itself has resolved.
+   *
+   * Contrast is computed from painted pixels. Before the stylesheet attaches,
+   * `getComputedStyle` returns empty strings and axe reads that as a failure —
+   * so a page that was merely still loading looked like a contrast bug. Waiting
+   * on a token proves our stylesheet is live, not just that markup exists.
+   */
+  await page.waitForFunction(() => {
+    const root = getComputedStyle(document.documentElement);
+    return root.getPropertyValue('--primary').trim() !== '' && getComputedStyle(document.body).backgroundColor !== '';
+  });
   await page.evaluate(() => document.fonts.ready);
+
+  /*
+   * Wait for the entrance animations to finish.
+   *
+   * Contrast is computed from what is painted, and an element half-way through
+   * a fade is genuinely low-contrast at that instant. Auditing mid-animation
+   * reported failures that no user could ever see, and only intermittently —
+   * whichever frame the measurement happened to land on.
+   */
+  /*
+   * Measure with motion suppressed.
+   *
+   * Contrast is computed from painted pixels, and an element half-way through a
+   * fade genuinely is low contrast at that instant. Waiting for entrances to
+   * finish narrowed the window but could not close it: a scroll-triggered fade
+   * can begin while axe is already walking the tree, and the failure then
+   * depends on which frame it lands on. Under reduced motion this site renders
+   * every entrance in its final state, which is the state a reader sees and the
+   * only one contrast can meaningfully be judged from. The animated path has
+   * its own tests further down this file.
+   */
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.reload({ waitUntil: 'load' });
+  if (readySelector) {
+    await page.waitForSelector(readySelector);
+  }
+
+  /*
+   * Trigger every lazy section, then let it settle.
+   *
+   * Scroll-triggered fades start when their element reaches the viewport, so
+   * simply waiting is not enough: an audit can begin while a section further
+   * down is still untouched, and the fade then starts under it — axe reaches
+   * that element mid-fade and reports a contrast failure no user could see.
+   * Walking the page down and back means every entrance has been asked to run
+   * before anything is measured.
+   */
+  await page.evaluate(async () => {
+    const step = Math.max(1, window.innerHeight);
+    for (let y = 0; y < document.body.scrollHeight; y += step) {
+      window.scrollTo(0, y);
+      await new Promise((resolve) => setTimeout(resolve, 120));
+    }
+    window.scrollTo(0, 0);
+  });
+
+  await page.waitForFunction(() => {
+    // `.rise` is the CSS entrance; `[data-entrance]` marks the ones a motion
+    // component drives. Both fade text in, and both must have finished before
+    // contrast means anything.
+    const animated = [...document.querySelectorAll('.rise, [data-entrance]')];
+    return animated.every((element) => Number(getComputedStyle(element).opacity) === 1);
+  });
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        // One more frame, so the final paint has certainly landed.
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
 
   return new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
 }
 
 /** Each page, with a selector proving its content has actually arrived. */
 const publicPages = [
-  ['home', '/', 'article'],
-  ['cars listing', '/cars', 'article'],
+  ['home', '/', 'h1'],
+  ['cars listing', '/cars', '[data-testid="car-card"]'],
   ['about', '/about', 'h1'],
   ['sign in', '/login', 'form'],
   ['sign up', '/signup', 'form'],
+  ['forgot password', '/forgot-password', 'form'],
 ] as const;
+
+/**
+ * The same pages in light mode.
+ *
+ * The site opens in dark mode, so an audit that only loads a page audits one of
+ * the two palettes — and the warm light palette is the one that changed. Its
+ * champagne accent is the exact colour that cannot be taken on trust: as small
+ * text on beige the specified #B08A4A measures 2.65:1, well under half of what
+ * is required, which is why the light palette uses a deeper member of the same
+ * family for text and keeps the champagne for dark surfaces. This proves that
+ * in the rendered page rather than in a spreadsheet.
+ */
+test.describe('WCAG 2.2 AA — public pages in light mode', () => {
+  for (const [name, path, ready] of publicPages) {
+    test(`${name} has no automatically detectable violations in light mode`, async ({ page }) => {
+      // next-themes reads this before first paint, so the page never renders dark.
+      await page.addInitScript(() => window.localStorage.setItem('theme', 'light'));
+      await page.goto(path);
+      await page.waitForFunction(() => document.documentElement.classList.contains('light'));
+
+      const results = await analyse(page, ready);
+
+      if (results.violations.length > 0) {
+        console.log(
+          `\n${name} (light) violations:\n` +
+            results.violations
+              .map((v) => `  [${v.impact}] ${v.id}: ${v.help}\n    ${v.nodes.map((n) => n.target.join(' ')).join('\n    ')}`)
+              .join('\n'),
+        );
+      }
+
+      expect(results.violations).toEqual([]);
+    });
+  }
+});
 
 test.describe('WCAG 2.2 AA — public pages', () => {
   for (const [name, path, ready] of publicPages) {
@@ -57,7 +166,7 @@ test.describe('WCAG 2.2 AA — public pages', () => {
 
   test('car detail has no automatically detectable violations', async ({ page }) => {
     await page.goto('/cars');
-    await page.locator('article a').first().click();
+    await page.getByTestId('car-card').first().getByRole('link').first().click();
     await expect(page).toHaveURL(/\/car\//);
 
     const results = await analyse(page, 'h1');
@@ -72,7 +181,7 @@ test.describe('WCAG 2.2 AA — public pages', () => {
     await page.goto('/cars');
     await expect(page.locator('html')).toHaveClass(/dark/);
 
-    const results = await analyse(page, 'article');
+    const results = await analyse(page, '[data-testid="car-card"]');
     const contrast = results.violations.filter((violation) => violation.id === 'color-contrast');
     if (contrast.length > 0) {
       console.log(contrast.map((v) => v.nodes.map((n) => n.html).join('\n')).join('\n'));
@@ -103,10 +212,10 @@ test.describe('Keyboard operation (spec §65)', () => {
 
   test('a car card is reachable and openable by keyboard alone', async ({ page }) => {
     await page.goto('/cars');
-    await expect(page.locator('article').first()).toBeVisible();
+    await expect(page.getByTestId('car-card').first()).toBeVisible();
 
     // Focus the first card's link directly, then activate it with the keyboard.
-    await page.locator('article a').first().focus();
+    await page.getByTestId('car-card').first().getByRole('link').first().focus();
     await page.keyboard.press('Enter');
 
     await expect(page).toHaveURL(/\/car\//);
@@ -163,8 +272,36 @@ test.describe('Reduced motion (spec §8, §65)', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
 
-    const opacity = await page.getByRole('heading', { level: 1 }).evaluate((el) => getComputedStyle(el).opacity);
-    expect(Number(opacity)).toBe(1);
+    await page.evaluate(() => document.fonts.ready);
+
+    /*
+     * Polled, not sampled once.
+     *
+     * `getComputedStyle` returns an empty string for every property while the
+     * element is detached or before a stylesheet has attached — and the hero
+     * re-renders once the browser has resolved the theme, so a single reading
+     * can land on the node from before that and report nothing at all.
+     * `Number('')` is 0, which reads as a hidden headline when the page was
+     * merely mid-hydration. Waiting for the value to settle asserts the same
+     * thing without racing the page.
+     *
+     * The two headline lines are what carry the entrance animation, so they are
+     * what must be fully opaque once it is suppressed.
+     */
+    await expect
+      .poll(
+        async () =>
+          page.getByRole('heading', { level: 1 }).evaluate((el) => {
+            const values = [
+              getComputedStyle(el).opacity,
+              ...[...el.querySelectorAll('span')].map((span) => getComputedStyle(span).opacity),
+            ];
+            // An empty string means "not measurable yet", not "transparent".
+            return values.every((value) => value !== '' && Number(value) === 1);
+          }),
+        { message: 'the headline never became fully opaque under reduced motion' },
+      )
+      .toBe(true);
   });
 });
 
@@ -177,7 +314,7 @@ test.describe('Responsive layout (spec §64)', () => {
     test(`${name} viewport has no horizontal overflow`, async ({ page }) => {
       await page.setViewportSize({ width, height });
       await page.goto('/cars');
-      await expect(page.locator('article').first()).toBeVisible();
+      await expect(page.getByTestId('car-card').first()).toBeVisible();
 
       const overflow = await page.evaluate(
         () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

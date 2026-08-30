@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Noto_Sans_Arabic, Sora } from 'next/font/google';
+import { Inter, Noto_Kufi_Arabic, Noto_Sans_Arabic, Sora } from 'next/font/google';
 import { cookies } from 'next/headers';
 import { Toaster } from '@/components/ui/sonner';
 import { ThemeProvider } from '@/providers/theme-provider';
@@ -14,17 +14,33 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-body', display: 'swa
 /** Arabic needs a face with proper shaping (spec §7). */
 const notoArabic = Noto_Sans_Arabic({ subsets: ['arabic'], variable: '--font-arabic', display: 'swap' });
 
+/**
+ * Arabic headings.
+ *
+ * Latin had two faces — Sora for headings, Inter for prose — and Arabic had
+ * one, so an Arabic page's headings were set in its body face and read flat
+ * beside the same page in French. Kufi is the right partner for Sora: both are
+ * geometric, and its heavier weights hold a large heading the way Sora does
+ * without the ornament of a naskh face, which would sit oddly on this site.
+ */
+const kufiArabic = Noto_Kufi_Arabic({
+  subsets: ['arabic'],
+  weight: ['600', '700'],
+  variable: '--font-arabic-display',
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
   title: {
-    default: 'Car Platform — Chinese cars: quality & innovation',
-    template: '%s · Car Platform',
+    default: 'ZODIC CAR — Chinese cars: quality & innovation',
+    template: '%s · ZODIC CAR',
   },
   description:
     'A premium catalogue for discovering Chinese vehicles: full specifications, comparison and favourites.',
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'),
   openGraph: {
     type: 'website',
-    title: 'Car Platform',
+    title: 'ZODIC CAR',
     description: 'Discover Chinese vehicles with complete specifications.',
   },
   robots: { index: true, follow: true },
@@ -48,7 +64,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang={locale} dir={dir} suppressHydrationWarning>
-      <body className={`${sora.variable} ${inter.variable} ${notoArabic.variable}`}>
+      <body className={`${sora.variable} ${inter.variable} ${notoArabic.variable} ${kufiArabic.variable}`}>
         <ThemeProvider>
           <LocaleProvider initialLocale={locale}>
             <AuthProvider>

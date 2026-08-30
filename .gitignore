@@ -63,3 +63,6 @@ frontend/blob-report/
 # that rewrites a file mid-sync leaves a "name 2.ext" copy behind.
 * 2.*
 *\ 2.*
+
+# Playwright stored auth state
+frontend/.auth/

@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { Car, LayoutDashboard, LogOut, Menu, ShieldCheck, User } from 'lucide-react';
+import { Car, Home, Info, LayoutDashboard, LogOut, Menu, ShieldCheck, User, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
@@ -16,11 +15,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { NavBar, type NavItem } from '@/components/ui/tubelight-navbar';
 import { LanguageSwitcher } from './language-switcher';
 import { ThemeToggle } from './theme-toggle';
+import { BrandLogo } from '@/components/ui/brand-logo';
 import { useLocale } from '@/providers/locale-provider';
 import { useAuth } from '@/providers/auth-provider';
-import { useScrolledPast } from '@/hooks/use-client-store';
+import { revealHeader, useHeaderRetreated, useScrolledPast } from '@/hooks/use-client-store';
 import { cn } from '@/lib/utils';
 
 /**
@@ -28,19 +29,26 @@ import { cn } from '@/lib/utils';
  * The logo is a placeholder until the real asset is supplied.
  */
 export function SiteHeader() {
-  const pathname = usePathname();
   const { t, dir } = useLocale();
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const scrolled = useScrolledPast(8);
+  const retreated = useHeaderRetreated();
 
   const links = [
-    { href: '/', label: t.nav.home },
-    { href: '/cars', label: t.nav.cars },
-    { href: '/about', label: t.nav.about },
+    { href: '/', label: t.nav.home, icon: Home },
+    { href: '/cars', label: t.nav.cars, icon: Car },
+    { href: '/videos', label: t.videos.navLabel, icon: Video },
+    { href: '/about', label: t.nav.about, icon: Info },
   ];
 
-  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
+  /** Shape the tubelight navigation expects. */
+  const navItems: NavItem[] = links.map((link) => ({
+    name: link.label,
+    url: link.href,
+    icon: link.icon,
+  }));
+
   const initials = (user?.fullName ?? '')
     .split(' ')
     .map((part) => part[0])
@@ -49,49 +57,94 @@ export function SiteHeader() {
     .join('')
     .toUpperCase();
 
+  /*
+   * The header paints nothing itself, so each cluster carries its own capsule.
+   * It is there from the start, not only once the page scrolls: over the hero
+   * photograph the controls are dark ink on a dark picture, and the language
+   * and theme buttons simply could not be seen until something appeared behind
+   * them. It deepens slightly on scroll, when page content passes underneath.
+   */
+  const floatingSurface = cn(
+    'border-border/60 border shadow-sm backdrop-blur-lg transition-colors duration-300',
+    scrolled ? 'bg-background/85' : 'bg-background/70',
+  );
+
   return (
+    /*
+     * The header steps out of the way while the reader moves down the page and
+     * returns the moment they move back up, at every width. It floats over the
+     * content rather than pushing it down, so on the way down it sits on top of
+     * whatever is being read — the orbital diagram and the showcase photograph
+     * both pass underneath it. Getting out of the way is the whole point of a
+     * header with no bar of its own.
+     */
     <header
       className={cn(
-        'sticky top-0 z-50 w-full transition-shadow duration-300',
-        scrolled
-          ? 'bg-background/85 border-border border-b shadow-sm backdrop-blur-lg'
-          : 'bg-background/60 border-transparent border-b backdrop-blur-sm',
+        'sticky top-0 z-50 w-full transition-transform duration-300 ease-out',
+        retreated ? '-translate-y-full' : 'translate-y-0',
       )}
+      onFocusCapture={revealHeader}
     >
-      <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-3 px-5 sm:px-8">
-        {/* Logo placeholder (spec §7 — do not invent the final logo) */}
+      {/*
+        No bar of its own: the header is a layout row over the page, and each
+        cluster inside it carries its own surface. A solid strip across the top
+        cut the hero in half.
+      */}
+      {/*
+        Three columns rather than an absolutely centred pill: the pill used to
+        be positioned independently of the clusters beside it, so between 768px
+        and roughly 930px the account controls sat on top of "About Us". Equal
+        side columns keep the pill centred in the row and make an overlap
+        impossible at any width or in any language.
+      */}
+      <div className="relative mx-auto grid h-16 w-full max-w-7xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-5 sm:px-8 md:h-20">
+        {/* The mark itself now, rather than the placeholder icon and wordmark. */}
         <Link
           href="/"
-          className="flex items-center gap-2.5 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4"
+          className={cn(
+            'group/brand flex w-fit items-center justify-self-start rounded-full transition-colors duration-300 focus-visible:outline-2 focus-visible:outline-offset-4',
+            floatingSurface,
+            'px-4 py-1.5',
+          )}
           aria-label={t.nav.home}
         >
-          <span className="bg-primary/10 ring-primary/20 grid size-9 place-items-center rounded-lg ring-1 ring-inset">
-            <Car className="text-primary size-5" aria-hidden="true" />
-          </span>
-          <span className="font-display hidden text-base font-semibold tracking-tight sm:inline">
-            Car Platform
-          </span>
+          {/* The crest alone below `sm`, where the full mark would be a smear. */}
+          <BrandLogo
+            symbolOnly
+            height={30}
+            animated
+            className="transition-transform duration-300 motion-safe:group-hover/brand:-translate-y-0.5 sm:hidden"
+          />
+          <BrandLogo
+            height={26}
+            animated
+            className="hidden transition-transform duration-300 motion-safe:group-hover/brand:-translate-y-0.5 sm:inline-block"
+          />
         </Link>
 
-        <nav aria-label={t.nav.home} className="ms-4 hidden items-center gap-1 md:flex">
-          {links.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              aria-current={isActive(link.href) ? 'page' : undefined}
-              className={cn(
-                'rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                isActive(link.href)
-                  ? 'text-foreground bg-secondary'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60',
-              )}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        {/*
+          Primary navigation. The pill appears once there is genuinely room for
+          it beside the logo and the account controls — below that width the
+          floating bar at the bottom carries it, which is where a thumb reaches
+          anyway.
+        */}
+        {/*
+          The column itself is always present. Hiding it with `display: none`
+          removes it from the grid altogether, and the account controls slide
+          into the middle column with it.
+        */}
+        <div className="flex justify-center">
+          <div className="hidden lg:block">
+            <NavBar items={navItems} variant="inline" layoutGroup="header" />
+          </div>
+        </div>
 
-        <div className="ms-auto flex items-center gap-1">
+        <div
+          className={cn(
+            'flex items-center gap-1 justify-self-end rounded-full px-1.5 py-1',
+            floatingSurface,
+          )}
+        >
           <LanguageSwitcher />
           <ThemeToggle />
 
@@ -153,37 +206,34 @@ export function SiteHeader() {
             </div>
           )}
 
-          {/* Mobile navigation */}
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          {/*
+            Account actions for the narrowest screens only. From `sm` up the
+            same actions are already on the header itself — Sign In and Sign Up
+            for a guest, the avatar menu for a signed-in customer — so on a
+            tablet this button opened a panel offering exactly what was visible
+            behind it.
+          */}
+          <Sheet
+            open={mobileOpen}
+            onOpenChange={(open) => {
+              if (open) revealHeader();
+              setMobileOpen(open);
+            }}
+          >
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden" aria-label={t.nav.openMenu}>
+              <Button variant="ghost" size="icon" className="sm:hidden" aria-label={t.nav.openMenu}>
                 <Menu className="size-5" aria-hidden="true" />
               </Button>
             </SheetTrigger>
             <SheetContent side={dir === 'rtl' ? 'left' : 'right'} className="w-[min(20rem,90vw)]">
               <SheetHeader>
-                <SheetTitle className="font-display">Car Platform</SheetTitle>
+                <SheetTitle className="font-display">ZODIC CAR</SheetTitle>
               </SheetHeader>
-              <nav aria-label={t.nav.home} className="mt-2 flex flex-col gap-1 px-4">
-                {links.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={() => setMobileOpen(false)}
-                    aria-current={isActive(link.href) ? 'page' : undefined}
-                    className={cn(
-                      'rounded-md px-3 py-2.5 text-sm font-medium transition-colors',
-                      isActive(link.href)
-                        ? 'bg-secondary text-foreground'
-                        : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
-                    )}
-                  >
-                    {link.label}
-                  </Link>
-                ))}
-
-                <Separator className="my-3" />
-
+              <nav aria-label={t.nav.dashboard} className="mt-2 flex flex-col gap-1 px-4">
+                {/*
+                  Account actions only: the floating bar below already carries
+                  Home, Cars and About, and repeating them here would be noise.
+                */}
                 {isAuthenticated ? (
                   <>
                     <Link
@@ -192,6 +242,13 @@ export function SiteHeader() {
                       className="text-muted-foreground hover:bg-secondary/60 hover:text-foreground rounded-md px-3 py-2.5 text-sm font-medium"
                     >
                       {t.nav.dashboard}
+                    </Link>
+                    <Link
+                      href="/dashboard/profile"
+                      onClick={() => setMobileOpen(false)}
+                      className="text-muted-foreground hover:bg-secondary/60 hover:text-foreground rounded-md px-3 py-2.5 text-sm font-medium"
+                    >
+                      {t.dashboard.profile}
                     </Link>
                     {isAdmin && (
                       <Link
@@ -202,9 +259,9 @@ export function SiteHeader() {
                         {t.nav.admin}
                       </Link>
                     )}
+                    <Separator className="my-3" />
                     <Button
                       variant="outline"
-                      className="mt-2"
                       onClick={() => {
                         setMobileOpen(false);
                         void logout();
@@ -215,7 +272,7 @@ export function SiteHeader() {
                     </Button>
                   </>
                 ) : (
-                  <div className="mt-1 grid gap-2">
+                  <div className="grid gap-2">
                     <Button asChild variant="outline">
                       <Link href="/login" onClick={() => setMobileOpen(false)}>
                         {t.nav.signIn}

@@ -148,11 +148,13 @@ export default function AdminDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              {t.admin.orders} · {formatNumber(overview.views.last30Days, locale)} views (30d)
+              {t.admin.orders} · {formatNumber(overview.visitors.last30Days, locale)}{' '}
+              {t.admin.visitors.toLowerCase()} ({t.admin.inLast30Days})
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            <BarChart series={growth.views} label="Views" />
+            {/* People, not hits — the same visitor refreshing is one line here. */}
+            <BarChart series={growth.visitors} label={t.admin.visitors} />
             <ul className="space-y-2">
               {orderBreakdown.map((entry) => (
                 <li key={entry.status} className="flex items-center justify-between text-sm">

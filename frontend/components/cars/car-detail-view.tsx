@@ -1,22 +1,25 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { ArrowLeft, Heart, Scale, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Heart, Play, Scale, ShoppingCart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Price } from '@/components/shared/price';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { CarGallery } from './car-gallery';
+import { spinFrames } from '@/lib/spin';
+import { StickyOrderBar } from './sticky-order-bar';
 import { SpecTable, type SpecRow } from './spec-table';
 import { DemoBadge } from '@/components/shared/demo-badge';
 import { useLocale } from '@/providers/locale-provider';
 import { useAuth } from '@/providers/auth-provider';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useCompare } from '@/hooks/use-compare';
-import { formatAcronym, formatMeasure, formatPrice, humaniseEnum } from '@/lib/format';
+import { formatAcronym, formatMeasure, humaniseEnum } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { CarDetail } from '@/types/api';
 
@@ -42,13 +45,87 @@ export function CarDetailView({ car }: { car: CarDetail }) {
   const selectedColor = exteriorColors.find((color) => color.id === selectedColorId);
   const alt = `${car.brand.name} ${car.model} ${car.year}`;
 
-  /** A colour with its own photography swaps the lead image (spec §13). */
+  /**
+   * The gallery follows the chosen colour (spec §13).
+   *
+   * Photographs attached to that colour come first — its own portrait, then any
+   * gallery shot recorded against it — and the rest of the car's photography
+   * follows, so a colour with one picture still has a full gallery behind it.
+   * The colour's picture is included even when it is not among the car's
+   * images, which is the normal case: it is uploaded on the colour itself.
+   */
+  const priceBlock = useRef<HTMLDivElement>(null);
+
   const images = useMemo(() => {
-    if (!selectedColor?.imageUrl) return car.images;
-    const matching = car.images.find((image) => image.url === selectedColor.imageUrl);
-    if (!matching) return car.images;
-    return [matching, ...car.images.filter((image) => image !== matching)];
-  }, [car.images, selectedColor]);
+    /*
+     * The 360° frames are images of this car, but they are not photographs of
+     * it: two dozen of them in the gallery would bury the four pictures a
+     * customer wants to see under a strip of near-identical thumbnails. They
+     * are shown by the viewer instead.
+     */
+    const photographs = car.images.filter((image) => image.kind !== 'SPIN');
+
+    // Nothing chosen yet: the car in general, main photograph first.
+    if (!selectedColor) return photographs;
+
+    /*
+     * A colour chosen shows that colour, and only that colour.
+     *
+     * Previously the colour's photographs were merely moved to the front and
+     * everything else followed, so choosing Basalt Grey still showed the white
+     * car's interior, its wheels, and the main photograph of whichever colour
+     * happened to be photographed for the listing. Ordered outside → inside →
+     * wheels, because that is the order somebody looks at a car.
+     */
+    /*
+     * Outside, inside, wheels, engine, boot, then anything else — the order
+     * somebody actually asks about a car. "Anything else" is last because it is
+     * whatever this particular car needed a slot for, including damage.
+     */
+    const ORDER: Record<string, number> = {
+      EXTERIOR: 0,
+      GALLERY: 1,
+      INTERIOR: 2,
+      WHEEL: 3,
+      ENGINE: 4,
+      TRUNK: 5,
+      OTHER: 6,
+    };
+    const forColour = photographs
+      .filter((image) => image.colorId === selectedColor.id)
+      .sort(
+        (a, b) =>
+          (ORDER[a.kind] ?? 9) - (ORDER[b.kind] ?? 9) || (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
+      );
+
+    const portrait = selectedColor.imageUrl
+      ? [
+          photographs.find((image) => image.url === selectedColor.imageUrl) ?? {
+            kind: 'GALLERY' as const,
+            url: selectedColor.imageUrl,
+            alt: `${car.brand.name} ${car.model} — ${selectedColor.name}`,
+          },
+        ]
+      : [];
+
+    const chosen = [...portrait, ...forColour];
+
+    /*
+     * A colour with no photographs of its own falls back to the car's general
+     * ones — but never to the main photograph, which is the listing's picture
+     * of one particular colour and would contradict the swatch just chosen.
+     * An empty gallery would be worse than a slightly generic one.
+     */
+    const ordered =
+      chosen.length > 0
+        ? chosen
+        : photographs.filter((image) => image.kind !== 'MAIN' && !image.colorId);
+
+    // Same photograph reached two ways — keep the first appearance only.
+    return ordered.filter(
+      (image, index) => ordered.findIndex((other) => other.url === image.url) === index,
+    );
+  }, [car.brand.name, car.images, car.model, selectedColor]);
 
   const labels = { fitted: t.car.fitted, notFitted: t.car.notFitted };
 
@@ -239,6 +316,8 @@ export function CarDetailView({ car }: { car: CarDetail }) {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-5 py-8 sm:px-8 sm:py-12">
+      <StickyOrderBar car={car} watch={priceBlock} selectedColorId={selectedColorId} />
+
       <Button asChild variant="ghost" size="sm" className="text-muted-foreground -ms-2 mb-6">
         <Link href="/cars">
           <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
@@ -248,7 +327,22 @@ export function CarDetailView({ car }: { car: CarDetail }) {
 
       <div className="grid gap-10 lg:grid-cols-[1.35fr_1fr] lg:gap-12">
         <div className="min-w-0">
-          <CarGallery images={images} alt={alt} />
+          {/*
+            Keyed by colour: the gallery holds its own index, so without this a
+            colour change would leave you on photograph four of the old colour
+            and the swap would look like nothing happened.
+          */}
+          {/*
+            No longer keyed by colour. The key forced a remount, which threw the
+            picture away and rebuilt it — the very flash the cross-fade exists
+            to avoid. The gallery resets its own index when the pictures change.
+          */}
+          <CarGallery
+            images={images}
+            alt={alt}
+            spinFrames={spinFrames(car.slug, car.images)}
+            caption={selectedColor?.name}
+          />
         </div>
 
         <div className="min-w-0">
@@ -269,9 +363,16 @@ export function CarDetailView({ car }: { car: CarDetail }) {
             {car.seats ? ` · ${car.seats} seats` : ''}
           </p>
 
-          <p className="font-display mt-5 text-3xl font-semibold tracking-tight">
-            {formatPrice(car.price, car.currency, locale)}
-          </p>
+          {/* Watched by the bar below, which appears once this has scrolled away. */}
+          <div ref={priceBlock}>
+            <Price
+              price={car.price}
+              promoPrice={car.promoPrice}
+              currency={car.currency}
+              size="lg"
+              className="mt-5"
+            />
+          </div>
 
           {car.marketingDescription && (
             <p className="text-muted-foreground mt-4 text-base/7">{car.marketingDescription}</p>
@@ -328,6 +429,23 @@ export function CarDetailView({ car }: { car: CarDetail }) {
                 ))}
               </ul>
             </div>
+          )}
+
+          {/*
+            A way to the video, not the video itself.
+
+            The clip belongs on the Videos page, where it sits beside every
+            other car's. Embedding it here put a second large moving thing on a
+            page that already leads with the gallery, and pushed the price and
+            the order button further down.
+          */}
+          {car.videoUrl && (
+            <Button asChild variant="outline" size="lg" className="mt-7 w-full sm:w-auto">
+              <Link href={`/videos#${car.slug}`}>
+                <Play className="size-4" aria-hidden="true" />
+                {t.videos.watchOnCard}
+              </Link>
+            </Button>
           )}
 
           <div className="mt-8 flex flex-wrap gap-3">

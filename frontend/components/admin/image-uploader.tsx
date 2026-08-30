@@ -25,11 +25,39 @@ export interface CarImageDraft {
   kind: ImageKind;
   url: string;
   alt: string;
+  /** Heading for an OTHER photograph, typed by the admin. */
+  label?: string;
+  /**
+   * Position within its group. Set for 360° frames, where it *is* the angle —
+   * frame 7 of 24 is 90°. Left unset for photographs, which are ordered by
+   * their position in the list.
+   */
+  sortOrder?: number;
   /** Present only for files uploaded here, so they can be deleted again. */
   filename?: string;
+  /**
+   * The colour this photograph shows, by name. Absent for photographs of the
+   * car in general — the main photo above all. See `ColourMedia` for why it is
+   * a name and not an id.
+   */
+  colorName?: string;
 }
 
-const KIND_LABELS: Record<ImageKind, string> = {
+/*
+ * SPIN is absent deliberately. A 360° frame is never picked one at a time or
+ * given a kind by hand — the whole set is uploaded together, by SpinUploader.
+ * Offering it here would let somebody create a set of one frame.
+ */
+/*
+ * The kinds a general photograph of the car may have.
+ *
+ * SPIN is absent because a 360° frame is never picked one at a time — the whole
+ * set is uploaded together, by SpinUploader, and offering it here would let
+ * somebody create a set of one frame. ENGINE, TRUNK and OTHER are absent
+ * because they are always photographs *of a colour*, uploaded beside that
+ * colour by ColourMedia.
+ */
+const KIND_LABELS: Record<'MAIN' | 'GALLERY' | 'EXTERIOR' | 'INTERIOR' | 'WHEEL', string> = {
   MAIN: 'Main photo',
   GALLERY: 'Gallery',
   EXTERIOR: 'Exterior',
@@ -107,14 +135,17 @@ export function ImageUploader({
   };
 
   const remove = (index: number) => {
-    const target = images[index];
+    /*
+     * Removed from the list, and that is all.
+     *
+     * This used to delete the file from the server at the same moment. The
+     * photograph was then gone from disk while the vehicle's saved record still
+     * pointed at it — so closing the page without saving, or a save that
+     * failed, left a listing with broken pictures and no way back. Files are
+     * reclaimed by the form once the save has succeeded and it knows which ones
+     * are genuinely unreferenced.
+     */
     onChange(images.filter((_, i) => i !== index));
-
-    // Reclaim the disk space for files uploaded here. A path typed by hand is
-    // left alone — it may be a placeholder shared by other vehicles.
-    if (target.filename) {
-      void uploadsService.deleteImage(target.filename, token);
-    }
   };
 
   const move = (index: number, direction: -1 | 1) => {
@@ -237,7 +268,7 @@ export function ImageUploader({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(Object.keys(KIND_LABELS) as ImageKind[]).map((kind) => (
+                      {(Object.keys(KIND_LABELS) as (keyof typeof KIND_LABELS)[]).map((kind) => (
                         <SelectItem key={kind} value={kind}>
                           {KIND_LABELS[kind]}
                         </SelectItem>

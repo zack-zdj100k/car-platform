@@ -5,13 +5,25 @@ import { Public } from '../common/decorators/public.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../common/types/authenticated-request';
+import { NotificationsService } from '../notifications/notifications.service';
 import { SettingsService } from './settings.service';
 import { UpdateSettingDto, UpdateSettingsDto } from './dto/update-setting.dto';
 
 @ApiTags('settings')
 @Controller('settings')
 export class SettingsController {
-  constructor(private readonly settings: SettingsService) {}
+  constructor(
+    private readonly settings: SettingsService,
+    private readonly notifications: NotificationsService,
+  ) {}
+
+  @Get('email-delivery')
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Whether order notifications are actually delivered, and to whom' })
+  emailDelivery() {
+    return this.notifications.deliveryStatus();
+  }
 
   @Public()
   @Get('public')

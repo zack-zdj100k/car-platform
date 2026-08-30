@@ -185,8 +185,33 @@ export class CarImageDto {
   @IsEnum(ImageKind)
   kind?: ImageKind;
 
+  /**
+   * The colour this photograph shows, by name — "Basalt Grey", not an id.
+   *
+   * By name because ids are not stable across a save: supplying colours
+   * replaces them, so every colour is created afresh with a new id and any id
+   * the browser was holding is already gone by the time the images are written.
+   * The name is the colour's natural key on a car, and it is also the only part
+   * of this payload a person can read.
+   *
+   * Unknown names are ignored rather than rejected: a photograph that cannot be
+   * attached to a colour is still a photograph of the car.
+   */
+  @ApiPropertyOptional({ description: 'Name of the colour this image belongs to' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  colorName?: string;
+
   @IsString() @MaxLength(500) url: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(300) alt?: string;
+
+  /**
+   * Heading for a photograph that does not belong to a fixed group — "Roof",
+   * "Scratch on the rear bumper". Separate from `alt`, which is what a screen
+   * reader says in place of the picture.
+   */
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(80) label?: string;
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(0) width?: number;
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(0) height?: number;
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(0) sortOrder?: number;

@@ -103,16 +103,21 @@ export function CarFilters({
 
   return (
     <div className={cn('space-y-6', className)}>
+      {/*
+        The panel's own title is gone: it only ever appears inside the sheet
+        now, which already names itself, and two headings reading "Filters" one
+        above the other is just noise. The active count stays — that is the part
+        that carries information.
+      */}
       <div className="flex items-center justify-between gap-2">
-        <h2 className="inline-flex items-center gap-2 text-sm font-semibold">
-          <SlidersHorizontal className="size-4" aria-hidden="true" />
-          {t.cars.filters}
-          {active > 0 && (
-            <Badge variant="secondary" className="ms-1">
-              {active}
-            </Badge>
+        <p className="text-muted-foreground inline-flex items-center gap-2 text-xs">
+          {active > 0 ? (
+            <Badge variant="secondary">{active}</Badge>
+          ) : (
+            <SlidersHorizontal className="size-4" aria-hidden="true" />
           )}
-        </h2>
+          {active > 0 ? t.cars.filters : t.cars.filtersShow}
+        </p>
         {active > 0 && (
           <Button variant="ghost" size="sm" onClick={onClear} className="h-8 text-xs">
             <X className="size-3.5" aria-hidden="true" />

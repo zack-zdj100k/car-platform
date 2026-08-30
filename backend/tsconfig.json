@@ -30,8 +30,8 @@
     }
   },
   "include": [
-    "src/**/*",
-    "test/**/*"
+    "src/**/*.ts",
+    "test/**/*.ts"
   ],
   "exclude": [
     "node_modules",

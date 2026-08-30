@@ -82,8 +82,8 @@ describe('Customer features', () => {
       const first = await seedCar(context, { model: 'First' });
       const second = await seedCar(context, { model: 'Second' });
 
-      await context.http().get(`/api/cars/${first.slug}`).set(auth).expect(200);
-      await context.http().get(`/api/cars/${second.slug}`).set(auth).expect(200);
+      await context.http().post(`/api/cars/${first.slug}/view`).set(auth).expect(204);
+      await context.http().post(`/api/cars/${second.slug}/view`).set(auth).expect(204);
 
       const response = await context.http().get('/api/recently-viewed').set(auth).expect(200);
 
@@ -94,8 +94,8 @@ describe('Customer features', () => {
     it('updates the timestamp on re-view rather than duplicating', async () => {
       const car = await seedCar(context);
 
-      await context.http().get(`/api/cars/${car.slug}`).set(auth).expect(200);
-      await context.http().get(`/api/cars/${car.slug}`).set(auth).expect(200);
+      await context.http().post(`/api/cars/${car.slug}/view`).set(auth).expect(204);
+      await context.http().post(`/api/cars/${car.slug}/view`).set(auth).expect(204);
 
       const response = await context.http().get('/api/recently-viewed').set(auth).expect(200);
       expect(response.body.meta.total).toBe(1);
@@ -104,7 +104,7 @@ describe('Customer features', () => {
 
     it('clears history', async () => {
       const car = await seedCar(context);
-      await context.http().get(`/api/cars/${car.slug}`).set(auth).expect(200);
+      await context.http().post(`/api/cars/${car.slug}/view`).set(auth).expect(204);
 
       await context.http().delete('/api/recently-viewed').set(auth).expect(200);
 
@@ -220,7 +220,7 @@ describe('Customer features', () => {
     it('summarises counts from the database', async () => {
       const car = await seedCar(context);
       await context.http().post(`/api/favorites/${car.id}`).set(auth).expect(201);
-      await context.http().get(`/api/cars/${car.slug}`).set(auth).expect(200);
+      await context.http().post(`/api/cars/${car.slug}/view`).set(auth).expect(204);
 
       const response = await context.http().get('/api/dashboard').set(auth).expect(200);
 

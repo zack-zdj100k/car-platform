@@ -147,10 +147,15 @@ export function CarsBrowser({ initialFacets }: { initialFacets: CarFacets | null
         </p>
 
         <div className="flex items-center gap-2">
-          {/* Filters open in a sheet on small screens (spec §64) */}
+          {/*
+            Filters open on request, from the edge of the screen, at every
+            width. A permanent column held a fifth of the page for controls
+            that are mostly untouched, and squeezed the vehicles — the point of
+            the page — into what was left.
+          */}
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="lg:hidden">
+              <Button variant="outline" size="sm">
                 <SlidersHorizontal className="size-4" aria-hidden="true" />
                 {t.cars.filters}
                 {activeCount > 0 && <Badge variant="secondary">{activeCount}</Badge>}
@@ -184,8 +189,7 @@ export function CarsBrowser({ initialFacets }: { initialFacets: CarFacets | null
         </div>
       </div>
 
-      {/* Filters sit in the right-hand column on desktop, as specified (§11) */}
-      <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_18rem] xl:grid-cols-[1fr_20rem]">
+      <div className="mt-8">
         <div className="min-w-0">
           {cars.status === 'loading' && <CarGridSkeleton count={6} />}
 
@@ -238,11 +242,6 @@ export function CarsBrowser({ initialFacets }: { initialFacets: CarFacets | null
           )}
         </div>
 
-        <aside className="hidden lg:block">
-          <div className="border-border bg-card sticky top-24 rounded-xl border p-5 shadow-[var(--shadow-card)]">
-            {filterPanel}
-          </div>
-        </aside>
       </div>
     </div>
   );

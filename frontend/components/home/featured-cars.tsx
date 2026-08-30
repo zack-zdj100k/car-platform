@@ -34,7 +34,7 @@ export function FeaturedCars({ cars }: { cars: CarListItem[] }) {
 
       <div className="mt-12">
         {cars.length > 0 ? (
-          <CarGrid cars={cars} />
+          <CarGrid cars={cars} layout="rail" />
         ) : (
           <EmptyState title={t.cars.noResults} actionLabel={t.home.viewAllCars} actionHref="/cars" />
         )}

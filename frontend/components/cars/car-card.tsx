@@ -2,14 +2,17 @@
 
 import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Fuel, GaugeCircle, Heart, Scale } from 'lucide-react';
+import { Fuel, GaugeCircle, Heart, Play, Scale } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Price } from '@/components/shared/price';
 import { Button } from '@/components/ui/button';
 import { DemoBadge } from '@/components/shared/demo-badge';
 import { useLocale } from '@/providers/locale-provider';
 import { useAuth } from '@/providers/auth-provider';
-import { formatAcronym, formatPrice, humaniseEnum } from '@/lib/format';
+import { useTilt } from '@/hooks/use-tilt';
+import { formatAcronym, humaniseEnum } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { CarListItem } from '@/types/api';
 
@@ -35,11 +38,17 @@ export function CarCard({
   onToggleCompare?: (carId: string) => void;
   priority?: boolean;
 }) {
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const { isAuthenticated } = useAuth();
   const router = useRouter();
 
-  const image = car.images[0];
+  const { ref: tiltRef, onPointerMove: onTiltMove, onPointerLeave: onTiltLeave } = useTilt<HTMLElement>();
+  const [shownColorId, setShownColorId] = useState<string | null>(null);
+  const shownColor = car.colors.find((color) => color.id === shownColorId);
+  // The chosen colour's photograph when there is one, the car's own otherwise.
+  const image = shownColor?.imageUrl
+    ? { url: shownColor.imageUrl, alt: `${car.brand.name} ${car.model} — ${shownColor.name}` }
+    : car.images[0];
   const defaultColor = car.colors.find((color) => color.isDefault) ?? car.colors[0];
 
   const handleFavorite = () => {
@@ -52,11 +61,22 @@ export function CarCard({
 
   return (
     <article
+      ref={tiltRef}
+      onPointerMove={onTiltMove}
+      onPointerLeave={onTiltLeave}
+      data-testid="car-card"
       className={cn(
         'group border-border bg-card relative flex flex-col overflow-hidden rounded-xl border',
         'shadow-[var(--shadow-card)] transition-all duration-300',
         'hover:border-primary/25 hover:shadow-[var(--shadow-lifted)] focus-within:border-primary/40',
+        /*
+         * The lift lives in the tilt's own transform, not here: a utility class
+         * and an inline transform cannot both set one, and the inline one wins.
+         * Without a pointer — touch, or reduced motion — this class is the only
+         * one that applies and the card simply rises as it always did.
+         */
         'motion-safe:hover:-translate-y-0.5',
+        'transition-transform',
       )}
     >
       <div className="bg-secondary relative aspect-16/10 overflow-hidden">
@@ -73,7 +93,13 @@ export function CarCard({
           <div className="text-muted-foreground grid h-full place-items-center text-xs">—</div>
         )}
 
-        <div className="absolute inset-x-3 top-3 flex items-start justify-between gap-2">
+        {/*
+          Above the card-covering link, or nothing here can be clicked.
+          The title's `after:inset-0` pseudo-element spans the whole card and
+          paints over this row, so favourite and compare silently did nothing
+          on the catalogue — the click landed on the link underneath.
+        */}
+        <div className="absolute inset-x-3 top-3 z-10 flex items-start justify-between gap-2">
           <div className="flex flex-wrap gap-1.5">
             {car.isFeatured && (
               <Badge className="bg-primary/95 text-primary-foreground shadow-sm">
@@ -168,11 +194,35 @@ export function CarCard({
           <p className="text-muted-foreground mt-3 line-clamp-2 text-sm/6">{car.marketingDescription}</p>
         )}
 
+        {/*
+          Straight to the clip, for the cars that have one — so the badge means
+          something rather than appearing on every card and disappointing
+          whoever taps it. It sits after the vehicle's own link and above the
+          card overlay: first tab stop stays "open this car", and this one is
+          actually clickable.
+        */}
+        {/*
+          Straight to the video, for the cars that have one — so the badge means
+          something rather than appearing on every card and disappointing
+          whoever taps it. It goes to our own videos page rather than off to
+          TikTok directly: the clip is one tap further, and the visitor sees the
+          rest of the films on the way. It sits after the vehicle's own link and
+          above the card overlay: first tab stop stays "open this car", and this
+          one is actually clickable.
+        */}
+        {car.videoUrl && (
+          <Link
+            href={`/videos#${car.slug}`}
+            className="bg-foreground text-background hover:bg-foreground/85 focus-visible:outline-2 focus-visible:outline-offset-2 relative z-10 mt-3 inline-flex w-fit items-center gap-1.5 self-start rounded-full px-2.5 py-1 text-xs font-semibold transition-colors"
+          >
+            <Play className="size-3.5" aria-hidden="true" />
+            {t.videos.watchOnCard}
+          </Link>
+        )}
+
         <div className="mt-4 flex items-end justify-between gap-3 pt-2">
           <div>
-            <p className="font-display text-xl font-semibold tracking-tight">
-              {formatPrice(car.price, car.currency, locale)}
-            </p>
+            <Price price={car.price} promoPrice={car.promoPrice} currency={car.currency} />
             {car.engine?.transmission && (
               <p className="text-muted-foreground mt-0.5 text-xs">
                 {formatAcronym(car.engine.transmission)}
@@ -182,16 +232,41 @@ export function CarCard({
           </div>
 
           {car.colors.length > 0 && (
-            <ul className="flex items-center gap-1.5" aria-label={t.car.colours}>
+            /*
+             * Choosing by colour, from the card. A colour with a photograph of
+             * its own swaps the card's picture; one without stays a swatch, so
+             * a dot never promises a change it cannot make. Above the card
+             * overlay, or the click would open the vehicle instead.
+             */
+            <ul className="relative z-10 flex items-center gap-1.5" aria-label={t.car.colours}>
               {car.colors.slice(0, 4).map((color) => (
                 <li key={color.id}>
-                  <span
-                    className="border-border/80 block size-4.5 rounded-full border shadow-inner"
-                    style={{ backgroundColor: color.hexCode }}
-                    title={color.name}
-                  >
-                    <span className="sr-only">{color.name}</span>
-                  </span>
+                  {color.imageUrl ? (
+                    <button
+                      type="button"
+                      aria-pressed={color.id === shownColorId}
+                      title={color.name}
+                      onClick={() => setShownColorId(color.id)}
+                      onMouseEnter={() => setShownColorId(color.id)}
+                      className={cn(
+                        'border-border/80 block size-4.5 rounded-full border shadow-inner transition-transform',
+                        color.id === shownColorId
+                          ? 'ring-primary ring-offset-background scale-110 ring-2 ring-offset-1'
+                          : 'hover:scale-110',
+                      )}
+                      style={{ backgroundColor: color.hexCode }}
+                    >
+                      <span className="sr-only">{color.name}</span>
+                    </button>
+                  ) : (
+                    <span
+                      className="border-border/80 block size-4.5 rounded-full border shadow-inner"
+                      style={{ backgroundColor: color.hexCode }}
+                      title={color.name}
+                    >
+                      <span className="sr-only">{color.name}</span>
+                    </span>
+                  )}
                 </li>
               ))}
               {car.colors.length > 4 && (

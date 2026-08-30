@@ -59,6 +59,11 @@ export const authService = {
     return apiRequest<void>('/auth/logout', { ...withCredentials(options), method: 'POST' });
   },
 
+  /** Which sign-in providers the server actually has configured. */
+  providers(options: RequestOptions = {}) {
+    return apiRequest<{ google: boolean }>('/auth/providers', options);
+  },
+
   me(options: RequestOptions = {}) {
     return apiRequest<AuthUser>('/auth/me', options);
   },

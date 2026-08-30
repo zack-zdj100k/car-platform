@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3000",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --port 3000",
     "lint": "eslint --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "test": "echo \"frontend unit tests land in Phase 9\" && exit 0",
@@ -37,6 +37,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.2",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "dotenv": "^17.4.2"
   }
 }

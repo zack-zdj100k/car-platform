@@ -1,13 +1,21 @@
 import { Hero } from '@/components/home/hero';
-import { FeaturesShowcase } from '@/components/home/features-showcase';
+import { BestOfGallery } from '@/components/home/best-of-gallery';
+import { CarOrbit } from '@/components/home/car-orbit';
+import { VideoShowcase } from '@/components/home/video-showcase';
 import { FeaturedCars } from '@/components/home/featured-cars';
-import { StatsStrip } from '@/components/home/stats-strip';
-import { fetchFeaturedCars, fetchPublicSettings, readMarketingStats } from '@/lib/server-api';
+import { ShowroomLocation } from '@/components/home/showroom-location';
+import { StatsBento } from '@/components/ui/stats-bento';
+import { fetchFeaturedCars, fetchPublicSettings, readMarketingStats, readSetting } from '@/lib/server-api';
 
 /** Home page (spec §7, §8, §9, §33). */
 export default async function HomePage() {
   const [featured, settings] = await Promise.all([fetchFeaturedCars(), fetchPublicSettings()]);
   const stats = readMarketingStats(settings);
+  // Stated plainly on the section itself: these are editable marketing figures,
+  // not measured analytics (spec §33, and docs/DECISIONS.md D-2.1).
+  const marketingNote =
+    readSetting(settings, 'about', 'about.mission') ||
+    'Configurable marketing content — not live analytics.';
 
   // The showcase illustrates its sections with a real vehicle from the
   // catalogue, so no placeholder path is hard-coded into the component.
@@ -15,12 +23,49 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero />
+      <Hero
+        social={{
+          tiktok: readSetting(settings, 'social', 'social.tiktok'),
+          instagram: readSetting(settings, 'social', 'social.instagram'),
+          facebook: readSetting(settings, 'social', 'social.facebook'),
+        }}
+      />
+      {/* Curated first, then the diagram that explains what is documented. */}
+      <BestOfGallery
+        entries={[1, 2, 3, 4, 5, 6].map((slot) => ({
+          image: readSetting(settings, 'best-of', `home.best.${slot}.image`),
+          caption: readSetting(settings, 'best-of', `home.best.${slot}.caption`),
+        }))}
+      />
+
       {showcaseSlug ? (
-        <FeaturesShowcase slug={showcaseSlug} />
+        <CarOrbit
+          slug={showcaseSlug}
+          images={{
+            safety: readSetting(settings, 'home-images', 'home.image.safety'),
+            engine: readSetting(settings, 'home-images', 'home.image.engine'),
+            wheels: readSetting(settings, 'home-images', 'home.image.wheels'),
+            tyres: readSetting(settings, 'home-images', 'home.image.tyres'),
+            exterior: readSetting(settings, 'home-images', 'home.image.exterior'),
+            interior: readSetting(settings, 'home-images', 'home.image.interior'),
+          }}
+          fallbackImages={featured
+            .map((car) => car.images[0]?.url)
+            .filter((url): url is string => Boolean(url))}
+        />
       ) : null}
+      <VideoShowcase />
+      {/*
+        Between the film and the cars: having watched one move, the next
+        question is where to go and see it.
+      */}
+      <ShowroomLocation
+        name={readSetting(settings, 'location', 'location.name')}
+        address={readSetting(settings, 'location', 'location.address')}
+        mapUrl={readSetting(settings, 'location', 'location.mapUrl')}
+      />
       <FeaturedCars cars={featured} />
-      <StatsStrip stats={stats} />
+      <StatsBento stats={stats} note={marketingNote} />
     </>
   );
 }

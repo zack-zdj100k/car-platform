@@ -44,7 +44,7 @@ const schema = z
 
 type Field = 'fullName' | 'email' | 'password' | 'confirmPassword' | 'phone' | 'acceptTerms';
 
-export function SignupForm({ googleEnabled }: { googleEnabled: boolean }) {
+export function SignupForm() {
   const { t } = useLocale();
   const { register } = useAuth();
   const router = useRouter();
@@ -251,7 +251,7 @@ export function SignupForm({ googleEnabled }: { googleEnabled: boolean }) {
         <Separator className="flex-1" />
       </div>
 
-      <GoogleButton enabled={googleEnabled} />
+      <GoogleButton />
     </AuthShell>
   );
 }

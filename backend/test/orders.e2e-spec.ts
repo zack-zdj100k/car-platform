@@ -1,6 +1,7 @@
 import {
   createAdmin,
   createTestApp,
+  flushEmails,
   registerCustomer,
   resetDatabase,
   seedCar,
@@ -153,11 +154,20 @@ describe('Orders', () => {
       const car = await seedCar(context);
       const response = await context.http().post('/api/orders').set(auth).send(orderBody(car.id)).expect(201);
 
+      await flushEmails(context);
       const emails = await context.prisma.emailLog.findMany({ where: { orderId: response.body.id } });
 
       // One to the administrator, one to the customer.
       expect(emails).toHaveLength(2);
-      expect(emails.every((entry) => entry.status === 'SENT')).toBe(true);
+
+      /*
+       * `LOGGED`, not `SENT`. Tests run with no mail provider configured, so
+       * nothing leaves the machine — and the log has to say so. This used to
+       * assert `SENT`, which was the platform lying to its owner: every order
+       * notification was recorded as delivered when none had been.
+       */
+      expect(emails.map((entry) => entry.status)).toEqual(['LOGGED', 'LOGGED']);
+      expect(emails.every((entry) => entry.sentAt === null)).toBe(true);
     });
   });
 
@@ -181,13 +191,17 @@ describe('Orders', () => {
       expect(response.body.status).toBe('CONTACTED');
     });
 
-    it('refuses PENDING → COMPLETED', async () => {
-      await context
+    it('permits PENDING → COMPLETED, without walking through the middle', async () => {
+      // A sale can conclude in one conversation. The administrator should not
+      // have to record two statuses that never happened to get there.
+      const response = await context
         .http()
         .patch(`/api/orders/${orderId}/status`)
         .set('Authorization', `Bearer ${adminToken}`)
         .send({ status: 'COMPLETED' })
-        .expect(400);
+        .expect(200);
+
+      expect(response.body.status).toBe('COMPLETED');
     });
 
     it('refuses a no-op transition', async () => {
@@ -199,16 +213,48 @@ describe('Orders', () => {
         .expect(400);
     });
 
-    it('treats COMPLETED as final', async () => {
+    it('lets a completed order be corrected, and records the correction', async () => {
       const admin = { Authorization: `Bearer ${adminToken}` };
 
-      await context.http().patch(`/api/orders/${orderId}/status`).set(admin).send({ status: 'CONTACTED' }).expect(200);
       await context.http().patch(`/api/orders/${orderId}/status`).set(admin).send({ status: 'COMPLETED' }).expect(200);
 
+      // COMPLETED used to be a dead end: a customer who pulled out afterwards
+      // could not be recorded at all.
       const transitions = await context.http().get(`/api/orders/${orderId}/transitions`).set(admin).expect(200);
-      expect(transitions.body.allowed).toEqual([]);
+      expect(transitions.body.allowed).toEqual(
+        expect.arrayContaining(['PENDING', 'CONTACTED', 'CONFIRMED', 'CANCELLED']),
+      );
+      expect(transitions.body.allowed).not.toContain('COMPLETED');
 
-      await context.http().patch(`/api/orders/${orderId}/status`).set(admin).send({ status: 'PENDING' }).expect(400);
+      await context
+        .http()
+        .patch(`/api/orders/${orderId}/status`)
+        .set(admin)
+        .send({ status: 'CANCELLED', note: 'Customer withdrew after delivery was agreed' })
+        .expect(200);
+
+      const order = await context.http().get(`/api/orders/${orderId}`).set(admin).expect(200);
+
+      expect(order.body.status).toBe('CANCELLED');
+      // The safeguard is the trail, not the locked door: the correction shows
+      // as a correction, with its reason and who made it.
+      expect(order.body.statusHistory).toHaveLength(3);
+      expect(order.body.statusHistory[2]).toMatchObject({
+        fromStatus: 'COMPLETED',
+        toStatus: 'CANCELLED',
+        note: 'Customer withdrew after delivery was agreed',
+      });
+      expect(order.body.statusHistory[2].changedBy).toBeTruthy();
+    });
+
+    it('offers every status except the current one', async () => {
+      const admin = { Authorization: `Bearer ${adminToken}` };
+      const transitions = await context.http().get(`/api/orders/${orderId}/transitions`).set(admin).expect(200);
+
+      expect(transitions.body.status).toBe('PENDING');
+      expect(transitions.body.allowed.sort()).toEqual(
+        ['CANCELLED', 'COMPLETED', 'CONFIRMED', 'CONTACTED'].sort(),
+      );
     });
 
     it('records every transition with the acting administrator', async () => {

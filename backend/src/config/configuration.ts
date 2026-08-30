@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { Env } from './env.validation';
 
 /**
@@ -48,11 +49,32 @@ export const ordersConfig = (env: Env) => ({
 export const uploadConfig = (env: Env) => ({
   dir: env.UPLOAD_DIR,
   maxBytes: env.MAX_UPLOAD_MB * 1024 * 1024,
+  maxVideoBytes: env.MAX_VIDEO_UPLOAD_MB * 1024 * 1024,
 });
 
 export const throttleConfig = (env: Env) => ({
   ttl: env.THROTTLE_TTL,
   limit: env.THROTTLE_LIMIT,
+});
+
+export const analyticsConfig = (env: Env) => ({
+  /**
+   * Salt for the anonymous visitor hash.
+   *
+   * Derived from a secret the installation already has, with its own prefix, so
+   * turning visitor counting on costs nobody a new environment variable and the
+   * value can still never be shared with — or reversed by — anything else.
+   */
+  visitorSalt: createHash('sha256').update(`analytics:${env.JWT_REFRESH_SECRET}`).digest('hex'),
+
+  /**
+   * How long one person's repeat views of one car count as a single visit.
+   *
+   * Thirty minutes: long enough that refreshing, comparing colours and coming
+   * back from the order form is one visit, short enough that a genuine second
+   * look later in the day is counted as one.
+   */
+  viewDedupeMinutes: 30,
 });
 
 export const configuration = (env: Env) => ({
@@ -62,6 +84,7 @@ export const configuration = (env: Env) => ({
   orders: ordersConfig(env),
   upload: uploadConfig(env),
   throttle: throttleConfig(env),
+  analytics: analyticsConfig(env),
 });
 
 export type Configuration = ReturnType<typeof configuration>;

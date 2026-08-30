@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Info, Loader2 } from 'lucide-react';
+import { Info, Loader2, MailCheck, MailWarning } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +15,9 @@ import { useAsync } from '@/hooks/use-async';
 import { useAuth } from '@/providers/auth-provider';
 import { useLocale } from '@/providers/locale-provider';
 import { settingsService } from '@/services/admin.service';
+import { SettingImageField } from '@/components/admin/setting-image-field';
 import { ApiError } from '@/services/api-client';
+import { cn } from '@/lib/utils';
 import type { Setting } from '@/types/api';
 
 /**
@@ -31,6 +34,17 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
 
   const settings = useAsync<Setting[]>(() => settingsService.all({ token }), [token], {
+    enabled: Boolean(token),
+  });
+
+  /*
+   * Whether order notifications actually leave the machine.
+   *
+   * With no mail provider configured the platform renders every notification
+   * and files it away, which from the outside looks exactly like working. An
+   * administrator waiting for an order alert has to be told.
+   */
+  const delivery = useAsync(() => settingsService.emailDelivery({ token }), [token], {
     enabled: Boolean(token),
   });
 
@@ -66,8 +80,35 @@ export default function AdminSettingsPage() {
     }
   };
 
+  /** Friendly label from a key like `home.image.safety` or `home.best.3.image`. */
+  const imageLabel = (key: string) => {
+    const parts = key.split('.');
+    const last = parts.pop() ?? key;
+    if (last === 'image' && parts[0] === 'home' && parts[1] === 'best') {
+      return `Photo ${parts[2]}`;
+    }
+    return last.charAt(0).toUpperCase() + last.slice(1);
+  };
+
   const renderField = (setting: Setting) => {
     const value = valueOf(setting);
+
+    // Photography uploads rather than a typed path (spec §9, §47). In the
+    // best-of group only the `.image` half is a photograph — its caption beside
+    // it stays an ordinary text field.
+    if (
+      setting.group === 'home-images' ||
+      setting.group === 'about-images' ||
+      (setting.group === 'best-of' && setting.key.endsWith('.image'))
+    ) {
+      return (
+        <SettingImageField
+          label={imageLabel(setting.key)}
+          value={typeof value === 'string' ? value : ''}
+          onChange={(next) => setDrafts((current) => ({ ...current, [setting.key]: next }))}
+        />
+      );
+    }
 
     // Marketing statistics carry a label and a caption (spec §33).
     if (value !== null && typeof value === 'object' && 'label' in (value as object)) {
@@ -134,6 +175,19 @@ export default function AdminSettingsPage() {
       );
     }
 
+    // Long-form copy needs room to write in; a single-line input for a privacy
+    // notice is unusable.
+    if (setting.group === 'legal' || setting.key === 'about.whoWeAre') {
+      return (
+        <Textarea
+          id={setting.key}
+          rows={10}
+          value={typeof value === 'string' ? value : ''}
+          onChange={(event) => setDrafts((current) => ({ ...current, [setting.key]: event.target.value }))}
+        />
+      );
+    }
+
     return (
       <Input
         id={setting.key}
@@ -153,6 +207,28 @@ export default function AdminSettingsPage() {
         </Button>
       </header>
 
+      {delivery.data && !delivery.data.delivers && (
+        <Alert>
+          <MailWarning className="size-4" aria-hidden="true" />
+          <AlertDescription>
+            Order notifications are being written to the log but not sent — no mail provider is
+            configured (<code className="font-mono text-xs">MAIL_PROVIDER={delivery.data.provider}</code>).
+            They would go to <strong>{delivery.data.recipient}</strong>. See
+            docs/EMAIL_NOTIFICATIONS.md to switch delivery on.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {delivery.data?.delivers && (
+        <Alert>
+          <MailCheck className="size-4" aria-hidden="true" />
+          <AlertDescription>
+            Order notifications are being sent to <strong>{delivery.data.recipient}</strong> over{' '}
+            {delivery.data.provider}.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {Object.entries(groups).map(([group, entries]) => (
         <Card key={group}>
           <CardHeader>
@@ -161,11 +237,43 @@ export default function AdminSettingsPage() {
             {group === 'social' && (
               <CardDescription>Leave empty until the real account URLs are provided.</CardDescription>
             )}
+            {group === 'home-images' && (
+              <CardDescription>
+                Photographs for the home page feature sections. Drop a file in or choose one — an empty
+                slot uses the bundled placeholder.
+              </CardDescription>
+            )}
+            {group === 'legal' && (
+              <CardDescription>
+                Shown on /privacy and /terms. Until you write them, those pages say plainly that the
+                document has not been published yet rather than inventing one.
+              </CardDescription>
+            )}
+            {group === 'best-of' && (
+              <CardDescription>
+                The gallery at the top of the home page. Upload a photograph and give it a caption;
+                slots left empty are skipped, and with none filled the section does not appear.
+              </CardDescription>
+            )}
+            {group === 'about-images' && (
+              <CardDescription>
+                Your photograph, shown on the About page under &ldquo;Developed by me&rdquo;. Drop a file
+                in or choose one — while it is empty the page shows a placeholder in its place.
+              </CardDescription>
+            )}
           </CardHeader>
           <CardContent className="space-y-5">
             {entries.map((setting) => (
               <div key={setting.key} className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
+                <div
+                  className={cn(
+                    'flex flex-wrap items-center gap-2',
+                    (setting.group === 'home-images' ||
+                      setting.group === 'about-images' ||
+                      (setting.group === 'best-of' && setting.key.endsWith('.image'))) &&
+                      'sr-only',
+                  )}
+                >
                   <Label htmlFor={setting.key} className="font-mono text-xs">
                     {setting.key}
                   </Label>

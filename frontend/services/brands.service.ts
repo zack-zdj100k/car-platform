@@ -8,4 +8,8 @@ export const brandsService = {
   detail(idOrSlug: string, options: RequestOptions = {}) {
     return apiRequest<Brand>(`/brands/${encodeURIComponent(idOrSlug)}`, options);
   },
+  /** Admin only — creates a marque that is not in the catalogue yet. */
+  create(payload: { name: string; country?: string }, options: RequestOptions = {}) {
+    return apiRequest<Brand>('/brands', { ...options, method: 'POST', body: payload });
+  },
 };

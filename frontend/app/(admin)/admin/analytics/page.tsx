@@ -2,7 +2,7 @@
 
 import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
-import { AlertTriangle, Car, Eye, Heart, Mail, Package } from 'lucide-react';
+import { AlertTriangle, Car, Eye, Heart, Mail, Package, Rocket, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatCard } from '@/components/admin/stat-card';
@@ -40,6 +40,16 @@ export default function AdminAnalyticsPage() {
   if (!dashboard.data) return <LoadingState />;
 
   const { overview, growth, mostViewed } = dashboard.data;
+
+  /*
+   * Nobody has visited yet.
+   *
+   * Worth saying outright rather than showing four zeros and letting them read
+   * as a fault. Until the site is published on the internet the only person who
+   * can reach it is whoever is sitting at this machine, and their own visits
+   * are deliberately not counted.
+   */
+  const noAudienceYet = overview.views.total === 0 && overview.visitors.total === 0;
   const failures = (email.data?.recentFailures ?? []) as {
     id: string;
     to: string;
@@ -53,15 +63,31 @@ export default function AdminAnalyticsPage() {
       <header>
         <h1 className="text-2xl font-semibold sm:text-3xl">{t.admin.analytics}</h1>
         <p className="text-muted-foreground mt-2 text-sm">
-          All figures are computed from the database — no estimates.
+          {t.admin.analyticsSubtitle}
         </p>
       </header>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {noAudienceYet && (
+        <div className="border-primary/30 bg-primary/5 flex items-start gap-3 rounded-xl border p-4">
+          <Rocket className="text-primary mt-0.5 size-5 shrink-0" aria-hidden="true" />
+          <div className="space-y-1 text-sm">
+            <p className="font-medium">{t.admin.noAudienceTitle}</p>
+            <p className="text-muted-foreground">{t.admin.noAudienceBody}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard
-          label="Total views"
+          label={t.admin.visitors}
+          value={formatNumber(overview.visitors.total, locale)}
+          hint={`${formatNumber(overview.visitors.last30Days, locale)} ${t.admin.inLast30Days}`}
+          icon={Users}
+        />
+        <StatCard
+          label={t.admin.totalViews}
           value={formatNumber(overview.views.total, locale)}
-          hint={`${formatNumber(overview.views.last30Days, locale)} in 30 days`}
+          hint={`${formatNumber(overview.views.last30Days, locale)} ${t.admin.inLast30Days}`}
           icon={Eye}
         />
         <StatCard label={t.admin.totalFavorites} value={formatNumber(overview.favorites.total, locale)} icon={Heart} />
@@ -98,10 +124,18 @@ export default function AdminAnalyticsPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Views</CardTitle>
+            <CardTitle className="text-base">{t.admin.visitors}</CardTitle>
           </CardHeader>
           <CardContent>
-            <BarChart series={growth.views} label="Views" height={160} />
+            <BarChart series={growth.visitors} label={t.admin.visitors} height={160} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t.admin.totalViews}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BarChart series={growth.views} label={t.admin.totalViews} height={160} />
           </CardContent>
         </Card>
         <Card>
@@ -113,6 +147,8 @@ export default function AdminAnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <p className="text-muted-foreground text-xs">{t.admin.viewsExplainer}</p>
 
       <Card>
         <CardHeader>
