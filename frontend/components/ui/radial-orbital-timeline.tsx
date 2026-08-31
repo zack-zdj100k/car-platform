@@ -131,7 +131,14 @@ export function RadialOrbitalTimeline({
     const measure = () => {
       const { width, height } = element.getBoundingClientRect();
       const usable = Math.min(width, height) / 2;
-      setRadius(Math.max(96, Math.min(usable - 68, 320)));
+      /*
+       * The margin kept for a node and the name under it. Smaller on a phone,
+       * where the type is smaller too — and where the ring is bounded by the
+       * width of the screen, so every pixel of it is the difference between a
+       * diagram and a badge.
+       */
+      const margin = width < 640 ? 52 : 68;
+      setRadius(Math.max(96, Math.min(usable - margin, 320)));
     };
 
     measure();
@@ -194,7 +201,15 @@ export function RadialOrbitalTimeline({
         id: item.id,
         x: quantise(radius * depth),
         y: quantise(radius * lift),
-        zIndex: Math.round(100 + 50 * depth),
+        /*
+         * Small numbers, and deliberately so. These only order the nodes
+         * against each other and against the vehicle at the centre (z-10) —
+         * but they were 50 to 150, which is above the site header and above
+         * the account menu at z-50, so opening that menu over this section
+         * showed the ring's icons floating through it. A diagram's internal
+         * depth has no business competing with the page's furniture.
+         */
+        zIndex: Math.round(20 + 8 * depth),
         opacity: quantise(Math.max(0.55, 0.55 + 0.45 * ((1 + lift) / 2))),
         scale: quantise(0.9 + 0.1 * ((depth + 1) / 2)),
       };
@@ -280,7 +295,7 @@ export function RadialOrbitalTimeline({
       <div className="mt-6 grid items-center gap-6 md:grid-cols-[minmax(0,1fr)_20rem] lg:grid-cols-[minmax(0,1fr)_30rem]">
       <div
         ref={ringRef}
-        className="relative mx-auto flex h-[24rem] w-full max-w-5xl items-center justify-center sm:h-[38rem] lg:h-[46rem]"
+        className="relative mx-auto flex h-[27rem] w-full max-w-5xl items-center justify-center sm:h-[38rem] lg:h-[46rem]"
         onPointerEnter={() => setEngaged(true)}
         onPointerLeave={() => setEngaged(false)}
         onFocusCapture={() => setEngaged(true)}
@@ -370,7 +385,7 @@ export function RadialOrbitalTimeline({
               className="absolute"
               style={{
                 transform: `translate(${position.x}px, ${position.y}px) scale(${position.scale})`,
-                zIndex: isActive ? 200 : position.zIndex,
+                zIndex: isActive ? 40 : position.zIndex,
               }}
             >
               <button
@@ -400,7 +415,16 @@ export function RadialOrbitalTimeline({
 
               <span
                 className={cn(
-                  'pointer-events-none absolute top-14 left-1/2 hidden -translate-x-1/2 text-center text-xs font-semibold tracking-wide whitespace-nowrap transition-colors duration-300 sm:block',
+                  /*
+                   * Shown on a phone too. The names were hidden below `sm`,
+                   * which left six unlabelled circles: the icons alone do not
+                   * say "tyres" rather than "wheels", and the name is the whole
+                   * point of the diagram. Wrapped and narrow there, since
+                   * "Safety & Driver Assistance" on one line would push the
+                   * page sideways.
+                   */
+                  'pointer-events-none absolute top-12 left-1/2 block max-w-24 -translate-x-1/2 text-center text-[10px] leading-tight font-semibold tracking-wide transition-colors duration-300',
+                  'sm:top-14 sm:max-w-none sm:text-xs sm:whitespace-nowrap',
                   // Full token colours only: `foreground/70` measured 4.35:1
                   // against the light surface, just under the 4.5:1 minimum.
                   isActive ? 'text-primary' : 'text-muted-foreground',
