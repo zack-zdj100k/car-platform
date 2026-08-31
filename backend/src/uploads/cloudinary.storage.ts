@@ -75,6 +75,22 @@ export class CloudinaryStorage {
     return v2;
   }
 
+  /**
+   * Turns a failure at the image host into something the person uploading can
+   * act on.
+   *
+   * Without this the request ends as an unhandled error, and every upload —
+   * whatever went wrong — reports "an unexpected error occurred", which is the
+   * least useful sentence in the application. The reason usually comes straight
+   * from the host: wrong credentials, an exhausted quota, a file it will not
+   * take. Those are worth reading.
+   */
+  private failed(error: unknown): never {
+    const reason = error instanceof Error ? error.message : String(error);
+    this.logger.error(`The image host refused the upload: ${reason}`);
+    throw new ServiceUnavailableException(`The image host refused the upload: ${reason}`);
+  }
+
   /** Sends bytes already held in memory — a photograph. */
   async putBuffer(buffer: Buffer, publicId: string): Promise<StoredFile> {
     const cloudinary = await this.ensureConfigured();
@@ -93,7 +109,7 @@ export class CloudinaryStorage {
         },
       );
       stream.end(buffer);
-    });
+    }).catch((error: unknown) => this.failed(error));
 
     this.logger.log(`Stored ${uploaded.public_id} (${uploaded.bytes} bytes)`);
     return { url: uploaded.secure_url, filename: uploaded.public_id };
@@ -120,7 +136,7 @@ export class CloudinaryStorage {
         },
       );
       createReadStream(path).pipe(stream);
-    });
+    }).catch((error: unknown) => this.failed(error));
 
     this.logger.log(`Stored video ${uploaded.public_id} (${uploaded.bytes} bytes)`);
     return { url: uploaded.secure_url, filename: uploaded.public_id };
