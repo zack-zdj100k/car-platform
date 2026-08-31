@@ -1,6 +1,6 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { v2 as cloudinary, type UploadApiResponse } from 'cloudinary';
+import type { UploadApiResponse, v2 as CloudinaryClient } from 'cloudinary';
 import { createReadStream } from 'node:fs';
 import type { Configuration } from '../config/configuration';
 
@@ -34,37 +34,50 @@ const FOLDER = 'zodic';
 @Injectable()
 export class CloudinaryStorage {
   private readonly logger = new Logger(CloudinaryStorage.name);
-  private configured = false;
+  private client: typeof CloudinaryClient | null = null;
 
   constructor(private readonly config: ConfigService<Configuration, true>) {}
 
   /**
-   * The SDK reads CLOUDINARY_URL from the environment on its own, but only at
-   * the moment it is first used and only from `process.env`. Configuring it
-   * explicitly keeps the credentials on one path — the validated configuration
-   * — and makes a missing value fail here rather than as a puzzling 401 later.
+   * Loads the SDK, and only then.
+   *
+   * Not a static import, and that is the whole point: the library reads
+   * CLOUDINARY_URL out of `process.env` while it is being *imported*, and
+   * throws from inside its own config file if the value is malformed. That
+   * happens before any of this application's code runs, so a mistyped
+   * credential killed the process with a stack trace from a third-party module
+   * instead of the sentence written here — which was the one thing this class
+   * was supposed to guarantee. Importing it lazily puts our message first.
    */
-  private ensureConfigured(): void {
-    if (this.configured) return;
+  private async ensureConfigured(): Promise<typeof CloudinaryClient> {
+    if (this.client) return this.client;
 
     const url = this.config.get('upload', { infer: true }).cloudinaryUrl;
     if (!url) {
       throw new ServiceUnavailableException('Uploads are not configured on this server.');
     }
 
+    if (!url.startsWith('cloudinary://')) {
+      throw new ServiceUnavailableException(
+        'CLOUDINARY_URL is malformed: it must be the whole value from the Cloudinary dashboard, starting with cloudinary:// — the name of the variable does not belong in it.',
+      );
+    }
+
     const parsed = new URL(url);
-    cloudinary.config({
+    const { v2 } = await import('cloudinary');
+    v2.config({
       cloud_name: parsed.hostname,
       api_key: parsed.username,
       api_secret: decodeURIComponent(parsed.password),
       secure: true,
     });
-    this.configured = true;
+    this.client = v2;
+    return v2;
   }
 
   /** Sends bytes already held in memory — a photograph. */
   async putBuffer(buffer: Buffer, publicId: string): Promise<StoredFile> {
-    this.ensureConfigured();
+    const cloudinary = await this.ensureConfigured();
 
     const uploaded = await new Promise<UploadApiResponse>((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
@@ -91,7 +104,7 @@ export class CloudinaryStorage {
    * clip is an order of magnitude larger than a photograph.
    */
   async putFile(path: string, publicId: string): Promise<StoredFile> {
-    this.ensureConfigured();
+    const cloudinary = await this.ensureConfigured();
 
     const uploaded = await new Promise<UploadApiResponse>((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
@@ -121,7 +134,7 @@ export class CloudinaryStorage {
    * there — is already true.
    */
   async destroy(publicId: string): Promise<void> {
-    this.ensureConfigured();
+    const cloudinary = await this.ensureConfigured();
 
     for (const type of ['image', 'video'] as const) {
       const result = (await cloudinary.uploader.destroy(publicId, { resource_type: type })) as {

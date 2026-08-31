@@ -99,9 +99,14 @@ export const envSchema = z.object({
       'COOKIE_SAME_SITE=none requires COOKIE_SECURE=true — a browser silently drops a cross-site cookie that is not Secure, and nobody would stay signed in',
     path: ['COOKIE_SAME_SITE'],
   })
-  .refine((env) => env.UPLOAD_DRIVER !== 'cloudinary' || env.CLOUDINARY_URL.startsWith('cloudinary://'), {
+  .refine((env) => env.UPLOAD_DRIVER !== 'cloudinary' || env.CLOUDINARY_URL !== '', {
     message:
-      'UPLOAD_DRIVER=cloudinary needs CLOUDINARY_URL — copy it from the Cloudinary console (it starts with cloudinary://). Refusing to start rather than accepting photographs and dropping them.',
+      'UPLOAD_DRIVER=cloudinary needs CLOUDINARY_URL — copy it from the Cloudinary dashboard. Refusing to start rather than accepting photographs and dropping them.',
+    path: ['CLOUDINARY_URL'],
+  })
+  .refine((env) => env.CLOUDINARY_URL === '' || env.CLOUDINARY_URL.startsWith('cloudinary://'), {
+    message:
+      "CLOUDINARY_URL must be the whole value from the Cloudinary dashboard, starting with 'cloudinary://'. If it was copied as CLOUDINARY_URL=cloudinary://... then the name of the variable has been pasted into its own value — remove everything up to and including the '='.",
     path: ['CLOUDINARY_URL'],
   });
 
