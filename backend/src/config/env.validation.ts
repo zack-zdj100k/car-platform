@@ -72,6 +72,20 @@ export const envSchema = z.object({
 
   REQUIRE_AUTH_FOR_ORDERS: booleanish.default(true),
 
+  /**
+   * Where uploaded files are kept.
+   *
+   * `local` writes them next to the API, which is right on a laptop and on a
+   * server with a permanent disk. `cloudinary` sends them to Cloudinary, which
+   * is what a host without one needs: a container's filesystem is erased on
+   * every deploy and every restart, so a catalogue built on it fills with
+   * broken pictures within a day.
+   */
+  UPLOAD_DRIVER: z.enum(['local', 'cloudinary']).default('local'),
+
+  /** cloudinary://<key>:<secret>@<cloud name> — from the Cloudinary console. */
+  CLOUDINARY_URL: z.string().default(''),
+
   UPLOAD_DIR: z.string().default('./uploads'),
   MAX_UPLOAD_MB: z.coerce.number().int().positive().default(8),
   /** Videos are an order of magnitude larger than photographs. */
@@ -84,6 +98,16 @@ export const envSchema = z.object({
     message:
       'COOKIE_SAME_SITE=none requires COOKIE_SECURE=true — a browser silently drops a cross-site cookie that is not Secure, and nobody would stay signed in',
     path: ['COOKIE_SAME_SITE'],
+  })
+  .refine((env) => env.UPLOAD_DRIVER !== 'cloudinary' || env.CLOUDINARY_URL !== '', {
+    message:
+      'UPLOAD_DRIVER=cloudinary needs CLOUDINARY_URL — copy it from the Cloudinary dashboard. Refusing to start rather than accepting photographs and dropping them.',
+    path: ['CLOUDINARY_URL'],
+  })
+  .refine((env) => env.CLOUDINARY_URL === '' || env.CLOUDINARY_URL.startsWith('cloudinary://'), {
+    message:
+      "CLOUDINARY_URL must be the whole value from the Cloudinary dashboard, starting with 'cloudinary://'. If it was copied as CLOUDINARY_URL=cloudinary://... then the name of the variable has been pasted into its own value — remove everything up to and including the '='.",
+    path: ['CLOUDINARY_URL'],
   });
 
 export type Env = z.infer<typeof envSchema>;

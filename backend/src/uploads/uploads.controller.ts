@@ -1,10 +1,12 @@
 import {
+  BadRequestException,
   Controller,
   Delete,
   HttpCode,
   HttpStatus,
   Param,
   Post,
+  Query,
   UploadedFile,
   UploadedFiles,
   UseInterceptors,
@@ -82,6 +84,22 @@ export class UploadsController {
   @ApiOperation({ summary: "Upload a vehicle's video (admin)" })
   uploadVideo(@UploadedFile() file: Express.Multer.File) {
     return this.uploads.storeVideo(file);
+  }
+
+  /**
+   * Deletes by reference — the URL stored against the vehicle, or a bare
+   * filename.
+   *
+   * A query parameter rather than a path segment because the reference may be
+   * an absolute URL, which does not survive being one. The route below is kept
+   * for the filename form.
+   */
+  @Delete()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a stored file by URL or filename (admin)' })
+  async removeByReference(@Query('ref') reference: string): Promise<void> {
+    if (!reference) throw new BadRequestException('Nothing to delete: no reference was given');
+    await this.uploads.remove(reference);
   }
 
   @Delete(':filename')

@@ -12,6 +12,7 @@ import { mkdir, open, readFile, rename, unlink, writeFile } from 'node:fs/promis
 import { existsSync } from 'node:fs';
 import { basename, extname, join, resolve } from 'node:path';
 import type { Configuration } from '../config/configuration';
+import { CloudinaryStorage } from './cloudinary.storage';
 
 export interface StoredImage {
   url: string;
@@ -98,7 +99,15 @@ export class UploadsService {
     return null;
   }
 
-  constructor(private readonly config: ConfigService<Configuration, true>) {}
+  constructor(
+    private readonly config: ConfigService<Configuration, true>,
+    private readonly cloudinary: CloudinaryStorage,
+  ) {}
+
+  /** Where files go. Local on a laptop; Cloudinary on a host with no disk. */
+  private get remote(): boolean {
+    return this.settings.driver === 'cloudinary';
+  }
 
   private get settings() {
     return this.config.get('upload', { infer: true });
@@ -144,17 +153,29 @@ export class UploadsService {
       throw new UnprocessableEntityException('That image could not be read. It may be corrupt.');
     }
 
-    await this.ensureDirectory();
-
     // Random name: an uploaded filename must never influence the path.
-    const filename = `${Date.now().toString(36)}-${randomBytes(8).toString('hex')}${extension}`;
-    await writeFile(join(this.directory, filename), file.buffer);
+    const name = `${Date.now().toString(36)}-${randomBytes(8).toString('hex')}`;
+    const filename = `${name}${extension}`;
 
-    this.logger.log(`Stored ${filename} (${dimensions.width}×${dimensions.height}, ${file.size} bytes)`);
+    /*
+     * Everything above this line is the same either way, and that is the point:
+     * what a file is allowed to be does not depend on where it is kept.
+     */
+    let stored: { url: string; filename: string };
+
+    if (this.remote) {
+      stored = await this.cloudinary.putBuffer(file.buffer, name);
+    } else {
+      await this.ensureDirectory();
+      await writeFile(join(this.directory, filename), file.buffer);
+      stored = { url: `/uploads/${filename}`, filename };
+    }
+
+    this.logger.log(`Stored ${stored.filename} (${dimensions.width}×${dimensions.height}, ${file.size} bytes)`);
 
     return {
-      url: `/uploads/${filename}`,
-      filename,
+      url: stored.url,
+      filename: stored.filename,
       width: dimensions.width ?? null,
       height: dimensions.height ?? null,
       sizeBytes: file.size,
@@ -175,7 +196,24 @@ export class UploadsService {
    * Only a bare filename is accepted, and the resolved path is checked to be
    * inside the upload directory, so `../` can never escape it.
    */
-  async remove(filename: string): Promise<void> {
+  async remove(reference: string): Promise<void> {
+    /*
+     * A URL is accepted as well as a filename, and is the form the
+     * administration now sends: once a file may live somewhere else, the only
+     * handle that is still true after a page reload is the address stored
+     * against the vehicle. Working out what that address refers to belongs
+     * here, where the destination is known.
+     */
+    const publicId = CloudinaryStorage.publicIdFromUrl(reference);
+    if (publicId) {
+      await this.cloudinary.destroy(publicId);
+      return;
+    }
+
+    const filename = reference.startsWith('/uploads/')
+      ? reference.slice('/uploads/'.length)
+      : reference;
+
     const safe = basename(filename);
     if (safe !== filename || !extname(safe)) {
       throw new BadRequestException('Invalid filename');
@@ -233,7 +271,21 @@ export class UploadsService {
       return reject('That file is not a supported video. Use MP4, MOV or WebM.');
     }
 
-    const filename = `${Date.now().toString(36)}-${randomBytes(8).toString('hex')}${extension}`;
+    const name = `${Date.now().toString(36)}-${randomBytes(8).toString('hex')}`;
+    const filename = `${name}${extension}`;
+
+    if (this.remote) {
+      /*
+       * Sent from where multer wrote it, then removed. The local copy exists
+       * only so the format could be checked without holding eighty megabytes
+       * in memory, and it has no reason to outlive that check.
+       */
+      const stored = await this.cloudinary.putFile(written, name);
+      await unlink(written).catch(() => undefined);
+      this.logger.log(`Stored video ${stored.filename} (${file.size} bytes)`);
+      return { url: stored.url, filename: stored.filename, sizeBytes: file.size };
+    }
+
     await rename(written, join(this.directory, filename));
 
     this.logger.log(`Stored video ${filename} (${file.size} bytes)`);

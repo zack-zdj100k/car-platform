@@ -147,6 +147,36 @@ which is the stronger setting.
 
    Vehicles referenced by an order cannot be deleted; archive those instead.
 
+## Uploaded photographs
+
+`UPLOAD_DRIVER` decides where they are kept.
+
+`local` writes them next to the API, under `UPLOAD_DIR`. Correct on a laptop,
+and on any server with a permanent disk attached.
+
+`cloudinary` sends them to Cloudinary instead, and is what a container host
+without a disk needs — Render's free instances included. Their filesystem is
+recreated from the image on every deploy and every wake from idle, so a
+catalogue built on it is a catalogue of broken pictures within days, with the
+database still pointing confidently at files that no longer exist.
+
+To switch it on:
+
+1. Create a Cloudinary account. The free tier covers a small catalogue.
+2. Copy the **API environment variable** from the dashboard — one string,
+   `cloudinary://<key>:<secret>@<cloud name>`.
+3. Set `UPLOAD_DRIVER=cloudinary` and `CLOUDINARY_URL=<that string>` on the API.
+
+The API refuses to start if the driver is `cloudinary` and the URL is missing,
+rather than accepting photographs and dropping them.
+
+What does not change: every check on an uploaded file. The bytes are read and
+the format identified before anything is sent anywhere, so what a file is
+allowed to be does not depend on where it is kept.
+
+Files already stored locally keep working — their URLs are site-relative and
+are still served by the API. Only new uploads go to Cloudinary.
+
 ## Database
 
 ```bash
