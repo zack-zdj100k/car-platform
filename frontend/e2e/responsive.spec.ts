@@ -81,6 +81,47 @@ test.describe('On a phone', () => {
   });
 });
 
+test.describe('The specification diagram', () => {
+  test('never paints over the page furniture', async ({ page }) => {
+    // Its nodes carried z-index 50 to 200, above the header and above the
+    // account menu at 50 — opening that menu over this section showed the
+    // ring's icons floating through it.
+    await open(page, DESKTOP);
+    await page.locator('#features').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(1200);
+
+    const layers = await page.evaluate(() => ({
+      ring: Math.max(
+        ...[...document.querySelectorAll('#features *')].map(
+          (node) => Number(getComputedStyle(node).zIndex) || 0,
+        ),
+        0,
+      ),
+      header: Number(getComputedStyle(document.querySelector('header')!).zIndex) || 0,
+    }));
+
+    expect(layers.ring, 'the diagram is drawn above the header').toBeLessThan(layers.header);
+  });
+
+  test('names every point on a phone', async ({ page }) => {
+    // Six unlabelled circles otherwise: an icon does not say "tyres" rather
+    // than "wheels", and the name is the point of the diagram.
+    await open(page, PHONE);
+    await page.locator('#features').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(1500);
+
+    const names = await page.evaluate(() =>
+      [...document.querySelectorAll('#features span')]
+        .filter((node) => getComputedStyle(node).display !== 'none')
+        .map((node) => (node.textContent ?? '').trim()),
+    );
+
+    for (const expected of ['Engine', 'Wheels', 'Tyres']) {
+      expect(names, `"${expected}" is not shown on a phone`).toContain(expected);
+    }
+  });
+});
+
 test.describe('The specification card', () => {
   async function cardWidth(page: Page, size: typeof TABLET): Promise<number> {
     await open(page, size);

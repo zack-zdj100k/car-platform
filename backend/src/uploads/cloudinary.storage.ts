@@ -63,12 +63,56 @@ export class CloudinaryStorage {
       );
     }
 
-    const parsed = new URL(url);
+    /*
+     * The angle brackets are stripped before the value is read, and that is
+     * not over-helpfulness.
+     *
+     * Cloudinary documents the value as
+     * `cloudinary://<api_key>:<api_secret>@<cloud_name>`, and copying that
+     * shape with the placeholders filled in — brackets and all — is the
+     * ordinary mistake. What it produces is two different failures depending
+     * on which part kept its brackets: the host answering `Invalid api_key
+     * %3C412553955184366%3E`, which is the right key wearing two percent
+     * escapes and reads as a wrong one, or `TypeError: Invalid URL`, because a
+     * hostname may not contain them at all. Neither character can appear in a
+     * real credential, so removing them cannot discard anything true.
+     */
+    const cleaned = url.replace(/[<>]/g, '');
+    if (cleaned !== url) {
+      this.logger.warn(
+        'CLOUDINARY_URL still has the placeholder < > around its parts. They have been ignored — remove them from the variable.',
+      );
+    }
+
+    let parsed: URL;
+    try {
+      parsed = new URL(cleaned);
+    } catch {
+      throw new ServiceUnavailableException(
+        'CLOUDINARY_URL could not be read. It must look like cloudinary://<key>:<secret>@<cloud name> with the real values and no angle brackets.',
+      );
+    }
+
+    const cloudName = parsed.hostname;
+    const apiKey = decodeURIComponent(parsed.username);
+    const apiSecret = decodeURIComponent(parsed.password);
+
+    /*
+     * The environment is corrected before the library is loaded, because the
+     * library does not ask us for the value — it reads CLOUDINARY_URL from the
+     * environment itself, while being imported, and parses it with `new URL`.
+     * A placeholder bracket in there is a TypeError from inside a third-party
+     * module, thrown before the explicit configuration below ever runs, and no
+     * amount of care on this side prevents it. So it is handed the same cleaned
+     * value we are about to use.
+     */
+    process.env.CLOUDINARY_URL = cleaned;
+
     const { v2 } = await import('cloudinary');
     v2.config({
-      cloud_name: parsed.hostname,
-      api_key: parsed.username,
-      api_secret: decodeURIComponent(parsed.password),
+      cloud_name: cloudName,
+      api_key: apiKey,
+      api_secret: apiSecret,
       secure: true,
     });
     this.client = v2;
