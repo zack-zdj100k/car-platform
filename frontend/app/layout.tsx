@@ -7,6 +7,7 @@ import { LocaleProvider } from '@/providers/locale-provider';
 import { AuthProvider } from '@/providers/auth-provider';
 import { DEFAULT_LOCALE, LOCALE_COOKIE, LOCALE_META, isLocale } from '@/lib/i18n/config';
 import './globals.css';
+import { NavigationDepthTracker } from '@/components/shared/navigation-depth';
 
 /** Display face for headings, body face for prose (spec §59 typography). */
 const sora = Sora({ subsets: ['latin'], variable: '--font-display', display: 'swap' });
@@ -68,6 +69,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ThemeProvider>
           <LocaleProvider initialLocale={locale}>
             <AuthProvider>
+              {/* Counts navigations inside the site, so "back" knows whether
+                  there is anywhere of ours to go back to. */}
+              <NavigationDepthTracker />
               {children}
               <Toaster position="top-center" richColors closeButton />
             </AuthProvider>

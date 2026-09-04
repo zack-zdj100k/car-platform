@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useId, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { notify } from '@/lib/notify';
 import { Check, Loader2, Rotate3d, Trash2, Upload } from 'lucide-react';
 import { MediaImage } from '@/components/shared/media-image';
 import { Button } from '@/components/ui/button';
@@ -100,7 +100,7 @@ export function SpinUploader({
         .slice(0, SPIN_PLAN.length);
 
       if (files.length === 0) {
-        toast.error('Those files are not images.');
+        notify.error('Those files are not images.');
         return;
       }
 

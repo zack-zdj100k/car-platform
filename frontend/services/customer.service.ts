@@ -94,6 +94,13 @@ export const ordersService = {
   cancel(id: string, options: RequestOptions = {}) {
     return apiRequest<OrderDetail>(`/orders/${id}/cancel`, { ...options, method: 'PATCH' });
   },
+  /**
+   * Clears a cancelled appointment out of one's own list. The API refuses
+   * anything still open — withdrawing and erasing are different acts.
+   */
+  remove(id: string, options: RequestOptions = {}) {
+    return apiRequest<{ deleted: boolean }>(`/orders/${id}`, { ...options, method: 'DELETE' });
+  },
 };
 
 export const profileService = {

@@ -3,7 +3,7 @@
 import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { notify } from '@/lib/notify';
 import { Eye, EyeOff, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -46,10 +46,10 @@ export default function AdminCarsPage() {
     try {
       if (publish) await carsService.publish(car.id, { token });
       else await carsService.unpublish(car.id, { token });
-      toast.success(publish ? t.admin.publish : t.admin.unpublish);
+      notify.success(publish ? t.admin.publish : t.admin.unpublish);
       cars.reload();
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : t.common.error);
+      notify.error(error instanceof ApiError ? error.message : t.common.error);
     }
   };
 
@@ -60,10 +60,10 @@ export default function AdminCarsPage() {
 
     try {
       const result = await carsService.remove(car.id, { token });
-      toast.success(result.message);
+      notify.success(result.message);
       cars.reload();
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : t.common.error);
+      notify.error(error instanceof ApiError ? error.message : t.common.error);
     }
   };
 

@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
-import { ArrowLeft, Heart, Play, Scale, ShoppingCart } from 'lucide-react';
+import { notify } from '@/lib/notify';
+import { Heart, Play, Scale, ShoppingCart } from 'lucide-react';
+import { BackLink } from '@/components/shared/back-link';
 import { Badge } from '@/components/ui/badge';
 import { Price } from '@/components/shared/price';
 import { Button } from '@/components/ui/button';
@@ -313,8 +314,8 @@ export function CarDetailView({ car }: { car: CarDetail }) {
       return;
     }
     const result = await favorites.toggle(car.id);
-    if ('error' in result) toast.error(result.error);
-    else toast.success(result.favorited ? t.car.favorited : t.car.removeFavorite);
+    if ('error' in result) notify.error(result.error);
+    else notify.success(result.favorited ? t.car.favorited : t.car.removeFavorite);
   };
 
   /*
@@ -332,8 +333,8 @@ export function CarDetailView({ car }: { car: CarDetail }) {
 
   const handleCompare = () => {
     const result = compare.toggle(car.id);
-    if (result.full) toast.error(`${t.car.compare}: ${compare.max}`);
-    else toast.success(result.added ? t.car.inCompare : t.dashboard.removeCar);
+    if (result.full) notify.error(`${t.car.compare}: ${compare.max}`);
+    else notify.success(result.added ? t.car.inCompare : t.dashboard.removeCar);
   };
 
   const isFavorite = favorites.isFavorite(car.id);
@@ -342,12 +343,12 @@ export function CarDetailView({ car }: { car: CarDetail }) {
     <div className="mx-auto w-full max-w-7xl px-5 py-8 sm:px-8 sm:py-12">
       <StickyOrderBar car={car} watch={priceBlock} selectedColorId={selectedColorId} />
 
-      <Button asChild variant="ghost" size="sm" className="text-muted-foreground -ms-2 mb-6">
-        <Link href="/cars">
-          <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
-          {t.car.backToCars}
-        </Link>
-      </Button>
+      {/*
+        Back to wherever the reader came from — their favourites, their
+        appointments, the home page — and to the catalogue only when there is no
+        history, which is how a shared link or a search result arrives.
+      */}
+      <BackLink href="/cars" label={t.car.backToCars} className="text-muted-foreground -ms-2 mb-6" />
 
       <div className="grid gap-10 lg:grid-cols-[1.35fr_1fr] lg:gap-12">
         <div className="min-w-0">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useId, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { notify } from '@/lib/notify';
 import { Armchair, Car, CircleDot, Cog, Loader2, PackageOpen, Plus, Trash2, Upload } from 'lucide-react';
 import { MediaImage } from '@/components/shared/media-image';
 import { Button } from '@/components/ui/button';
@@ -103,7 +103,7 @@ export function ColourMedia({
       free?: { slot: number; label: string },
     ) => {
       if (!trimmed) {
-        toast.error('Give the colour a name first — the photographs are filed under it.');
+        notify.error('Give the colour a name first — the photographs are filed under it.');
         return;
       }
 

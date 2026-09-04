@@ -56,10 +56,16 @@ function show(
         title={options.title}
         description={options.description}
         primaryButtonText={progressing?.cancelText ?? finished?.primaryText}
+        /*
+         * Always dismisses. "Done" carries no handler — there is nothing to do
+         * but acknowledge — and the old condition only closed the card when a
+         * handler existed, so the one button on a finished upload did nothing
+         * at all when pressed.
+         */
         onPrimaryButtonClick={() => {
           progressing?.onCancel?.();
           finished?.onPrimary?.();
-          if (progressing?.onCancel || finished?.onPrimary) toast.dismiss(toastId);
+          toast.dismiss(toastId);
         }}
         secondaryButtonText={finished?.secondaryText}
         onSecondaryButtonClick={() => {

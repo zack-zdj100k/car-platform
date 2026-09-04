@@ -370,6 +370,70 @@ describe('Orders', () => {
     });
   });
 
+  describe('deleting an appointment', () => {
+    async function book() {
+      const car = await seedCar(context);
+      const created = await context
+        .http()
+        .post('/api/orders')
+        .set(auth)
+        .send(orderBody(car.id))
+        .expect(201);
+      return created.body.id as string;
+    }
+
+    it('lets a customer clear one they have cancelled', async () => {
+      const id = await book();
+      await context.http().patch(`/api/orders/${id}/cancel`).set(auth).expect(200);
+      await context.http().delete(`/api/orders/${id}`).set(auth).expect(200);
+      await context.http().get(`/api/orders/${id}`).set(auth).expect(404);
+    });
+
+    it('refuses to let a customer delete one that is still open', async () => {
+      // Withdrawing and erasing are different acts, and the first comes first.
+      const id = await book();
+      await context.http().delete(`/api/orders/${id}`).set(auth).expect(400);
+    });
+
+    it('refuses somebody else’s', async () => {
+      const id = await book();
+      await context.http().patch(`/api/orders/${id}/cancel`).set(auth).expect(200);
+
+      const other = await registerCustomer(context, 'nosy@test.local');
+      await context
+        .http()
+        .delete(`/api/orders/${id}`)
+        .set('Authorization', `Bearer ${other.token}`)
+        .expect(403);
+    });
+
+    it('lets an administrator remove any appointment', async () => {
+      const id = await book();
+      await context
+        .http()
+        .delete(`/api/orders/${id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+    });
+
+    it('keeps a completed one, whoever asks', async () => {
+      // It is the record of a sale — who bought the car, and when it left.
+      const id = await book();
+      await context
+        .http()
+        .patch(`/api/orders/${id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'COMPLETED' })
+        .expect(200);
+
+      await context
+        .http()
+        .delete(`/api/orders/${id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+    });
+  });
+
   describe('the meeting place', () => {
     const place = {
       meetingAddress: 'Cité 1000 Logements, El Khroub, Constantine',

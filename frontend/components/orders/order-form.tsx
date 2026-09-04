@@ -4,7 +4,8 @@ import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, ArrowLeft, CheckCircle2, Info, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Info, Loader2 } from 'lucide-react';
+import { BackLink } from '@/components/shared/back-link';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -214,12 +215,11 @@ export function OrderForm({
 
   return (
     <div className="mx-auto w-full max-w-5xl px-5 py-8 sm:px-8 sm:py-12">
-      <Button asChild variant="ghost" size="sm" className="text-muted-foreground -ms-2 mb-6">
-        <Link href={`/car/${car.slug}`}>
-          <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
-          {car.brand.name} {car.model}
-        </Link>
-      </Button>
+      <BackLink
+        href={`/car/${car.slug}`}
+        label={`${car.brand.name} ${car.model}`}
+        className="text-muted-foreground -ms-2 mb-6"
+      />
 
       <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr]">
         <div>

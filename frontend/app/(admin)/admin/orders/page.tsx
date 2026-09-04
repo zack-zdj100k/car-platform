@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { toast } from 'sonner';
-import { MapPin, Search } from 'lucide-react';
+import { notify } from '@/lib/notify';
+import { MapPin, Search, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,16 +60,39 @@ export default function AdminOrdersPage() {
   const [place, setPlace] = useState({ meetingAddress: '', meetingMapUrl: '', meetingNote: '' });
   const [savingPlace, setSavingPlace] = useState(false);
 
+  /*
+   * Removing an appointment for good. Behind a confirmation because it takes
+   * the history with it — and refused by the API for a completed one, which is
+   * the record of a sale.
+   */
+  const [deleting, setDeleting] = useState<AdminOrderRow | null>(null);
+  const [busyDelete, setBusyDelete] = useState(false);
+
+  const removeOrder = async () => {
+    if (!deleting) return;
+    setBusyDelete(true);
+    try {
+      await adminOrdersService.remove(deleting.id, { token });
+      notify.success(t.admin.deleteOrderDone, { description: deleting.reference });
+      setDeleting(null);
+      orders.reload();
+    } catch (error) {
+      notify.error(error instanceof Error ? error.message : t.common.error);
+    } finally {
+      setBusyDelete(false);
+    }
+  };
+
   const savePlace = async () => {
     if (!placing) return;
     setSavingPlace(true);
     try {
       await adminOrdersService.setMeetingPlace(placing.id, place, { token });
-      toast.success(t.admin.meetingSaved);
+      notify.success(t.admin.meetingSaved);
       setPlacing(null);
       orders.reload();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t.common.error);
+      notify.error(error instanceof Error ? error.message : t.common.error);
     } finally {
       setSavingPlace(false);
     }
@@ -113,13 +136,13 @@ export default function AdminOrdersPage() {
     setSaving(true);
     try {
       await adminOrdersService.updateStatus(active.id, { status: nextStatus, note: note || undefined }, { token });
-      toast.success(t.admin.updateStatus);
+      notify.success(t.admin.updateStatus);
       setActive(null);
       setNextStatus('');
       setNote('');
       orders.reload();
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : t.common.error);
+      notify.error(error instanceof ApiError ? error.message : t.common.error);
     } finally {
       setSaving(false);
     }
@@ -257,6 +280,21 @@ export default function AdminOrdersPage() {
                       >
                         {t.admin.updateStatus}
                       </Button>
+
+                      {/* Not for a completed one: the API refuses it, and the
+                          button should not pretend otherwise. */}
+                      {order.status !== 'COMPLETED' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-muted-foreground hover:text-destructive"
+                          title={t.admin.deleteOrder}
+                          aria-label={`${t.admin.deleteOrder} — ${order.reference}`}
+                          onClick={() => setDeleting(order)}
+                        >
+                          <Trash2 className="size-4" aria-hidden="true" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -265,6 +303,25 @@ export default function AdminOrdersPage() {
           </Table>
         </div>
       )}
+
+      <Dialog open={Boolean(deleting)} onOpenChange={(open) => !open && setDeleting(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t.admin.deleteOrder}</DialogTitle>
+            <DialogDescription>
+              {deleting?.reference} · {t.admin.deleteOrderConfirm}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setDeleting(null)}>
+              {t.admin.deleteKeep}
+            </Button>
+            <Button variant="destructive" onClick={() => void removeOrder()} disabled={busyDelete}>
+              {t.admin.deleteYes}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(placing)} onOpenChange={(open) => !open && setPlacing(null)}>
         <DialogContent>

@@ -457,6 +457,60 @@ export class OrdersService {
     return updated;
   }
 
+  /**
+   * Removes an appointment.
+   *
+   * The administration may remove any of them; a customer only their own, and
+   * only once it has been cancelled — a list of appointments that were called
+   * off is clutter to the person who called them off, and tidying it is
+   * theirs to do. An appointment still open is not: withdrawing it and erasing
+   * it are different acts, and the first has to happen before the second.
+   *
+   * A completed one is kept whatever the caller's rights. It is the record of
+   * a sale, the history of a car leaving the floor, and the only place that
+   * says who bought it.
+   */
+  async remove(id: string, requester: AuthenticatedUser) {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      select: { id: true, reference: true, status: true, userId: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const isAdmin = requester.role === Role.ADMIN;
+
+    if (!isAdmin) {
+      if (order.userId !== requester.id) {
+        throw new ForbiddenException('You do not have access to this order');
+      }
+      if (order.status !== OrderStatus.CANCELLED) {
+        throw new BadRequestException(
+          'Only a cancelled appointment can be removed. Cancel it first.',
+        );
+      }
+    }
+
+    if (order.status === OrderStatus.COMPLETED) {
+      throw new BadRequestException(
+        'A completed appointment is the record of a sale and cannot be deleted.',
+      );
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.orderStatusHistory.deleteMany({ where: { orderId: id } }),
+      this.prisma.emailLog.deleteMany({ where: { orderId: id } }),
+      this.prisma.order.delete({ where: { id } }),
+    ]);
+
+    this.logger.log(
+      `Order ${order.reference} deleted by ${isAdmin ? `admin ${requester.id}` : 'its customer'}`,
+    );
+    return { deleted: true };
+  }
+
   /** Every status the order is not already in — see `allowedFrom`. */
   allowedTransitions(status: OrderStatus): OrderStatus[] {
     return allowedFrom(status);

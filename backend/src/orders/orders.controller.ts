@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
@@ -90,6 +90,17 @@ export class OrdersController {
    * Where a confirmed customer should come. Administration only, and separate
    * from the status: the two are decided at different moments.
    */
+  /**
+   * Removes an appointment. The service decides who may: an administrator any
+   * of them, a customer only their own and only once it is cancelled.
+   */
+  @Delete(':id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete an appointment' })
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.orders.remove(id, user);
+  }
+
   @Patch(':id/meeting')
   @Roles(Role.ADMIN)
   @ApiBearerAuth()

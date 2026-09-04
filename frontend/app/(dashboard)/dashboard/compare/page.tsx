@@ -130,7 +130,18 @@ export default function ComparePage() {
             <caption className="sr-only">{t.dashboard.compare}</caption>
             <thead>
               <tr>
-                <th scope="col" className="bg-card sticky start-0 w-40 p-4 text-start align-bottom">
+                {/*
+                  `z-20` on the frozen column, and a solid background.
+
+                  A sticky cell with no z-index of its own is painted in
+                  document order, so every scrolling cell after it — the
+                  photographs, the values — slid over the top of it instead of
+                  under. The column of labels appeared to be printed on the cars.
+                */}
+                <th
+                  scope="col"
+                  className="bg-card sticky start-0 z-20 w-40 p-4 text-start align-bottom"
+                >
                   <span className="sr-only">{t.car.specifications}</span>
                 </th>
                 {list.map((car) => (
@@ -167,7 +178,7 @@ export default function ComparePage() {
                 <tr key={row.label} className={index % 2 === 1 ? 'bg-secondary/40' : undefined}>
                   <th
                     scope="row"
-                    className="bg-card text-muted-foreground sticky start-0 p-3 text-start font-normal"
+                    className="bg-card text-muted-foreground sticky start-0 z-20 p-3 text-start font-normal"
                   >
                     {row.label}
                   </th>

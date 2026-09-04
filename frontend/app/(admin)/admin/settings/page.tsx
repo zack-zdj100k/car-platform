@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { notify } from '@/lib/notify';
 import { Info, Loader2, MailCheck, MailWarning } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,11 +70,11 @@ export default function AdminSettingsPage() {
         Object.entries(drafts).map(([key, value]) => ({ key, value })),
         { token },
       );
-      toast.success(t.common.save);
+      notify.success(t.common.save);
       setDrafts({});
       settings.reload();
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : t.common.error);
+      notify.error(error instanceof ApiError ? error.message : t.common.error);
     } finally {
       setSaving(false);
     }

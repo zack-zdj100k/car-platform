@@ -1,6 +1,6 @@
 'use client';
 
-import { toast } from 'sonner';
+import { notify } from '@/lib/notify';
 import { Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CarRow } from '@/components/dashboard/car-row';
@@ -27,10 +27,10 @@ export default function RecentlyViewedPage() {
   const clear = async () => {
     try {
       await recentlyViewedService.clear({ token });
-      toast.success(t.dashboard.clearHistory);
+      notify.success(t.dashboard.clearHistory);
       recent.reload();
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : t.common.error);
+      notify.error(error instanceof ApiError ? error.message : t.common.error);
     }
   };
 

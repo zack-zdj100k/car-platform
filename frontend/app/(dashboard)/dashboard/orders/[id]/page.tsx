@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { use } from 'react';
-import { ArrowLeft, ArrowRight, Clock, MapPin } from 'lucide-react';
+import { ArrowRight, Clock, MapPin } from 'lucide-react';
+import { BackLink } from '@/components/shared/back-link';
 import { MediaImage } from '@/components/shared/media-image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -52,12 +53,11 @@ export default function AppointmentPage({ params }: { params: Promise<{ id: stri
 
   return (
     <div className="space-y-6">
-      <Button asChild variant="ghost" size="sm" className="text-muted-foreground -ms-2">
-        <Link href="/dashboard/orders">
-          <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
-          {t.dashboard.orders}
-        </Link>
-      </Button>
+      <BackLink
+        href="/dashboard/orders"
+        label={t.dashboard.orders}
+        className="text-muted-foreground -ms-2"
+      />
 
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>

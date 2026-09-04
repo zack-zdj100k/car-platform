@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -46,6 +46,14 @@ export class UsersController {
   @ApiOperation({ summary: 'User detail with recent orders (admin)' })
   findOne(@Param('id') id: string) {
     return this.users.findOneForAdmin(id);
+  }
+
+  @Delete(':id')
+  @Roles(Role.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Delete an account and everything belonging to it (admin)' })
+  remove(@Param('id') id: string, @CurrentUser() actor: AuthenticatedUser) {
+    return this.users.removeForAdmin(id, actor.id);
   }
 
   @Patch(':id')

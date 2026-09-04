@@ -174,6 +174,68 @@ export class UsersService {
   }
 
   /** Spec §48 — role and account status. Guarded against self-lockout. */
+  /**
+   * Removes an account, and everything of theirs that is only theirs.
+   *
+   * Their appointments go with them, which is the point: a customer asked for
+   * their account to be gone, and leaving a row with their name, telephone
+   * number and address in the orders table is not "gone". The vehicles they
+   * enquired about, the photographs, the catalogue — none of that is theirs and
+   * none of it moves.
+   *
+   * The same two protections as a demotion: an administrator cannot delete
+   * themselves, and the last active administrator cannot be deleted at all.
+   * Locking everybody out of the administration is not a thing to do by
+   * accident.
+   */
+  async removeForAdmin(id: string, actingAdminId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, role: true, email: true, status: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (id === actingAdminId) {
+      throw new ForbiddenException('You cannot delete your own account');
+    }
+
+    if (user.role === Role.ADMIN) {
+      const others = await this.prisma.user.count({
+        where: { role: Role.ADMIN, status: UserStatus.ACTIVE, id: { not: id } },
+      });
+      if (others === 0) {
+        throw new ForbiddenException('At least one active administrator must remain');
+      }
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      const orders = await tx.order.findMany({ where: { userId: id }, select: { id: true } });
+      const orderIds = orders.map((order) => order.id);
+
+      // Order history and email logs point at the orders, so they go first.
+      await tx.orderStatusHistory.deleteMany({
+        where: { OR: [{ orderId: { in: orderIds } }, { changedById: id }] },
+      });
+      await tx.emailLog.deleteMany({ where: { orderId: { in: orderIds } } });
+      await tx.order.deleteMany({ where: { id: { in: orderIds } } });
+
+      await tx.favorite.deleteMany({ where: { userId: id } });
+      await tx.recentlyViewed.deleteMany({ where: { userId: id } });
+      await tx.comparison.deleteMany({ where: { userId: id } });
+      await tx.refreshToken.deleteMany({ where: { userId: id } });
+      await tx.passwordResetToken.deleteMany({ where: { userId: id } });
+      await tx.carView.deleteMany({ where: { userId: id } });
+
+      await tx.user.delete({ where: { id } });
+    });
+
+    this.logger.log(`Account ${user.email} deleted by admin ${actingAdminId}`);
+    return { deleted: true };
+  }
+
   async updateForAdmin(id: string, dto: UpdateUserAdminDto, actingAdminId: string) {
     const user = await this.prisma.user.findUnique({ where: { id }, select: { id: true, role: true } });
     if (!user) {

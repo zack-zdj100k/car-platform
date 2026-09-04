@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { notify } from '@/lib/notify';
 import { AlertCircle, Loader2, LogOut } from 'lucide-react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -106,11 +106,11 @@ export default function ProfilePage() {
         },
         { token },
       );
-      toast.success(t.dashboard.saveChanges);
+      notify.success(t.dashboard.saveChanges);
       await refresh();
       profile.reload();
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : t.common.error);
+      notify.error(error instanceof ApiError ? error.message : t.common.error);
     } finally {
       setSavingDetails(false);
     }
@@ -133,7 +133,7 @@ export default function ProfilePage() {
       await profileService.changePassword(parsed.data, { token });
       // The backend revokes every session on a password change, so the user
       // must sign in again — that is intentional, not an error.
-      toast.success(t.common.signedOut);
+      notify.success(t.common.signedOut);
       await logout();
     } catch (error) {
       setPasswordError(error instanceof ApiError ? error.message : t.common.error);

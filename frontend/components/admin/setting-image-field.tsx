@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { notify } from '@/lib/notify';
 import { ImagePlus, Loader2, Trash2, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MediaImage } from '@/components/shared/media-image';
@@ -35,7 +35,7 @@ export function SettingImageField({
   const upload = async (file: File | undefined) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      toast.error('That file is not an image.');
+      notify.error('That file is not an image.');
       return;
     }
 
@@ -43,9 +43,9 @@ export function SettingImageField({
     try {
       const result = await uploadsService.uploadImage(file, token);
       onChange(result.url);
-      toast.success(`${label} updated`);
+      notify.success(`${label} updated`);
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : 'Upload failed');
+      notify.error(error instanceof ApiError ? error.message : 'Upload failed');
     } finally {
       setUploading(false);
     }

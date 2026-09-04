@@ -2,7 +2,7 @@
 
 import { MediaImage } from '@/components/shared/media-image';
 import { useCallback, useId, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { notify } from '@/lib/notify';
 import { GripVertical, ImagePlus, Loader2, Star, Trash2, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -94,7 +94,7 @@ export function ImageUploader({
     async (files: FileList | File[]) => {
       const list = Array.from(files).filter((file) => file.type.startsWith('image/'));
       if (list.length === 0) {
-        toast.error('Those files are not images.');
+        notify.error('Those files are not images.');
         return;
       }
 
@@ -114,7 +114,7 @@ export function ImageUploader({
             filename: result.filename,
           });
         } catch (error) {
-          toast.error(
+          notify.error(
             `${file.name}: ${error instanceof ApiError ? error.message : 'could not be uploaded'}`,
           );
         } finally {
@@ -124,7 +124,7 @@ export function ImageUploader({
 
       if (uploaded.length > 0) {
         onChange([...images, ...uploaded]);
-        toast.success(`${uploaded.length} image${uploaded.length === 1 ? '' : 's'} uploaded`);
+        notify.success(`${uploaded.length} image${uploaded.length === 1 ? '' : 's'} uploaded`);
       }
     },
     [images, onChange, token],

@@ -1,6 +1,6 @@
 'use client';
 
-import { toast } from 'sonner';
+import { notify } from '@/lib/notify';
 import { CarCard } from './car-card';
 import { Carousel } from '@/components/ui/carousel';
 import { Reveal } from '@/components/shared/reveal';
@@ -32,19 +32,19 @@ export function CarGrid({
   const handleFavorite = async (carId: string) => {
     const result = await favorites.toggle(carId);
     if ('error' in result) {
-      toast.error(result.error);
+      notify.error(result.error);
       return;
     }
-    toast.success(result.favorited ? t.car.favorited : t.car.removeFavorite);
+    notify.success(result.favorited ? t.car.favorited : t.car.removeFavorite);
   };
 
   const handleCompare = (carId: string) => {
     const result = compare.toggle(carId);
     if (result.full) {
-      toast.error(`${t.car.compare}: ${compare.max}`);
+      notify.error(`${t.car.compare}: ${compare.max}`);
       return;
     }
-    toast.success(result.added ? t.car.inCompare : t.dashboard.removeCar);
+    notify.success(result.added ? t.car.inCompare : t.dashboard.removeCar);
   };
 
   const card = (car: CarListItem, index: number) => (

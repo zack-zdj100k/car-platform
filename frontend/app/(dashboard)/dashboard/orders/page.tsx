@@ -3,8 +3,8 @@
 import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Loader2, Package, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { Loader2, Package, Trash2, X } from 'lucide-react';
+import { notify } from '@/lib/notify';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -48,15 +48,40 @@ export default function MyOrdersPage() {
    */
   const [confirming, setConfirming] = useState<string | null>(null);
 
+  /*
+   * Removing a cancelled appointment from one's own list.
+   *
+   * Kept separate from cancelling, and only offered once it is cancelled: a
+   * list of appointments that were called off is clutter to the person who
+   * called them off, but withdrawing one and erasing it are different acts and
+   * the first has to happen first.
+   */
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [confirmingRemove, setConfirmingRemove] = useState<string | null>(null);
+
+  const remove = async (id: string) => {
+    setConfirmingRemove(null);
+    setRemoving(id);
+    try {
+      await ordersService.remove(id, { token });
+      notify.success(t.order.removed);
+      orders.reload();
+    } catch (error) {
+      notify.error(error instanceof Error ? error.message : t.common.error);
+    } finally {
+      setRemoving(null);
+    }
+  };
+
   const cancel = async (id: string) => {
     setConfirming(null);
     setCancelling(id);
     try {
       await ordersService.cancel(id, { token });
-      toast.success(t.order.cancelled);
+      notify.success(t.order.cancelled);
       orders.reload();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t.order.cancelFailed);
+      notify.error(error instanceof Error ? error.message : t.order.cancelFailed);
     } finally {
       setCancelling(null);
     }
@@ -139,6 +164,23 @@ export default function MyOrdersPage() {
                   mean telephoning a showroom in the morning to undo it — and an
                   appointment list nobody can correct is a list nobody trusts.
                 */}
+                {order.status === 'CANCELLED' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground hover:text-destructive -me-2 h-7 px-2 text-xs"
+                    disabled={removing === order.id}
+                    onClick={() => setConfirmingRemove(order.id)}
+                  >
+                    {removing === order.id ? (
+                      <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Trash2 className="size-3.5" aria-hidden="true" />
+                    )}
+                    {t.order.remove}
+                  </Button>
+                )}
+
                 {order.status !== 'CANCELLED' && order.status !== 'COMPLETED' && (
                   <Button
                     variant="ghost"
@@ -160,6 +202,30 @@ export default function MyOrdersPage() {
           ))}
         </ul>
       )}
+
+      <Dialog
+        open={confirmingRemove !== null}
+        onOpenChange={(open) => !open && setConfirmingRemove(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t.order.remove}</DialogTitle>
+            <DialogDescription>{t.order.removeConfirm}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setConfirmingRemove(null)}>
+              {t.admin.deleteKeep}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => confirmingRemove && void remove(confirmingRemove)}
+              disabled={removing !== null}
+            >
+              {t.admin.deleteYes}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={confirming !== null} onOpenChange={(open) => !open && setConfirming(null)}>
         <DialogContent className="sm:max-w-md">

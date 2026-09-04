@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { toast } from 'sonner';
-import { Search, ShieldCheck, UserRound } from 'lucide-react';
+import { notify } from '@/lib/notify';
+import { Search, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { LoadingState, ErrorState, EmptyState } from '@/components/shared/states';
 import { useAsync } from '@/hooks/use-async';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
@@ -49,15 +57,39 @@ export default function AdminUsersPage() {
     { enabled: Boolean(token), isEmpty: (result) => result.data.length === 0 },
   );
 
+  /*
+   * Deleting an account, behind a confirmation because it takes the person's
+   * appointments with them. The API refuses the administrator's own account and
+   * the last one left — the button is hidden for the first, and the second is
+   * only knowable server-side.
+   */
+  const [deleting, setDeleting] = useState<AdminUser | null>(null);
+  const [busyDelete, setBusyDelete] = useState(false);
+
+  const remove = async () => {
+    if (!deleting) return;
+    setBusyDelete(true);
+    try {
+      await adminUsersService.remove(deleting.id, { token });
+      notify.success(t.admin.deleteUserDone, { description: deleting.email });
+      setDeleting(null);
+      users.reload();
+    } catch (error) {
+      notify.error(error instanceof Error ? error.message : t.common.error);
+    } finally {
+      setBusyDelete(false);
+    }
+  };
+
   const update = async (target: AdminUser, changes: { role?: string; status?: string }) => {
     try {
       await adminUsersService.update(target.id, changes, { token });
-      toast.success(t.common.save);
+      notify.success(t.common.save);
       users.reload();
     } catch (error) {
       // The backend refuses self-demotion and removing the last admin, and
       // returns a clear reason — surface it rather than a generic failure.
-      toast.error(error instanceof ApiError ? error.message : t.common.error);
+      notify.error(error instanceof ApiError ? error.message : t.common.error);
     }
   };
 
@@ -200,6 +232,17 @@ export default function AdminUsersPage() {
                         >
                           {entry.status === 'ACTIVE' ? 'Suspend' : 'Reinstate'}
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-muted-foreground hover:text-destructive"
+                          disabled={isSelf}
+                          title={t.admin.deleteUser}
+                          aria-label={`${t.admin.deleteUser} — ${entry.email}`}
+                          onClick={() => setDeleting(entry)}
+                        >
+                          <Trash2 className="size-4" aria-hidden="true" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -209,6 +252,25 @@ export default function AdminUsersPage() {
           </Table>
         </div>
       )}
+
+      <Dialog open={Boolean(deleting)} onOpenChange={(open) => !open && setDeleting(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t.admin.deleteUser}</DialogTitle>
+            <DialogDescription>
+              {deleting?.email} · {t.admin.deleteUserConfirm}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setDeleting(null)}>
+              {t.admin.deleteKeep}
+            </Button>
+            <Button variant="destructive" onClick={() => void remove()} disabled={busyDelete}>
+              {t.admin.deleteYes}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
