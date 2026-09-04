@@ -252,6 +252,65 @@ export class OrdersService {
     return this.findOne(order.id, requester);
   }
 
+  /**
+   * The customer withdrawing their own appointment.
+   *
+   * Separate from the administrator's status change, and deliberately narrow:
+   * it only ever cancels, only ever their own, and only while the appointment
+   * is still open. Somebody who booked the wrong colour at midnight should not
+   * have to telephone a showroom in the morning to undo it, and the alternative
+   * — a customer who cannot correct their own mistake — produces a list of
+   * appointments nobody trusts.
+   *
+   * It is a cancellation, not a deletion. The record stays, with the
+   * cancellation written into its history like any other move, because it is
+   * part of what happened.
+   */
+  async cancelMine(id: string, requester: AuthenticatedUser) {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      select: { id: true, reference: true, status: true, userId: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.userId !== requester.id) {
+      throw new ForbiddenException('You do not have access to this order');
+    }
+
+    if (order.status === OrderStatus.CANCELLED) {
+      throw new BadRequestException('This appointment is already cancelled');
+    }
+
+    if (order.status === OrderStatus.COMPLETED) {
+      throw new BadRequestException(
+        'This appointment is already completed. Contact us if something is wrong with it.',
+      );
+    }
+
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.order.update({
+        where: { id },
+        data: { status: OrderStatus.CANCELLED },
+        include: { car: { select: orderCarSelect } },
+      }),
+      this.prisma.orderStatusHistory.create({
+        data: {
+          orderId: id,
+          fromStatus: order.status,
+          toStatus: OrderStatus.CANCELLED,
+          changedById: requester.id,
+          note: 'Cancelled by the customer',
+        },
+      }),
+    ]);
+
+    this.logger.log(`Order ${order.reference}: ${order.status} → CANCELLED by its customer`);
+    return updated;
+  }
+
   /** Spec §25 — admin updates the status; every change is recorded. */
   async updateStatus(id: string, dto: UpdateOrderStatusDto, adminId: string) {
     const order = await this.prisma.order.findUnique({

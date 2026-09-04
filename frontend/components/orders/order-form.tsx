@@ -19,6 +19,8 @@ import { useAuth } from '@/providers/auth-provider';
 import { ordersService } from '@/services/customer.service';
 import { ApiError } from '@/services/api-client';
 import { cn } from '@/lib/utils';
+import { whatsappLink } from '@/lib/whatsapp';
+import { WhatsAppIcon } from '@/components/ui/whatsapp-icon';
 import type { CarDetail, OrderDetail } from '@/types/api';
 
 /**
@@ -41,7 +43,16 @@ const schema = z.object({
 
 type FieldErrors = Partial<Record<'buyerName' | 'buyerEmail' | 'buyerPhone' | 'message', string>>;
 
-export function OrderForm({ car, initialColorId }: { car: CarDetail; initialColorId?: string }) {
+export function OrderForm({
+  car,
+  initialColorId,
+  whatsappPhone = '',
+}: {
+  car: CarDetail;
+  initialColorId?: string;
+  /** The showroom's number, from settings. No number, no button. */
+  whatsappPhone?: string;
+}) {
   const { t, format } = useLocale();
   const { user, token, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
@@ -118,6 +129,16 @@ export function OrderForm({ car, initialColorId }: { car: CarDetail; initialColo
 
   // ---- success ----
   if (order) {
+    const whatsapp = whatsappPhone
+      ? whatsappLink(
+          whatsappPhone,
+          format(t.order.whatsappBody, {
+            reference: order.reference,
+            vehicle: `${car.brand.name} ${car.model} ${car.year}`,
+          }),
+        )
+      : null;
+
     return (
       <div className="mx-auto w-full max-w-2xl px-5 py-16 sm:px-8">
         <div className="border-border bg-card rounded-xl border p-8 text-center shadow-[var(--shadow-card)]">
@@ -149,13 +170,37 @@ export function OrderForm({ car, initialColorId }: { car: CarDetail; initialColo
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">{t.dashboard.status}</dt>
               <dd>
-                <Badge variant="secondary">{order.status}</Badge>
+                <Badge variant="secondary">{t.orderStatus[order.status] ?? order.status}</Badge>
               </dd>
             </div>
           </dl>
 
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Button asChild>
+          {/*
+            WhatsApp, first and in its own colour.
+
+            The appointment is a request for a conversation, and this is the
+            moment the customer has the most to say — a time that suits them, a
+            question they did not put in the form. Waiting for us to call is the
+            slower half of that exchange, and a business that runs on contact
+            should not make the customer wait to make contact.
+          */}
+          {whatsapp && (
+            <div className="mt-8">
+              <Button
+                asChild
+                size="lg"
+                className="w-full bg-[#25D366] text-black hover:bg-[#1FB855] sm:w-auto"
+              >
+                <a href={whatsapp} target="_blank" rel="noreferrer noopener">
+                  <WhatsAppIcon className="size-5" aria-hidden="true" />
+                  {t.order.whatsapp}
+                </a>
+              </Button>
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-wrap justify-center gap-3">
+            <Button asChild variant={whatsapp ? 'outline' : 'default'}>
               <Link href="/dashboard/orders">{t.order.viewOrders}</Link>
             </Button>
             <Button asChild variant="outline">

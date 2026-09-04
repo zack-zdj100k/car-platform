@@ -281,6 +281,95 @@ describe('Orders', () => {
     });
   });
 
+  describe('a customer withdrawing their own appointment', () => {
+    it('cancels it, and records who cancelled it', async () => {
+      const car = await seedCar(context);
+      const created = await context
+        .http()
+        .post('/api/orders')
+        .set(auth)
+        .send(orderBody(car.id))
+        .expect(201);
+
+      const cancelled = await context
+        .http()
+        .patch(`/api/orders/${created.body.id}/cancel`)
+        .set(auth)
+        .expect(200);
+      expect(cancelled.body.status).toBe('CANCELLED');
+
+      // The record stays, with the withdrawal in its history — it is part of
+      // what happened, not something to erase.
+      const detail = await context
+        .http()
+        .get(`/api/orders/${created.body.id}`)
+        .set(auth)
+        .expect(200);
+      const last = detail.body.statusHistory.at(-1);
+      expect(last.toStatus).toBe('CANCELLED');
+      expect(last.note).toMatch(/customer/i);
+    });
+
+    it('refuses to cancel somebody else’s', async () => {
+      const car = await seedCar(context);
+      const created = await context
+        .http()
+        .post('/api/orders')
+        .set(auth)
+        .send(orderBody(car.id))
+        .expect(201);
+
+      const other = await registerCustomer(context, 'stranger@test.local');
+      await context
+        .http()
+        .patch(`/api/orders/${created.body.id}/cancel`)
+        .set('Authorization', `Bearer ${other.token}`)
+        .expect(403);
+    });
+
+    it('refuses once the appointment has been completed', async () => {
+      const car = await seedCar(context);
+      const created = await context
+        .http()
+        .post('/api/orders')
+        .set(auth)
+        .send(orderBody(car.id))
+        .expect(201);
+
+      await context
+        .http()
+        .patch(`/api/orders/${created.body.id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'COMPLETED' })
+        .expect(200);
+
+      await context
+        .http()
+        .patch(`/api/orders/${created.body.id}/cancel`)
+        .set(auth)
+        .expect(400);
+    });
+
+    it('cannot be used to set any other status', async () => {
+      // The customer's route only ever cancels; anything else is the
+      // administrator's, and that one is behind the admin guard.
+      const car = await seedCar(context);
+      const created = await context
+        .http()
+        .post('/api/orders')
+        .set(auth)
+        .send(orderBody(car.id))
+        .expect(201);
+
+      await context
+        .http()
+        .patch(`/api/orders/${created.body.id}/status`)
+        .set(auth)
+        .send({ status: 'CONFIRMED' })
+        .expect(403);
+    });
+  });
+
   describe('visibility', () => {
     it('shows a customer only their own orders', async () => {
       const car = await seedCar(context);

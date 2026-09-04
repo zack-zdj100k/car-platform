@@ -142,7 +142,7 @@ test.describe('Public pages are error-free', () => {
     await expect(page).toHaveURL(/\/car\//);
     await page.waitForTimeout(1000);
 
-    await page.getByRole('link', { name: 'Order this car' }).click();
+    await page.getByRole('link', { name: 'Request an appointment' }).click();
     await expect(page).toHaveURL(/\/order/);
     await page.waitForTimeout(1000);
 

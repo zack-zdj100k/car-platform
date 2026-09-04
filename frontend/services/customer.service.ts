@@ -86,6 +86,14 @@ export const ordersService = {
   detail(id: string, options: RequestOptions = {}) {
     return apiRequest<OrderDetail>(`/orders/${id}`, options);
   },
+  /**
+   * Withdraws one's own appointment. Not the administrator's status route with
+   * a different argument — the API keeps them apart, and this one can only ever
+   * cancel, and only the caller's own.
+   */
+  cancel(id: string, options: RequestOptions = {}) {
+    return apiRequest<OrderDetail>(`/orders/${id}/cancel`, { ...options, method: 'PATCH' });
+  },
 };
 
 export const profileService = {

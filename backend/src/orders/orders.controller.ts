@@ -74,6 +74,17 @@ export class OrdersController {
     return { status: order.status, allowed: this.orders.allowedTransitions(order.status) };
   }
 
+  /**
+   * The customer's own withdrawal. Not the admin route with a looser guard:
+   * that one can move an order to any status, and this may only cancel.
+   */
+  @Patch(':id/cancel')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cancel your own appointment' })
+  cancelMine(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.orders.cancelMine(id, user);
+  }
+
   @Patch(':id/status')
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
