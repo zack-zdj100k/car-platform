@@ -9,6 +9,7 @@ import type { AuthenticatedUser } from '../common/types/authenticated-request';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { SetMeetingPlaceDto } from './dto/set-meeting-place.dto';
 import { QueryOrdersDto } from './dto/query-orders.dto';
 
 @ApiTags('orders')
@@ -83,6 +84,18 @@ export class OrdersController {
   @ApiOperation({ summary: 'Cancel your own appointment' })
   cancelMine(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     return this.orders.cancelMine(id, user);
+  }
+
+  /**
+   * Where a confirmed customer should come. Administration only, and separate
+   * from the status: the two are decided at different moments.
+   */
+  @Patch(':id/meeting')
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Set the meeting place for an appointment (admin)' })
+  setMeetingPlace(@Param('id') id: string, @Body() dto: SetMeetingPlaceDto) {
+    return this.orders.setMeetingPlace(id, dto);
   }
 
   @Patch(':id/status')

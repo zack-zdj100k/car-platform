@@ -16,6 +16,7 @@ import type { Configuration } from '../config/configuration';
 import type { AuthenticatedUser } from '../common/types/authenticated-request';
 import type { CreateOrderDto } from './dto/create-order.dto';
 import type { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import type { SetMeetingPlaceDto } from './dto/set-meeting-place.dto';
 import type { QueryOrdersDto } from './dto/query-orders.dto';
 
 const orderCarSelect = {
@@ -171,6 +172,9 @@ export class OrdersService {
           selectedColorName: true,
           createdAt: true,
           updatedAt: true,
+          meetingAddress: true,
+          meetingMapUrl: true,
+          meetingNote: true,
           car: { select: orderCarSelect },
         },
         orderBy: { createdAt: 'desc' },
@@ -180,7 +184,12 @@ export class OrdersService {
       this.prisma.order.count({ where }),
     ]);
 
-    return paginate(rows, total, query.page, query.pageSize);
+    return paginate(
+      rows.map((row) => this.withoutUnconfirmedPlace(row)),
+      total,
+      query.page,
+      query.pageSize,
+    );
   }
 
   /** Spec §45, §46 — admin order management. */
@@ -241,7 +250,31 @@ export class OrdersService {
       throw new ForbiddenException('You do not have access to this order');
     }
 
-    return order;
+    return requester.role === Role.ADMIN ? order : this.withoutUnconfirmedPlace(order);
+  }
+
+  /**
+   * Removes the meeting place from an appointment that is not confirmed.
+   *
+   * The address is written when the owner knows which of their places the car
+   * will be at, which can be before the customer is told anything — and a
+   * customer reading an address on a request nobody has answered, or on one
+   * that was cancelled, turns up to a closed door. Confirmed is the only state
+   * in which the invitation is real, so it is the only state that carries it.
+   *
+   * Stripped here rather than left out of the query: the administration reads
+   * the same record through the same method, and one of them has to see it.
+   */
+  private withoutUnconfirmedPlace<
+    T extends {
+      status: OrderStatus;
+      meetingAddress: string | null;
+      meetingMapUrl: string | null;
+      meetingNote: string | null;
+    },
+  >(order: T): T {
+    if (order.status === OrderStatus.CONFIRMED) return order;
+    return { ...order, meetingAddress: null, meetingMapUrl: null, meetingNote: null };
   }
 
   async findByReference(reference: string, requester: AuthenticatedUser) {
@@ -383,6 +416,44 @@ export class OrdersService {
     });
 
     this.logger.log(`Order ${order.reference}: ${order.status} → ${dto.status} by admin ${adminId}`);
+    return updated;
+  }
+
+  /**
+   * Records where a confirmed customer should come.
+   *
+   * Kept apart from the status: confirming an appointment happens on the
+   * telephone, and deciding which of the business's places the car will be at
+   * happens afterwards. The customer sees none of this until the appointment is
+   * confirmed — before that there is nothing to come to, and an address on an
+   * unanswered request sends somebody to a closed door.
+   */
+  async setMeetingPlace(id: string, dto: SetMeetingPlaceDto) {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      select: { id: true, reference: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    // An empty string clears the field; an absent one leaves it alone. The
+    // difference matters when an address is being corrected rather than added.
+    const value = (given: string | undefined) =>
+      given === undefined ? undefined : given.trim() === '' ? null : given.trim();
+
+    const updated = await this.prisma.order.update({
+      where: { id },
+      data: {
+        meetingAddress: value(dto.meetingAddress),
+        meetingMapUrl: value(dto.meetingMapUrl),
+        meetingNote: value(dto.meetingNote),
+      },
+      include: { car: { select: orderCarSelect } },
+    });
+
+    this.logger.log(`Order ${order.reference}: meeting place updated`);
     return updated;
   }
 

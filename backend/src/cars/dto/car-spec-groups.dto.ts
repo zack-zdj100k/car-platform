@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -12,6 +12,7 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { ColorKind, Drivetrain, FuelType, ImageKind, Transmission } from '@prisma/client';
 
@@ -187,7 +188,18 @@ export class CarColorDto {
    */
   @ApiPropertyOptional({ nullable: true })
   @IsOptional()
-  @Type(() => Number)
+  /*
+   * Transformed by hand, because `@Type(() => Number)` turns null into 0.
+   *
+   * That is not a rounding detail: null means "not counted" and 0 means "sold
+   * out", and the conversion silently changed every colour saved through the
+   * administration into one nobody could book. The catalogue went unavailable
+   * without anybody touching a stock field.
+   */
+  @Transform(({ value }: { value: unknown }) =>
+    value === null || value === undefined || value === '' ? null : Number(value),
+  )
+  @ValidateIf((_object: unknown, value: unknown) => value !== null)
   @IsInt()
   @Min(0)
   @Max(9999)

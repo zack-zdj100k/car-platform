@@ -24,8 +24,17 @@ async function registerAndBook(page: Page): Promise<string> {
   await page.getByRole('button', { name: 'Create Account' }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
 
+  /*
+   * A vehicle that can actually be booked. Taking the first card would pick
+   * whatever the catalogue happens to open with, and a sold-out one has no
+   * booking link to follow — which is correct behaviour and a useless test.
+   */
   await page.goto('/cars');
-  await page.getByTestId('car-card').first().getByRole('link').first().click();
+  const bookable = page
+    .getByTestId('car-card')
+    .filter({ hasNot: page.getByText(/not available/i) })
+    .first();
+  await bookable.getByRole('link').first().click();
   await expect(page).toHaveURL(/\/car\//);
 
   await page.getByRole('link', { name: 'Request an appointment' }).click();
@@ -52,8 +61,16 @@ test('a customer books an appointment and can withdraw it', async ({ page }) => 
   // The status reads as a sentence, not as a database enum.
   await expect(row).toContainText(/awaiting our reply/i);
 
-  page.once('dialog', (dialog) => void dialog.accept());
+  /*
+   * The site's own dialog, not the browser's. `window.confirm` labels its
+   * dismiss button "Cancel", so a customer pressing "Cancel this appointment"
+   * was shown two buttons and told to press Cancel in order not to cancel.
+   */
   await row.getByRole('button', { name: /cancel this appointment/i }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /keep the appointment/i })).toBeVisible();
+  await dialog.getByRole('button', { name: /yes, cancel it/i }).click();
 
   await expect(row).toContainText(/cancelled/i, { timeout: 20_000 });
   // Cancelled, not deleted: it is part of what happened.

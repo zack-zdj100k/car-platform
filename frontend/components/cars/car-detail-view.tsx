@@ -38,9 +38,20 @@ export function CarDetailView({ car }: { car: CarDetail }) {
 
   const exteriorColors = car.colors.filter((color) => color.kind === 'EXTERIOR');
   const interiorColors = car.colors.filter((color) => color.kind === 'INTERIOR');
-  const [selectedColorId, setSelectedColorId] = useState(
-    () => exteriorColors.find((color) => color.isDefault)?.id ?? exteriorColors[0]?.id ?? '',
-  );
+  /*
+   * The colour the page opens on: the default one, unless it is sold out.
+   *
+   * A vehicle whose default colour has gone opens on "Not available" with the
+   * booking button dead, which reads as "this car cannot be had" — when three
+   * other colours are sitting on the floor. Opening on one that can be booked
+   * shows the offer that exists; the sold-out swatch is still there, still
+   * selectable, and still says so when chosen.
+   */
+  const [selectedColorId, setSelectedColorId] = useState(() => {
+    const preferred = exteriorColors.find((color) => color.isDefault) ?? exteriorColors[0];
+    if (!preferred || preferred.isAvailable !== false) return preferred?.id ?? '';
+    return (exteriorColors.find((color) => color.isAvailable !== false) ?? preferred).id;
+  });
 
   const selectedColor = exteriorColors.find((color) => color.id === selectedColorId);
   const alt = `${car.brand.name} ${car.model} ${car.year}`;

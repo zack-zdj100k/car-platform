@@ -639,8 +639,26 @@ model Order {
   message           String?
   status            OrderStatus @default(PENDING)
   adminNote         String?     @map("admin_note")
-  createdAt         DateTime    @default(now()) @map("created_at")
-  updatedAt         DateTime    @updatedAt @map("updated_at")
+
+  /// Where this customer is being asked to come, and when.
+  ///
+  /// Per appointment rather than per site: a business with more than one place
+  /// — a showroom, a yard where the larger vehicles sit, a colleague's garage
+  /// across town — sends different customers to different addresses, and the
+  /// one that matters is the one for this car and this person.
+  ///
+  /// Only ever shown once the appointment is confirmed. Before that there is
+  /// nothing to come to, and a customer who reads an address on a request
+  /// nobody has answered turns up to a closed door.
+  meetingAddress String? @map("meeting_address")
+  /// The seller's own map link, opened as-is. Not generated from the address:
+  /// a pin somebody placed is worth more than a geocoder's guess.
+  meetingMapUrl  String? @map("meeting_map_url")
+  /// Free text — a time, a floor, "ask for Karim".
+  meetingNote    String? @map("meeting_note")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   user          User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
   /// Restrict — spec §55: deleting a car must never destroy order history

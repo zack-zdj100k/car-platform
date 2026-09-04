@@ -142,6 +142,40 @@ describe('Stock and availability', () => {
     expect(colour.stock).toBeNull();
   });
 
+  it('keeps "not counted" through a save, rather than turning it into none left', async () => {
+    /*
+     * The bug this exists to prevent: `@Type(() => Number)` on the stock field
+     * converted null to 0, so saving a vehicle through the administration —
+     * without touching a stock field — marked every one of its colours sold
+     * out. The catalogue went unavailable and nothing said why.
+     */
+    const car = await seedCar(context);
+
+    const saved = await context
+      .http()
+      .patch(`/api/cars/${car.id}`)
+      .set(admin())
+      .send({
+        colors: [
+          { name: 'Test White', hexCode: '#FFFFFF', isDefault: true, stock: null },
+          { name: 'Counted Black', hexCode: '#000000', stock: 4 },
+        ],
+      })
+      .expect(200);
+
+    const white = saved.body.colors.find((colour: { name: string }) => colour.name === 'Test White');
+    const black = saved.body.colors.find(
+      (colour: { name: string }) => colour.name === 'Counted Black',
+    );
+
+    expect(white.stock).toBeNull();
+    expect(white.isAvailable).toBe(true);
+    expect(black.stock).toBe(4);
+
+    const seen = await context.http().get(`/api/cars/${car.slug}`).expect(200);
+    expect(seen.body.isAvailable).toBe(true);
+  });
+
   it('keeps a sold-out vehicle in the catalogue, unavailable rather than gone', async () => {
     const car = await seedCar(context);
     await context.prisma.carColor.update({ where: { id: car.colorId }, data: { stock: 0 } });

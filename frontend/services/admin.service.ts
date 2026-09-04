@@ -59,6 +59,18 @@ export const adminOrdersService = {
   updateStatus(id: string, body: { status: OrderStatus; note?: string }, options: RequestOptions = {}) {
     return apiRequest<OrderDetail>(`/orders/${id}/status`, { ...options, method: 'PATCH', body });
   },
+  /**
+   * Where this customer should come. Separate from the status because the two
+   * are decided at different moments — the appointment on the telephone, the
+   * address once the owner knows which of their places the car will be at.
+   */
+  setMeetingPlace(
+    id: string,
+    body: { meetingAddress?: string; meetingMapUrl?: string; meetingNote?: string },
+    options: RequestOptions = {},
+  ) {
+    return apiRequest<OrderDetail>(`/orders/${id}/meeting`, { ...options, method: 'PATCH', body });
+  },
 };
 
 export const settingsService = {

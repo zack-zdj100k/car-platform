@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Search } from 'lucide-react';
+import { MapPin, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +46,34 @@ export default function AdminOrdersPage() {
 
   const [active, setActive] = useState<AdminOrderRow | null>(null);
   const [nextStatus, setNextStatus] = useState<OrderStatus | ''>('');
+
+  /*
+   * The meeting place, in its own dialog.
+   *
+   * Not folded into the status dialog: confirming an appointment happens while
+   * the customer is on the telephone, and the address is decided afterwards,
+   * once the owner knows which of their places the car will be at. One dialog
+   * for both would mean typing an address in a hurry, or losing it on the next
+   * status edit.
+   */
+  const [placing, setPlacing] = useState<AdminOrderRow | null>(null);
+  const [place, setPlace] = useState({ meetingAddress: '', meetingMapUrl: '', meetingNote: '' });
+  const [savingPlace, setSavingPlace] = useState(false);
+
+  const savePlace = async () => {
+    if (!placing) return;
+    setSavingPlace(true);
+    try {
+      await adminOrdersService.setMeetingPlace(placing.id, place, { token });
+      toast.success(t.admin.meetingSaved);
+      setPlacing(null);
+      orders.reload();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t.common.error);
+    } finally {
+      setSavingPlace(false);
+    }
+  };
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -193,17 +221,43 @@ export default function AdminOrdersPage() {
                     {formatDateTime(order.createdAt, locale)}
                   </TableCell>
                   <TableCell className="text-end">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setActive(order);
-                        setNextStatus('');
-                        setNote('');
-                      }}
-                    >
-                      {t.admin.updateStatus}
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      {/*
+                        Only on a confirmed appointment: before that there is
+                        nothing to send anybody to, and the customer would not
+                        be shown it anyway.
+                      */}
+                      {order.status === 'CONFIRMED' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          title={t.admin.meetingPlace}
+                          aria-label={`${t.admin.meetingPlace} — ${order.reference}`}
+                          onClick={() => {
+                            setPlacing(order);
+                            setPlace({
+                              meetingAddress: order.meetingAddress ?? '',
+                              meetingMapUrl: order.meetingMapUrl ?? '',
+                              meetingNote: order.meetingNote ?? '',
+                            });
+                          }}
+                        >
+                          <MapPin className="size-4" aria-hidden="true" />
+                        </Button>
+                      )}
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setActive(order);
+                          setNextStatus('');
+                          setNote('');
+                        }}
+                      >
+                        {t.admin.updateStatus}
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -211,6 +265,59 @@ export default function AdminOrdersPage() {
           </Table>
         </div>
       )}
+
+      <Dialog open={Boolean(placing)} onOpenChange={(open) => !open && setPlacing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t.admin.meetingPlace}</DialogTitle>
+            <DialogDescription>
+              {placing?.reference} · {t.admin.meetingPlaceHint}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="meeting-address">{t.admin.meetingAddress}</Label>
+              <Input
+                id="meeting-address"
+                value={place.meetingAddress}
+                onChange={(event) => setPlace({ ...place, meetingAddress: event.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="meeting-map">{t.admin.meetingMapUrl}</Label>
+              <Input
+                id="meeting-map"
+                type="url"
+                inputMode="url"
+                placeholder="https://maps.google.com/…"
+                value={place.meetingMapUrl}
+                onChange={(event) => setPlace({ ...place, meetingMapUrl: event.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="meeting-note">{t.admin.meetingNote}</Label>
+              <Textarea
+                id="meeting-note"
+                rows={2}
+                value={place.meetingNote}
+                onChange={(event) => setPlace({ ...place, meetingNote: event.target.value })}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPlacing(null)}>
+              {t.common.cancel}
+            </Button>
+            <Button onClick={() => void savePlace()} disabled={savingPlace}>
+              {savingPlace ? t.common.saving : t.common.save}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(active)} onOpenChange={(open) => !open && setActive(null)}>
         <DialogContent>

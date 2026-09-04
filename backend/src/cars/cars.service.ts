@@ -287,6 +287,15 @@ export class CarsService {
       throw new NotFoundException('Vehicle not found');
     }
 
+    return this.forAdmin(car);
+  }
+
+  /**
+   * What the administration sees: the counts, and the availability they add up
+   * to. Used by its read and by both of its writes, so a vehicle looks the same
+   * immediately after saving as it does when the page is opened again.
+   */
+  private forAdmin<T extends { colors: { stock?: number | null }[] }>(car: T) {
     return {
       ...car,
       isAvailable: vehicleAvailable(car.colors),
@@ -409,7 +418,8 @@ export class CarsService {
     if (dto.images?.length) {
       const withImages = await this.prisma.$transaction(async (tx) => {
         await this.writeImages(tx, car.id, dto.images!);
-        return tx.car.findUniqueOrThrow({ where: { id: car.id }, include: detailInclude });
+        const saved = await tx.car.findUniqueOrThrow({ where: { id: car.id }, include: detailInclude });
+        return this.forAdmin(saved);
       });
 
       this.logger.log(`Car ${car.id} (${car.slug}) created by admin ${adminId}`);
@@ -576,7 +586,8 @@ export class CarsService {
         await this.writeImages(tx, id, dto.images);
       }
 
-      return tx.car.findUniqueOrThrow({ where: { id }, include: detailInclude });
+      const saved = await tx.car.findUniqueOrThrow({ where: { id }, include: detailInclude });
+      return this.forAdmin(saved);
     });
 
     this.logger.log(`Car ${id} updated by admin ${adminId}`);

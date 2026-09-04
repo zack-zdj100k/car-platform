@@ -395,6 +395,16 @@ export interface OrderSummary {
   createdAt: string;
   updatedAt: string;
   car: Pick<CarListItem, 'id' | 'slug' | 'model' | 'year' | 'price' | 'currency' | 'brand' | 'images'>;
+  /**
+   * Where the customer should come, and when.
+   *
+   * Only ever present on a confirmed appointment: the API removes it from
+   * every other status before the customer sees the record, because an address
+   * on a request nobody has answered sends somebody to a closed door.
+   */
+  meetingAddress?: string | null;
+  meetingMapUrl?: string | null;
+  meetingNote?: string | null;
 }
 
 /**

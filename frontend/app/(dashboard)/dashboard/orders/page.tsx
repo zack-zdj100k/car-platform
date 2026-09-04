@@ -6,6 +6,14 @@ import { useState } from 'react';
 import { Loader2, Package, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { CarGridSkeleton, EmptyState, ErrorState } from '@/components/shared/states';
 import { useAsync } from '@/hooks/use-async';
@@ -28,9 +36,20 @@ export default function MyOrdersPage() {
    */
   const [cancelling, setCancelling] = useState<string | null>(null);
 
-  const cancel = async (id: string) => {
-    if (!window.confirm(t.order.cancelConfirm)) return;
+  /*
+   * Which appointment is being asked about, in a dialog of our own rather than
+   * `window.confirm`.
+   *
+   * The browser's dialog labels its own dismiss button "Cancel" — "Annuler" in
+   * French — so a customer who has just pressed "Cancel this appointment" is
+   * shown two buttons and told to press Cancel to not cancel. Pressing what
+   * looks like the obvious one keeps the appointment, nothing appears to
+   * happen, and the feature looks broken. Here the buttons say what they do.
+   */
+  const [confirming, setConfirming] = useState<string | null>(null);
 
+  const cancel = async (id: string) => {
+    setConfirming(null);
     setCancelling(id);
     try {
       await ordersService.cancel(id, { token });
@@ -88,8 +107,17 @@ export default function MyOrdersPage() {
 
               <div className="min-w-0 flex-1">
                 <p className="text-muted-foreground font-mono text-xs">{order.reference}</p>
+                {/*
+                  To the appointment, not to the vehicle. Once it is confirmed
+                  that page carries the address, and it is the thing the
+                  customer opened this list to find; the car is one click on
+                  from there.
+                */}
                 <h2 className="truncate font-semibold">
-                  <Link href={`/car/${order.car.slug}`} className="hover:underline underline-offset-4">
+                  <Link
+                    href={`/dashboard/orders/${order.id}`}
+                    className="hover:underline underline-offset-4"
+                  >
                     {order.car.brand.name} {order.car.model} {order.car.year}
                   </Link>
                 </h2>
@@ -117,7 +145,7 @@ export default function MyOrdersPage() {
                     size="sm"
                     className="text-muted-foreground hover:text-destructive -me-2 h-7 px-2 text-xs"
                     disabled={cancelling === order.id}
-                    onClick={() => void cancel(order.id)}
+                    onClick={() => setConfirming(order.id)}
                   >
                     {cancelling === order.id ? (
                       <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
@@ -132,6 +160,27 @@ export default function MyOrdersPage() {
           ))}
         </ul>
       )}
+
+      <Dialog open={confirming !== null} onOpenChange={(open) => !open && setConfirming(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t.order.cancel}</DialogTitle>
+            <DialogDescription>{t.order.cancelConfirm}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setConfirming(null)}>
+              {t.order.cancelKeep}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => confirming && void cancel(confirming)}
+              disabled={cancelling !== null}
+            >
+              {cancelling ? t.order.cancelling : t.order.cancelYes}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
