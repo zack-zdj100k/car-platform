@@ -349,7 +349,13 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
         hexCode: color.hexCode,
         finish: color.finish ?? '',
         imageUrl: color.imageUrl ?? '',
-      })) ?? [{ name: '', hexCode: '#000000', finish: '', imageUrl: '' }],
+        /*
+         * Kept as the typed text, not a number. Empty and zero are different
+         * answers — "I do not count this colour" against "there are none left"
+         * — and a numeric field cannot hold the difference.
+         */
+        stock: color.stock == null ? '' : String(color.stock),
+      })) ?? [{ name: '', hexCode: '#000000', finish: '', imageUrl: '', stock: '' }],
   );
 
   const [images, setImages] = useState<CarImageDraft[]>(
@@ -507,6 +513,8 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
           imageUrl: color.imageUrl || undefined,
           isDefault: index === 0,
           sortOrder: index,
+          // Blank means "not counted", which is not the same as none left.
+          stock: color.stock.trim() === '' ? null : Number(color.stock),
         })),
       images: images
         .filter((image) => image.url)
@@ -932,6 +940,34 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
                       }
                     />
                   </div>
+
+                  {/*
+                    How many are on the floor in this colour.
+                    
+                    Never shown to a customer — they are told whether it is
+                    available, not how thin it is. Left blank the colour is not
+                    counted, which is the right answer for one that can always
+                    be ordered in; 0 means sold out, and the swatch says so.
+                    Completing a sale takes one off this number on its own.
+                  */}
+                  <div className="w-28 space-y-2">
+                    <Label htmlFor={`color-stock-${index}`}>{t.admin.stock}</Label>
+                    <Input
+                      id={`color-stock-${index}`}
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      placeholder={t.admin.stockUncounted}
+                      value={color.stock}
+                      onChange={(event) =>
+                        setColors(
+                          colors.map((entry, i) =>
+                            i === index ? { ...entry, stock: event.target.value } : entry,
+                          ),
+                        )
+                      }
+                    />
+                  </div>
                   <Button
                     type="button"
                     size="icon"
@@ -972,7 +1008,7 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setColors([...colors, { name: '', hexCode: '#000000', finish: '', imageUrl: '' }])
+                  setColors([...colors, { name: '', hexCode: '#000000', finish: '', imageUrl: '', stock: '' }])
                 }
               >
                 <Plus className="size-4" aria-hidden="true" />

@@ -176,6 +176,22 @@ export class CarColorDto {
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsNumber() priceDelta?: number;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isDefault?: boolean;
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(0) sortOrder?: number;
+
+  /**
+   * How many are on the floor in this colour. Administration only — customers
+   * are told whether a colour is available, never how thin it is.
+   *
+   * Null is meaningful and is the default: "not counted", for a colour that can
+   * always be ordered in. Zero means sold out. Sending nothing leaves whatever
+   * was there alone.
+   */
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(9999)
+  stock?: number | null;
 }
 
 /** Spec §47 (Media), §63 */

@@ -315,7 +315,8 @@ export class OrdersService {
   async updateStatus(id: string, dto: UpdateOrderStatusDto, adminId: string) {
     const order = await this.prisma.order.findUnique({
       where: { id },
-      select: { id: true, reference: true, status: true },
+      // The colour comes too: completing a sale takes that car off the floor.
+      select: { id: true, reference: true, status: true, selectedColorId: true },
     });
 
     if (!order) {
@@ -326,13 +327,14 @@ export class OrdersService {
       throw new BadRequestException(`This order is already ${dto.status.toLowerCase()}`);
     }
 
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.order.update({
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.order.update({
         where: { id },
         data: { status: dto.status, adminNote: dto.note ?? undefined },
         include: { car: { select: orderCarSelect } },
-      }),
-      this.prisma.orderStatusHistory.create({
+      });
+
+      await tx.orderStatusHistory.create({
         data: {
           orderId: id,
           fromStatus: order.status,
@@ -340,8 +342,45 @@ export class OrdersService {
           changedById: adminId,
           note: dto.note ?? null,
         },
-      }),
-    ]);
+      });
+
+      /*
+       * A completed sale takes one car off the floor.
+       *
+       * Written here, inside the same transaction as the status, because the
+       * two facts are one fact: the vehicle left in that colour. Doing it by
+       * hand afterwards means a catalogue that offers a car somebody has
+       * already driven away.
+       *
+       * Only on the way *into* COMPLETED, and only for a counted colour. A
+       * colour with no count is one the owner can order in, and decrementing
+       * null into -1 would invent a shortage. A correction back out of
+       * COMPLETED returns the car to the floor, since the sale did not happen
+       * after all — and the owner can always type over the number regardless.
+       */
+      if (order.selectedColorId) {
+        const entering = dto.status === OrderStatus.COMPLETED;
+        const leaving = order.status === OrderStatus.COMPLETED;
+
+        if (entering !== leaving) {
+          const colour = await tx.carColor.findUnique({
+            where: { id: order.selectedColorId },
+            select: { id: true, name: true, stock: true },
+          });
+
+          if (colour?.stock != null) {
+            const next = entering ? Math.max(0, colour.stock - 1) : colour.stock + 1;
+            await tx.carColor.update({ where: { id: colour.id }, data: { stock: next } });
+            this.logger.log(
+              `Order ${order.reference}: ${colour.name} stock ${colour.stock} → ${next}` +
+                (next === 0 ? ' — that colour is now sold out' : ''),
+            );
+          }
+        }
+      }
+
+      return result;
+    });
 
     this.logger.log(`Order ${order.reference}: ${order.status} → ${dto.status} by admin ${adminId}`);
     return updated;

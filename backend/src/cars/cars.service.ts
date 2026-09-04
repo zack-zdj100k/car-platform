@@ -10,6 +10,7 @@ import { CarSort, QueryCarsDto } from './dto/query-cars.dto';
 import type { CarImageDto } from './dto/car-spec-groups.dto';
 import type { CreateCarDto } from './dto/create-car.dto';
 import type { UpdateCarDto } from './dto/update-car.dto';
+import { colourAvailable, vehicleAvailable, withoutStockCounts } from './availability';
 
 /** Public listing shape — deliberately lighter than the detail payload. */
 const listSelect = {
@@ -40,7 +41,15 @@ const listSelect = {
   },
   colors: {
     where: { kind: ColorKind.EXTERIOR },
-    select: { id: true, name: true, hexCode: true, finish: true, isDefault: true, imageUrl: true },
+    select: {
+      id: true,
+      name: true,
+      hexCode: true,
+      finish: true,
+      isDefault: true,
+      imageUrl: true,
+      stock: true,
+    },
     orderBy: { sortOrder: 'asc' },
   },
   _count: { select: { favorites: true } },
@@ -161,7 +170,23 @@ export class CarsService {
       this.prisma.car.count({ where }),
     ]);
 
-    return paginate(rows, total, query.page, query.pageSize);
+    return paginate(rows.map((row) => this.forCustomer(row)), total, query.page, query.pageSize);
+  }
+
+  /**
+   * Strips the stock counts and states availability instead.
+   *
+   * Applied on the way out of every route a customer can reach, rather than
+   * left out of the queries: the count has to be read to work availability out,
+   * and a projection that fetches it and forgets to drop it is a projection
+   * that publishes it. One place to get right.
+   */
+  private forCustomer<T extends { colors: { stock?: number | null }[] }>(car: T) {
+    return {
+      ...car,
+      colors: withoutStockCounts(car.colors),
+      isAvailable: vehicleAvailable(car.colors),
+    };
   }
 
   /**
@@ -230,16 +255,17 @@ export class CarsService {
       throw new NotFoundException('Vehicle not found');
     }
 
-    return car;
+    return this.forCustomer(car);
   }
 
   async findFeatured(limit = 6) {
-    return this.prisma.car.findMany({
+    const rows = await this.prisma.car.findMany({
       where: { ...this.publicScope, isFeatured: true },
       select: listSelect,
       orderBy: [{ publishedAt: 'desc' }],
       take: limit,
     });
+    return rows.map((row) => this.forCustomer(row));
   }
 
   /** Admin listing — includes drafts and archived vehicles. */
@@ -247,8 +273,25 @@ export class CarsService {
     return this.findAll(query, { deletedAt: null });
   }
 
+  /**
+   * The administration's own read, counts included — and not `findOne`, which
+   * strips them for customers. The owner needs the number to type over.
+   */
   async findOneForAdmin(idOrSlug: string) {
-    return this.findOne(idOrSlug, {});
+    const car = await this.prisma.car.findFirst({
+      where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
+      include: detailInclude,
+    });
+
+    if (!car) {
+      throw new NotFoundException('Vehicle not found');
+    }
+
+    return {
+      ...car,
+      isAvailable: vehicleAvailable(car.colors),
+      colors: car.colors.map((colour) => ({ ...colour, isAvailable: colourAvailable(colour) })),
+    };
   }
 
   private async uniqueSlug(brandId: string, model: string, year: number, trim?: string | null, excludeId?: string) {
@@ -349,6 +392,7 @@ export class CarsService {
                   priceDelta: color.priceDelta !== undefined ? new Prisma.Decimal(color.priceDelta) : null,
                   isDefault: color.isDefault ?? index === 0,
                   sortOrder: color.sortOrder ?? index,
+                  stock: color.stock ?? null,
                 })),
               },
             }
@@ -518,6 +562,7 @@ export class CarsService {
           priceDelta: color.priceDelta !== undefined ? new Prisma.Decimal(color.priceDelta) : null,
           isDefault: color.isDefault ?? index === 0,
           sortOrder: color.sortOrder ?? index,
+          stock: color.stock ?? null,
         })),
       };
     }

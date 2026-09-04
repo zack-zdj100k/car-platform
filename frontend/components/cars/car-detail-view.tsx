@@ -306,6 +306,19 @@ export function CarDetailView({ car }: { car: CarDetail }) {
     else toast.success(result.favorited ? t.car.favorited : t.car.removeFavorite);
   };
 
+  /*
+   * Whether the colour in front of the customer can be booked.
+   *
+   * Read from the selected colour rather than the vehicle: a car with four
+   * colours and one sold out is available, but not in that one, and the answer
+   * has to change when they tap a different swatch. An uncounted colour is
+   * available — the API decides that, and sends the verdict rather than the
+   * number.
+   */
+  const colourAvailable = selectedColor?.isAvailable !== false;
+  const carAvailable = car.isAvailable !== false;
+  const bookable = carAvailable && colourAvailable;
+
   const handleCompare = () => {
     const result = compare.toggle(car.id);
     if (result.full) toast.error(`${t.car.compare}: ${compare.max}`);
@@ -448,15 +461,28 @@ export function CarDetailView({ car }: { car: CarDetail }) {
             </Button>
           )}
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button asChild size="lg" className="flex-1 sm:flex-none">
-              <Link
-                href={`/car/${car.slug}/order${selectedColorId ? `?color=${selectedColorId}` : ''}`}
-              >
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            {/*
+              The appointment button, and only while there is something to book.
+              A sold-out colour keeps the button in place but inert, rather than
+              removing it: a control that disappears reads as a fault, and the
+              customer is left wondering what they did.
+            */}
+            {bookable ? (
+              <Button asChild size="lg" className="flex-1 sm:flex-none">
+                <Link
+                  href={`/car/${car.slug}/order${selectedColorId ? `?color=${selectedColorId}` : ''}`}
+                >
+                  <ShoppingCart className="size-4" aria-hidden="true" />
+                  {t.car.order}
+                </Link>
+              </Button>
+            ) : (
+              <Button size="lg" className="flex-1 sm:flex-none" disabled>
                 <ShoppingCart className="size-4" aria-hidden="true" />
                 {t.car.order}
-              </Link>
-            </Button>
+              </Button>
+            )}
 
             <Button
               size="lg"
@@ -481,7 +507,38 @@ export function CarDetailView({ car }: { car: CarDetail }) {
               <Scale className="size-4" aria-hidden="true" />
               {compare.has(car.id) ? t.car.inCompare : t.car.compare}
             </Button>
+
+            {/*
+              Whether this colour can be had, in the same row and at the same
+              height as the buttons it sits with — a statement rather than a
+              control, so it is not a button, but it should not look like an
+              afterthought either.
+            */}
+            <span
+              role="status"
+              className={cn(
+                'inline-flex h-11 items-center gap-2 rounded-md border px-4 text-sm font-medium',
+                bookable
+                  ? 'border-success/30 bg-success/10 text-success'
+                  : 'border-border bg-secondary text-muted-foreground',
+              )}
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'size-2 rounded-full',
+                  bookable ? 'bg-success' : 'bg-muted-foreground/60',
+                )}
+              />
+              {bookable ? t.car.available : t.car.unavailable}
+            </span>
           </div>
+
+          {!bookable && (
+            <p className="text-muted-foreground mt-3 text-sm">
+              {carAvailable ? t.car.unavailableHint : t.car.unavailableCar}
+            </p>
+          )}
 
           {car.isDemoData && (
             <p className="border-warning/30 bg-warning/5 text-muted-foreground mt-6 rounded-lg border p-3 text-xs/5">

@@ -78,3 +78,43 @@ test('the confirmation offers WhatsApp when a number is configured', async ({ pa
   const href = await whatsapp.getAttribute('href');
   expect(href).toMatch(/^https:\/\/wa\.me\/\d{8,}\?text=/);
 });
+
+test.describe('Stock', () => {
+  test('a sold-out colour cannot be booked, and says so', async ({ page, request }) => {
+    test.setTimeout(120_000);
+
+    // Find a vehicle the API reports as unbookable in at least one colour,
+    // rather than assuming the demo catalogue is arranged a particular way.
+    const api = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+    const list = await (await request.get(`${api}/cars?pageSize=50`)).json();
+    const cars = list.data as { slug: string; colors: { name: string; isAvailable?: boolean }[] }[];
+    const target = cars.find((car) => car.colors.some((colour) => colour.isAvailable === false));
+    test.skip(!target, 'no colour is sold out in this catalogue');
+
+    const soldOut = target!.colors.find((colour) => colour.isAvailable === false)!;
+    const spare = target!.colors.find((colour) => colour.isAvailable !== false);
+
+    await page.goto(`/car/${target!.slug}`);
+    await page.waitForLoadState('load');
+
+    await page.getByRole('button', { name: new RegExp(soldOut.name, 'i') }).first().click();
+    await page.waitForTimeout(400);
+
+    const status = page.locator('[role="status"]').filter({ hasText: /available/i }).first();
+    await expect(status).toContainText(/not available/i);
+    // The button stays where it is, and does nothing: a control that vanishes
+    // reads as a fault.
+    await expect(page.getByRole('button', { name: /request an appointment/i })).toBeDisabled();
+
+    // The count itself is never published.
+    const detail = await (await request.get(`${api}/cars/${target!.slug}`)).text();
+    expect(detail).not.toContain('"stock"');
+
+    if (spare) {
+      await page.getByRole('button', { name: new RegExp(spare.name, 'i') }).first().click();
+      await page.waitForTimeout(400);
+      await expect(status).toContainText(/^available$/i);
+      await expect(page.getByRole('link', { name: /request an appointment/i })).toBeVisible();
+    }
+  });
+});

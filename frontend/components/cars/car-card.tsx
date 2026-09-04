@@ -277,8 +277,24 @@ export function CarCard({
         </div>
 
         {defaultColor && (
-          <p className="text-muted-foreground mt-2 text-xs">
-            {t.car.colours}: {defaultColor.name}
+          <p className="text-muted-foreground mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+            <span>
+              {t.car.colours}: {(shownColor ?? defaultColor).name}
+            </span>
+
+            {/*
+              Whether the colour being shown can be had, on the card and not
+              only on the vehicle's page. Tapping a swatch here already swaps
+              the photograph, so it should answer the next question too — and
+              the alternative is a customer choosing a colour, opening the page
+              and finding out it is gone.
+            */}
+            {(shownColor ?? defaultColor).isAvailable === false && (
+              <span className="border-border bg-secondary text-muted-foreground inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium">
+                <span aria-hidden="true" className="bg-muted-foreground/60 size-1.5 rounded-full" />
+                {t.car.unavailable}
+              </span>
+            )}
           </p>
         )}
       </div>
