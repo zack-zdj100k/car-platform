@@ -30,7 +30,7 @@ export function CarRow({
   showEngine?: boolean;
   action?: React.ReactNode;
 }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const image = car.images[0];
 
   return (
@@ -58,13 +58,13 @@ export function CarRow({
           </Link>
         </h3>
         <p className="text-muted-foreground mt-0.5 truncate text-sm">
-          {car.year} · {humaniseEnum(car.bodyType)}
+          {car.year} · {humaniseEnum(car.bodyType, locale)}
           {showEngine && car.engine
-            ? ` · ${car.engine.engineType ?? humaniseEnum(car.engine.fuelType)}${
+            ? ` · ${car.engine.engineType ?? humaniseEnum(car.engine.fuelType, locale)}${
                 car.engine.powerHp ? ` · ${car.engine.powerHp} hp` : ''
               }`
             : ''}
-          {car.engine?.transmission && !showEngine ? ` · ${formatAcronym(car.engine.transmission)}` : ''}
+          {car.engine?.transmission && !showEngine ? ` · ${formatAcronym(car.engine.transmission, locale)}` : ''}
         </p>
         {meta && <p className="text-muted-foreground mt-1 text-xs">{meta}</p>}
       </div>

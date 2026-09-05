@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { z } from 'zod';
@@ -11,24 +11,26 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AuthShell } from './auth-shell';
 import { useLocale } from '@/providers/locale-provider';
+import type { Dictionary } from '@/lib/i18n/dictionaries';
 import { authService } from '@/services/auth.service';
 import { ApiError } from '@/services/api-client';
 
-/** Mirrors the backend policy exactly (spec §36, §37). */
-const schema = z
-  .object({
-    password: z
-      .string()
-      .min(8, 'At least 8 characters')
-      .regex(/[a-z]/, 'Include a lowercase letter')
-      .regex(/[A-Z]/, 'Include an uppercase letter')
-      .regex(/\d/, 'Include a number'),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  });
+/** Mirrors the backend policy exactly (spec §36, §37), in the reader's language. */
+const buildSchema = (v: Dictionary['validation']) =>
+  z
+    .object({
+      password: z
+        .string()
+        .min(8, v.min8)
+        .regex(/[a-z]/, v.lowercase)
+        .regex(/[A-Z]/, v.uppercase)
+        .regex(/\d/, v.number),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: v.passwordsMatch,
+      path: ['confirmPassword'],
+    });
 
 /**
  * Reset password (spec §37).
@@ -39,6 +41,7 @@ const schema = z
  */
 export function ResetPasswordForm() {
   const { t } = useLocale();
+  const schema = useMemo(() => buildSchema(t.validation), [t]);
   const params = useSearchParams();
   const token = params.get('token') ?? '';
 

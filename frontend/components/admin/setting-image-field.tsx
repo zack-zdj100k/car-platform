@@ -8,6 +8,7 @@ import { MediaImage } from '@/components/shared/media-image';
 import { uploadsService } from '@/services/uploads.service';
 import { ApiError } from '@/services/api-client';
 import { useAuth } from '@/providers/auth-provider';
+import { useLocale } from '@/providers/locale-provider';
 import { cn } from '@/lib/utils';
 
 /**
@@ -28,6 +29,7 @@ export function SettingImageField({
   label: string;
 }) {
   const { token } = useAuth();
+  const { t, format } = useLocale();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
@@ -35,7 +37,7 @@ export function SettingImageField({
   const upload = async (file: File | undefined) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      notify.error('That file is not an image.');
+      notify.error(t.admin.notAnImage);
       return;
     }
 
@@ -43,9 +45,9 @@ export function SettingImageField({
     try {
       const result = await uploadsService.uploadImage(file, token);
       onChange(result.url);
-      notify.success(`${label} updated`);
+      notify.success(format(t.admin.fieldUpdated, { label }));
     } catch (error) {
-      notify.error(error instanceof ApiError ? error.message : 'Upload failed');
+      notify.error(error instanceof ApiError ? error.message : t.admin.uploadFailed);
     } finally {
       setUploading(false);
     }
@@ -81,7 +83,7 @@ export function SettingImageField({
       <div className="min-w-40 flex-1">
         <p className="text-sm font-medium">{label}</p>
         <p className="text-muted-foreground mt-0.5 text-xs">
-          {value ? 'Custom photo' : 'Using the bundled placeholder'}
+          {value ? t.admin.customPhoto : t.admin.bundledPlaceholder}
         </p>
       </div>
 
@@ -103,7 +105,7 @@ export function SettingImageField({
           ) : (
             <Upload className="size-4" aria-hidden="true" />
           )}
-          {value ? 'Replace' : 'Upload'}
+          {value ? t.admin.replace : t.admin.upload}
         </Button>
 
         {value && (
@@ -111,7 +113,7 @@ export function SettingImageField({
             type="button"
             variant="ghost"
             size="icon"
-            aria-label={`Remove ${label}`}
+            aria-label={format(t.admin.removeField, { label })}
             onClick={() => onChange('')}
           >
             <Trash2 className="text-destructive size-4" aria-hidden="true" />

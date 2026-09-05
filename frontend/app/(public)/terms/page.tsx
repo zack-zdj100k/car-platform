@@ -1,10 +1,14 @@
 import type { Metadata } from 'next';
+import { serverDictionary } from '@/lib/i18n/server';
 import { LegalPage } from '@/components/shared/legal-page';
 import { fetchPublicSettings, readSetting } from '@/lib/server-api';
 
-export const metadata: Metadata = { title: 'Terms & Conditions' };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await serverDictionary();
+  return { title: t.meta.termsTitle };
+}
 
 export default async function TermsPage() {
-  const settings = await fetchPublicSettings();
-  return <LegalPage title="Terms & Conditions" body={readSetting(settings, 'legal', 'legal.terms')} />;
+  const [settings, t] = await Promise.all([fetchPublicSettings(), serverDictionary()]);
+  return <LegalPage title={t.meta.termsTitle} body={readSetting(settings, 'legal', 'legal.terms')} />;
 }

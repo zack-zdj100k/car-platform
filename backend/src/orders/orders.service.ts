@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -50,6 +51,15 @@ const orderCarSelect = {
 function allowedFrom(status: OrderStatus): OrderStatus[] {
   return Object.values(OrderStatus).filter((candidate) => candidate !== status);
 }
+
+/**
+ * An appointment that is still going on.
+ *
+ * Pending, been in touch about, or confirmed — all three are one live request
+ * for one car. Cancelled and completed are finished: a customer who withdrew
+ * may ask again, and one who has bought may buy another.
+ */
+const LIVE_STATUSES = [OrderStatus.PENDING, OrderStatus.CONTACTED, OrderStatus.CONFIRMED];
 
 @Injectable()
 export class OrdersService {
@@ -109,6 +119,36 @@ export class OrdersService {
       selectedColorName = color.name;
     }
 
+    /*
+     * One live appointment per vehicle and colour, per customer.
+     *
+     * Somebody who books, hears nothing for a day and books again has not
+     * asked for two meetings — they have asked twice for the same one, and the
+     * showroom then rings them twice about one car. Only a live appointment
+     * blocks — see `LIVE_STATUSES`.
+     *
+     * Guests are not checked. There is no identity to check against, and
+     * matching on an email address would let anybody find out what somebody
+     * else has asked for by watching which requests are refused.
+     */
+    if (user) {
+      const existing = await this.prisma.order.findFirst({
+        where: {
+          userId: user.id,
+          carId: car.id,
+          selectedColorId: dto.selectedColorId ?? null,
+          status: { in: LIVE_STATUSES },
+        },
+        select: { reference: true },
+      });
+
+      if (existing) {
+        throw new ConflictException(
+          `You already have an appointment for this vehicle in this colour (${existing.reference}). We will contact you soon.`,
+        );
+      }
+    }
+
     const order = await this.prisma.order.create({
       data: {
         reference: generateOrderReference(),
@@ -153,6 +193,36 @@ export class OrdersService {
     this.notifications.dispatchOrderEmails(notificationData, order.id);
 
     return order;
+  }
+
+  /**
+   * What this customer has already asked for on one vehicle.
+   *
+   * The vehicle's page needs it to decide whether to offer the booking button
+   * or say that somebody will be in touch. Only ids come back — no references,
+   * no dates — because that is all the page needs to make that one decision.
+   */
+  async mineForCar(userId: string, carId: string) {
+    const car = await this.prisma.car.findFirst({
+      where: { OR: [{ id: carId }, { slug: carId }] },
+      select: { id: true },
+    });
+    if (!car) return { colorIds: [], withoutColour: false };
+
+    const orders = await this.prisma.order.findMany({
+      where: {
+        userId,
+        carId: car.id,
+        status: { in: LIVE_STATUSES },
+      },
+      select: { selectedColorId: true },
+    });
+
+    return {
+      colorIds: orders.map((order) => order.selectedColorId).filter((id): id is string => Boolean(id)),
+      // An appointment made before any colour was chosen still counts.
+      withoutColour: orders.some((order) => order.selectedColorId === null),
+    };
   }
 
   /** Spec §38, §39 — a customer sees only their own orders. */

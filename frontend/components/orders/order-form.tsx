@@ -2,7 +2,7 @@
 
 import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, CheckCircle2, Info, Loader2 } from 'lucide-react';
 import { BackLink } from '@/components/shared/back-link';
@@ -16,6 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { Price } from '@/components/shared/price';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useLocale } from '@/providers/locale-provider';
+import type { Dictionary } from '@/lib/i18n/dictionaries';
 import { useAuth } from '@/providers/auth-provider';
 import { ordersService } from '@/services/customer.service';
 import { ApiError } from '@/services/api-client';
@@ -32,15 +33,16 @@ import type { CarDetail, OrderDetail } from '@/types/api';
  * before a round trip; the backend validates independently and remains the
  * authority.
  */
-const schema = z.object({
-  buyerName: z.string().trim().min(2, 'Please enter your full name').max(120),
-  buyerEmail: z.string().trim().toLowerCase().pipe(z.email('Enter a valid email address')),
-  buyerPhone: z
-    .string()
-    .trim()
-    .regex(/^\+?[0-9 ()-]{6,20}$/, 'Enter a valid phone number'),
-  message: z.string().trim().max(2000).optional(),
-});
+const buildSchema = (v: Dictionary['validation']) =>
+  z.object({
+    buyerName: z.string().trim().min(2, v.fullName).max(120),
+    buyerEmail: z.string().trim().toLowerCase().pipe(z.email(v.email)),
+    buyerPhone: z
+      .string()
+      .trim()
+      .regex(/^\+?[0-9 ()-]{6,20}$/, v.phone),
+    message: z.string().trim().max(2000).optional(),
+  });
 
 type FieldErrors = Partial<Record<'buyerName' | 'buyerEmail' | 'buyerPhone' | 'message', string>>;
 
@@ -55,6 +57,7 @@ export function OrderForm({
   whatsappPhone?: string;
 }) {
   const { t, format } = useLocale();
+  const schema = useMemo(() => buildSchema(t.validation), [t]);
   const { user, token, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -120,8 +123,18 @@ export function OrderForm({
         router.push(`/login?next=${encodeURIComponent(`/car/${car.slug}/order`)}`);
         return;
       }
+      /*
+       * 409 is the one case with its own wording: the customer already has
+       * this appointment. The API's sentence is English and names a reference;
+       * the reader wants to know they are already in the queue, in their own
+       * language, which is what the vehicle's page says too.
+       */
+      if (error instanceof ApiError && error.status === 409) {
+        setFormError(`${t.car.alreadyRequested}. ${t.car.alreadyRequestedBody}`);
+        return;
+      }
       setFormError(
-        error instanceof ApiError ? error.message : 'We could not send your request. Please try again.',
+        error instanceof ApiError ? error.message : t.validation.requestFailed,
       );
     } finally {
       setSubmitting(false);

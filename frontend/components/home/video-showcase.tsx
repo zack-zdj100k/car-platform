@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Section } from '@/components/shared/section';
 import { Reveal } from '@/components/shared/reveal';
 import { RadialBackdrop } from '@/components/ui/tailwind-css-background-snippet';
+import { OriginsLine } from './origins-line';
 import { useLocale } from '@/providers/locale-provider';
 import { cn } from '@/lib/utils';
 
@@ -53,9 +54,9 @@ export function VideoShowcase() {
 
           <div className="relative grid items-center gap-8 p-6 sm:p-10 lg:grid-cols-[1.1fr_1fr]">
             <div className="text-hero-foreground">
-              <p className="text-hero-foreground/70 inline-flex items-center gap-2 text-xs font-semibold tracking-[0.18em] uppercase">
-                <Play className="size-3" aria-hidden="true" />
-                {t.home.heroEyebrow}
+              <p className="text-hero-foreground/70 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold tracking-[0.12em] uppercase sm:text-xs sm:tracking-[0.18em]">
+                <Play className="size-3 shrink-0" aria-hidden="true" />
+                <OriginsLine />
               </p>
 
               <h2 className="mt-4 text-2xl font-semibold sm:text-3xl">{t.home.showcaseTitle}</h2>

@@ -44,6 +44,15 @@ export class OrdersController {
     return this.orders.findMine(user.id, query);
   }
 
+  @Get('mine/for-car/:carId')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Which colours of one vehicle this customer already has an appointment for',
+  })
+  mineForCar(@CurrentUser() user: AuthenticatedUser, @Param('carId') carId: string) {
+    return this.orders.mineForCar(user.id, carId);
+  }
+
   @Get('admin/all')
   @Roles(Role.ADMIN)
   @ApiBearerAuth()

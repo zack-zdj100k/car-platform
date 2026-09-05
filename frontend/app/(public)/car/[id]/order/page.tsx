@@ -1,12 +1,16 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { serverDictionary } from '@/lib/i18n/server';
 import { OrderForm } from '@/components/orders/order-form';
 import { carsService } from '@/services/cars.service';
 import { fetchPublicSettings, readSetting } from '@/lib/server-api';
 import { ApiError } from '@/services/api-client';
 import type { CarDetail } from '@/types/api';
 
-export const metadata: Metadata = { title: 'Appointment request', robots: { index: false, follow: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await serverDictionary();
+  return { title: t.meta.appointmentTitle, robots: { index: false, follow: false } };
+}
 
 /** Order form route from the final route map: /car/:id/order (spec §24). */
 export default async function OrderPage({

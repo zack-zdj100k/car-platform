@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { z } from 'zod';
@@ -14,17 +14,21 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AuthShell } from './auth-shell';
 import { GoogleButton } from './google-button';
 import { useLocale } from '@/providers/locale-provider';
+import type { Dictionary } from '@/lib/i18n/dictionaries';
 import { useAuth } from '@/providers/auth-provider';
 import { ApiError } from '@/services/api-client';
 
-const schema = z.object({
-  email: z.string().trim().toLowerCase().pipe(z.email('Enter a valid email address')),
-  password: z.string().min(1, 'Enter your password'),
-});
+/* Built inside the component: at module scope the language is not known yet. */
+const buildSchema = (v: Dictionary['validation']) =>
+  z.object({
+    email: z.string().trim().toLowerCase().pipe(z.email(v.email)),
+    password: z.string().min(1, v.password),
+  });
 
 /** Sign in (spec §37). Redirects by role: customer → dashboard, admin → admin. */
 export function LoginForm() {
   const { t } = useLocale();
+  const schema = useMemo(() => buildSchema(t.validation), [t]);
   const { login } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
@@ -63,7 +67,7 @@ export function LoginForm() {
       router.replace(destination);
     } catch (error) {
       setFormError(
-        error instanceof ApiError ? error.message : 'We could not sign you in. Please try again.',
+        error instanceof ApiError ? error.message : t.validation.loginFailed,
       );
       setSubmitting(false);
     }

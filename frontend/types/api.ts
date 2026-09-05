@@ -254,6 +254,8 @@ export interface CarListItem {
   images: Pick<CarImage, 'url' | 'alt'>[];
   // `imageUrl` lets the card swap its photograph when a colour is chosen.
   colors: Pick<CarColor, 'id' | 'name' | 'hexCode' | 'finish' | 'isDefault' | 'imageUrl' | 'isAvailable'>[];
+  /** The card's one line, in the other languages. Absent fields fall back. */
+  translations?: { locale: 'EN' | 'FR' | 'AR'; marketingDescription: string | null }[];
   _count?: { favorites: number };
 }
 
@@ -302,7 +304,14 @@ export interface CarDetail {
   dimensions: CarDimensions | null;
   colors: CarColor[];
   images: CarImage[];
-  translations: { locale: 'EN' | 'FR' | 'AR'; marketingDescription: string | null; description: string | null }[];
+  /** Optional per-language overlays for the authored copy; empty fields fall back to the car's own. */
+  translations: {
+    locale: 'EN' | 'FR' | 'AR';
+    marketingDescription: string | null;
+    description?: string | null;
+    exteriorDescription?: string | null;
+    interiorDescription?: string | null;
+  }[];
   _count?: { favorites: number; views: number };
 }
 

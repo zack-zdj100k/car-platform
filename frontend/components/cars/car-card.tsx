@@ -14,6 +14,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { useTilt } from '@/hooks/use-tilt';
 import { formatAcronym, humaniseEnum } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { carCopy } from '@/lib/i18n/car-copy';
 import type { CarListItem } from '@/types/api';
 
 /**
@@ -38,7 +39,9 @@ export function CarCard({
   onToggleCompare?: (carId: string) => void;
   priority?: boolean;
 }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  /* The showroom's own line, in the reader's language where it has one. */
+  const summary = carCopy(car, locale).marketingDescription;
   const { isAuthenticated } = useAuth();
   const router = useRouter();
 
@@ -169,13 +172,13 @@ export function CarCard({
         <div className="text-muted-foreground mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <span>{car.year}</span>
           <span aria-hidden="true">·</span>
-          <span>{humaniseEnum(car.bodyType)}</span>
+          <span>{humaniseEnum(car.bodyType, locale)}</span>
           {car.engine?.fuelType && (
             <>
               <span aria-hidden="true">·</span>
               <span className="inline-flex items-center gap-1">
                 <Fuel className="size-3.5" aria-hidden="true" />
-                {humaniseEnum(car.engine.fuelType)}
+                {humaniseEnum(car.engine.fuelType, locale)}
               </span>
             </>
           )}
@@ -190,8 +193,8 @@ export function CarCard({
           )}
         </div>
 
-        {car.marketingDescription && (
-          <p className="text-muted-foreground mt-3 line-clamp-2 text-sm/6">{car.marketingDescription}</p>
+        {summary && (
+          <p className="text-muted-foreground mt-3 line-clamp-2 text-sm/6">{summary}</p>
         )}
 
         {/*
@@ -225,8 +228,8 @@ export function CarCard({
             <Price price={car.price} promoPrice={car.promoPrice} currency={car.currency} />
             {car.engine?.transmission && (
               <p className="text-muted-foreground mt-0.5 text-xs">
-                {formatAcronym(car.engine.transmission)}
-                {car.engine.drivetrain ? ` · ${formatAcronym(car.engine.drivetrain)}` : ''}
+                {formatAcronym(car.engine.transmission, locale)}
+                {car.engine.drivetrain ? ` · ${formatAcronym(car.engine.drivetrain, locale)}` : ''}
               </p>
             )}
           </div>

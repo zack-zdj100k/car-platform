@@ -169,7 +169,7 @@ export default function AdminOrdersPage() {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Reference, name, email or phone"
+              placeholder={t.admin.searchOrders}
               className="ps-9"
             />
           </div>
@@ -203,12 +203,12 @@ export default function AdminOrdersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>{t.dashboard.reference}</TableHead>
-                <TableHead>Customer</TableHead>
+                <TableHead>{t.admin.customer}</TableHead>
                 <TableHead>{t.dashboard.vehicle}</TableHead>
-                <TableHead>Contact</TableHead>
+                <TableHead>{t.admin.contact}</TableHead>
                 <TableHead>{t.dashboard.status}</TableHead>
                 <TableHead>{t.dashboard.submitted}</TableHead>
-                <TableHead className="text-end">Actions</TableHead>
+                <TableHead className="text-end">{t.admin.actions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -421,7 +421,7 @@ export default function AdminOrdersPage() {
             {detail.data && detail.data.statusHistory.length > 0 && (
               <div className="border-border border-t pt-3">
                 <h3 className="text-muted-foreground mb-2 text-xs font-semibold tracking-widest uppercase">
-                  History
+                  {t.admin.history}
                 </h3>
                 <ol className="space-y-1.5 text-xs">
                   {detail.data.statusHistory.map((entry) => (

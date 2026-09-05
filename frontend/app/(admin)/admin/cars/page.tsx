@@ -23,6 +23,7 @@ import { useAsync } from '@/hooks/use-async';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useAuth } from '@/providers/auth-provider';
 import { useLocale } from '@/providers/locale-provider';
+import { specLabels } from '@/lib/i18n/spec';
 import { carsService } from '@/services/cars.service';
 import { ApiError } from '@/services/api-client';
 import { formatPrice } from '@/lib/format';
@@ -66,6 +67,14 @@ export default function AdminCarsPage() {
       notify.error(error instanceof ApiError ? error.message : t.common.error);
     }
   };
+
+  /* PUBLISHED, DRAFT, ARCHIVED are database values; these are the words. */
+  const carStatusLabel = (status: string) =>
+    status === 'PUBLISHED'
+      ? t.admin.carPublished
+      : status === 'ARCHIVED'
+        ? t.admin.carArchived
+        : t.admin.carDraft;
 
   const statusVariant = (status: string) =>
     status === 'PUBLISHED'
@@ -121,9 +130,9 @@ export default function AdminCarsPage() {
                   <TableHead>{t.cars.brand}</TableHead>
                   <TableHead>{t.cars.model}</TableHead>
                   <TableHead className="text-end">{t.cars.year}</TableHead>
-                  <TableHead className="text-end">Price</TableHead>
+                  <TableHead className="text-end">{specLabels(locale).price}</TableHead>
                   <TableHead>{t.dashboard.status}</TableHead>
-                  <TableHead className="text-end">Actions</TableHead>
+                  <TableHead className="text-end">{t.admin.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -151,7 +160,7 @@ export default function AdminCarsPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={statusVariant(car.status)}>
-                        {car.status}
+                        {carStatusLabel(car.status)}
                       </Badge>
                     </TableCell>
                     <TableCell>

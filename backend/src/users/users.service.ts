@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma, Role, UserStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { UploadsService } from '../uploads/uploads.service';
 import { PasswordService } from '../auth/password.service';
 import { TokenService } from '../auth/token.service';
 import { paginate } from '../common/dto/paginated-result';
@@ -33,6 +34,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly passwords: PasswordService,
     private readonly tokens: TokenService,
+    private readonly uploads: UploadsService,
   ) {}
 
   /** Spec §44 — profile page. */
@@ -79,6 +81,76 @@ export class UsersService {
       },
       select: profileSelect,
     });
+  }
+
+  /**
+   * The customer's own photograph, uploaded rather than typed.
+   *
+   * The profile had a text field for a path, which asked a customer to know
+   * where a file lives on a server they have never seen — so nobody ever set
+   * one. The bytes go through the same store as everything else, and the
+   * previous picture is deleted once the new one is saved: an account should
+   * cost one photograph, not one for every time somebody changed their mind.
+   *
+   * Deletion comes after the save, and its failure is swallowed. A file left
+   * behind is untidy; a profile pointing at a file that has been deleted is
+   * broken.
+   */
+  async setProfileImage(userId: string, file: Express.Multer.File) {
+    const before = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { profileImage: true },
+    });
+
+    const stored = await this.uploads.store(file);
+
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { profileImage: stored.url },
+      select: profileSelect,
+    });
+
+    const previous = before?.profileImage;
+    // Only ours: a bundled placeholder under /images/ is not this account's.
+    if (previous && previous !== stored.url && !previous.startsWith('/images/')) {
+      try {
+        await this.uploads.remove(previous);
+      } catch (error) {
+        this.logger.warn(`Could not remove the previous profile picture: ${String(error)}`);
+      }
+    }
+
+    return user;
+  }
+
+  /**
+   * Takes the photograph off the account, and off the disk.
+   *
+   * The avatar falls back to the customer's initials, which is what an account
+   * without a picture has always shown.
+   */
+  async clearProfileImage(userId: string) {
+    const before = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { profileImage: true },
+    });
+
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data: { profileImage: null },
+      select: profileSelect,
+    });
+
+    const previous = before?.profileImage;
+    if (previous && !previous.startsWith('/images/')) {
+      try {
+        await this.uploads.remove(previous);
+      } catch (error) {
+        this.logger.warn(`Could not remove the profile picture: ${String(error)}`);
+      }
+    }
+
+    return user;
   }
 
   /** Spec §44 — change password. Every other session is ended afterwards. */

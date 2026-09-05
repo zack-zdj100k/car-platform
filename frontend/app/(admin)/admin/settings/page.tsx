@@ -29,7 +29,7 @@ import type { Setting } from '@/types/api';
  */
 export default function AdminSettingsPage() {
   const { token } = useAuth();
-  const { t } = useLocale();
+  const { t, format } = useLocale();
   const [drafts, setDrafts] = useState<Record<string, unknown>>({});
   const [saving, setSaving] = useState(false);
 
@@ -116,7 +116,7 @@ export default function AdminSettingsPage() {
       return (
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor={`${setting.key}-label`}>Value</Label>
+            <Label htmlFor={`${setting.key}-label`}>{t.admin.settingValue}</Label>
             <Input
               id={`${setting.key}-label`}
               value={stat.label}
@@ -126,7 +126,7 @@ export default function AdminSettingsPage() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor={`${setting.key}-caption`}>Caption</Label>
+            <Label htmlFor={`${setting.key}-caption`}>{t.admin.settingCaption}</Label>
             <Input
               id={`${setting.key}-caption`}
               value={stat.caption}
@@ -211,10 +211,10 @@ export default function AdminSettingsPage() {
         <Alert>
           <MailWarning className="size-4" aria-hidden="true" />
           <AlertDescription>
-            Order notifications are being written to the log but not sent — no mail provider is
-            configured (<code className="font-mono text-xs">MAIL_PROVIDER={delivery.data.provider}</code>).
-            They would go to <strong>{delivery.data.recipient}</strong>. See
-            docs/EMAIL_NOTIFICATIONS.md to switch delivery on.
+            {format(t.admin.mailNotSending, {
+              provider: `MAIL_PROVIDER=${delivery.data.provider}`,
+              recipient: delivery.data.recipient,
+            })}
           </AlertDescription>
         </Alert>
       )}
@@ -223,8 +223,10 @@ export default function AdminSettingsPage() {
         <Alert>
           <MailCheck className="size-4" aria-hidden="true" />
           <AlertDescription>
-            Order notifications are being sent to <strong>{delivery.data.recipient}</strong> over{' '}
-            {delivery.data.provider}.
+            {format(t.admin.mailSendingTo, {
+              recipient: delivery.data.recipient,
+              provider: delivery.data.provider,
+            })}
           </AlertDescription>
         </Alert>
       )}
@@ -235,13 +237,10 @@ export default function AdminSettingsPage() {
             <CardTitle className="text-base capitalize">{group.replace('-', ' ')}</CardTitle>
             {group === 'marketing-stats' && <CardDescription>{t.admin.marketingCopy}</CardDescription>}
             {group === 'social' && (
-              <CardDescription>Leave empty until the real account URLs are provided.</CardDescription>
+              <CardDescription>{t.admin.socialsHint}</CardDescription>
             )}
             {group === 'home-images' && (
-              <CardDescription>
-                Photographs for the home page feature sections. Drop a file in or choose one — an empty
-                slot uses the bundled placeholder.
-              </CardDescription>
+              <CardDescription>{t.admin.homeImagesHint}</CardDescription>
             )}
             {group === 'legal' && (
               <CardDescription>
@@ -300,7 +299,7 @@ export default function AdminSettingsPage() {
       <Alert>
         <Info className="size-4" aria-hidden="true" />
         <AlertDescription>
-          Settings are seeded, not created here — an unknown key is rejected by the API.
+          {t.admin.settingsHint}
         </AlertDescription>
       </Alert>
     </div>

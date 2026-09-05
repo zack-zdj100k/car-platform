@@ -39,6 +39,8 @@ logs/
 
 # Uploads (runtime user content)
 backend/uploads/
+# Jest runs from the repository root, so the API's upload directory lands here.
+uploads/
 frontend/public/uploads/
 
 # OS / editor

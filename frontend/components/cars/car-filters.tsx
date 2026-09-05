@@ -270,7 +270,7 @@ export function CarFilters({
                     onCheckedChange={() => toggleArrayValue('bodyType', entry.value)}
                   />
                   <Label htmlFor={id} className="flex-1 cursor-pointer text-sm font-normal">
-                    {humaniseEnum(entry.value)}
+                    {humaniseEnum(entry.value, locale)}
                   </Label>
                   <span className="text-muted-foreground text-xs">{entry.count}</span>
                 </li>
@@ -295,7 +295,7 @@ export function CarFilters({
                     onCheckedChange={() => toggleArrayValue('fuelType', entry.value)}
                   />
                   <Label htmlFor={id} className="flex-1 cursor-pointer text-sm font-normal">
-                    {humaniseEnum(entry.value)}
+                    {humaniseEnum(entry.value, locale)}
                   </Label>
                   <span className="text-muted-foreground text-xs">{entry.count}</span>
                 </li>

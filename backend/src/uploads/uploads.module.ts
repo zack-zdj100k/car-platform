@@ -22,7 +22,13 @@ import { CloudinaryStorage } from './cloudinary.storage';
   ],
   controllers: [UploadsController],
   providers: [UploadsService, CloudinaryStorage],
-  exports: [UploadsService],
+  /*
+   * MulterModule is re-exported so a module that imports this one gets the
+   * same limits. Without it a `FileInterceptor` elsewhere falls back to
+   * Multer's defaults and will buffer a file of any size into memory before
+   * the service ever gets to refuse it.
+   */
+  exports: [UploadsService, MulterModule],
 })
 export class UploadsModule implements OnModuleInit {
   constructor(private readonly uploads: UploadsService) {}

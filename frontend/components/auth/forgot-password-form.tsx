@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ArrowLeft, CheckCircle2, Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
@@ -9,11 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AuthShell } from './auth-shell';
 import { useLocale } from '@/providers/locale-provider';
+import type { Dictionary } from '@/lib/i18n/dictionaries';
 import { authService } from '@/services/auth.service';
 
-const schema = z.object({
-  email: z.string().trim().toLowerCase().pipe(z.email('Enter a valid email address')),
-});
+const buildSchema = (v: Dictionary['validation']) =>
+  z.object({
+    email: z.string().trim().toLowerCase().pipe(z.email(v.email)),
+  });
 
 /**
  * Forgot password (spec §37).
@@ -24,6 +26,7 @@ const schema = z.object({
  */
 export function ForgotPasswordForm() {
   const { t } = useLocale();
+  const schema = useMemo(() => buildSchema(t.validation), [t]);
   const [email, setEmail] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -34,7 +37,7 @@ export function ForgotPasswordForm() {
 
     const parsed = schema.safeParse({ email });
     if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? 'Enter a valid email address');
+      setError(parsed.error.issues[0]?.message ?? t.validation.email);
       return;
     }
 

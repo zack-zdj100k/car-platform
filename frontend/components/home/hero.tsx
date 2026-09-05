@@ -10,6 +10,7 @@ import { FacebookIcon, InstagramIcon, TikTokIcon } from '@/components/ui/brand-i
 import { useIsClient } from '@/hooks/use-client-store';
 import { useLocale } from '@/providers/locale-provider';
 import { cn } from '@/lib/utils';
+import { OriginsLine } from './origins-line';
 
 /**
  * Home hero (spec §8), premium light treatment.
@@ -269,8 +270,15 @@ export function Hero({ social }: { social: { tiktok: string; instagram: string; 
             varying frame by frame as the picture moves. The full-strength text
             colour holds regardless of what the car is doing behind it.
           */}
-          <p className="rise text-foreground text-sm font-semibold tracking-[0.18em] uppercase">
-            {t.home.heroEyebrow}
+          {/*
+            The origins the showroom actually sells, not one of them.
+
+            Five words at full tracking overrun a phone, so the letter-spacing
+            and the size step up with the viewport rather than being set once
+            for the desktop and left to wrap awkwardly everywhere else.
+          */}
+          <p className="rise text-foreground max-w-xl text-[11px] font-semibold tracking-[0.12em] uppercase sm:text-sm sm:tracking-[0.18em]">
+            <OriginsLine />
           </p>
 
           {/*

@@ -112,7 +112,7 @@ export default function AdminUsersPage() {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Name or email"
+              placeholder={t.admin.searchUsers}
               className="ps-9"
             />
           </div>
@@ -126,8 +126,8 @@ export default function AdminUsersPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t.common.all}</SelectItem>
-              <SelectItem value="CUSTOMER">CUSTOMER</SelectItem>
-              <SelectItem value="ADMIN">ADMIN</SelectItem>
+              <SelectItem value="CUSTOMER">{t.admin.roleCustomer}</SelectItem>
+              <SelectItem value="ADMIN">{t.admin.roleAdmin}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -140,8 +140,8 @@ export default function AdminUsersPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t.common.all}</SelectItem>
-              <SelectItem value="ACTIVE">ACTIVE</SelectItem>
-              <SelectItem value="SUSPENDED">SUSPENDED</SelectItem>
+              <SelectItem value="ACTIVE">{t.admin.statusActive}</SelectItem>
+              <SelectItem value="SUSPENDED">{t.admin.statusSuspended}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -163,7 +163,7 @@ export default function AdminUsersPage() {
                 <TableHead className="text-end">{t.dashboard.favorites}</TableHead>
                 <TableHead className="text-end">{t.dashboard.orders}</TableHead>
                 <TableHead>{t.admin.createdAt}</TableHead>
-                <TableHead className="text-end">Actions</TableHead>
+                <TableHead className="text-end">{t.admin.actions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -188,7 +188,9 @@ export default function AdminUsersPage() {
                     </TableCell>
                     <TableCell className="text-sm">{entry.email}</TableCell>
                     <TableCell>
-                      <Badge variant={entry.role === 'ADMIN' ? 'default' : 'outline'}>{entry.role}</Badge>
+                      <Badge variant={entry.role === 'ADMIN' ? 'default' : 'outline'}>
+                        {entry.role === 'ADMIN' ? t.admin.roleAdmin : t.admin.roleCustomer}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -199,7 +201,7 @@ export default function AdminUsersPage() {
                             : 'bg-destructive/10 border-destructive/30'
                         }
                       >
-                        {entry.status}
+                        {entry.status === 'ACTIVE' ? t.admin.statusActive : t.admin.statusSuspended}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-end tabular-nums">{entry._count?.favorites ?? 0}</TableCell>
@@ -218,7 +220,7 @@ export default function AdminUsersPage() {
                             void update(entry, { role: entry.role === 'ADMIN' ? 'CUSTOMER' : 'ADMIN' })
                           }
                         >
-                          {entry.role === 'ADMIN' ? 'Make customer' : 'Make admin'}
+                          {entry.role === 'ADMIN' ? t.admin.makeCustomer : t.admin.makeAdmin}
                         </Button>
                         <Button
                           size="sm"
@@ -230,7 +232,7 @@ export default function AdminUsersPage() {
                             })
                           }
                         >
-                          {entry.status === 'ACTIVE' ? 'Suspend' : 'Reinstate'}
+                          {entry.status === 'ACTIVE' ? t.admin.suspend : t.admin.reinstate}
                         </Button>
                         <Button
                           size="sm"

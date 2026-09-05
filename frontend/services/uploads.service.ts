@@ -31,7 +31,40 @@ export interface UploadedImage {
  * Uses FormData rather than the JSON client, since the body is multipart. Still
  * lives in the service layer so components never call `fetch` (spec §58).
  */
+/** Reads the API's own reason out of a failed multipart response. */
+async function failure(response: Response, fallback: string): Promise<ApiError> {
+  let message = fallback;
+  try {
+    const parsed = (await response.json()) as { message?: string | string[] };
+    message = (Array.isArray(parsed.message) ? parsed.message[0] : parsed.message) ?? message;
+  } catch {
+    /* keep the default */
+  }
+  return new ApiError(response.status, message);
+}
+
 export const uploadsService = {
+  /**
+   * A customer's own photograph.
+   *
+   * Its own route rather than the car media one: that is administrators only,
+   * and it writes into the catalogue's pictures. This saves against the
+   * caller's account and nothing else.
+   */
+  async uploadProfilePicture(file: File, token: string | null): Promise<{ profileImage: string | null }> {
+    const body = new FormData();
+    body.append('file', file);
+
+    const response = await fetch(`${API_URL}/users/me/picture`, {
+      method: 'POST',
+      headers: token ? { authorization: `Bearer ${token}` } : undefined,
+      body,
+    });
+
+    if (!response.ok) throw await failure(response, 'Upload failed');
+    return (await response.json()) as { profileImage: string | null };
+  },
+
   async uploadImage(file: File, token: string | null): Promise<UploadedImage> {
     const body = new FormData();
     body.append('file', file);

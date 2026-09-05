@@ -9,6 +9,7 @@ import type { Configuration } from '../config/configuration';
 import { CarSort, QueryCarsDto } from './dto/query-cars.dto';
 import type { CarImageDto } from './dto/car-spec-groups.dto';
 import type { CreateCarDto } from './dto/create-car.dto';
+import type { CarTranslationDto } from './dto/car-spec-groups.dto';
 import type { UpdateCarDto } from './dto/update-car.dto';
 import { colourAvailable, vehicleAvailable, withoutStockCounts } from './availability';
 
@@ -52,6 +53,15 @@ const listSelect = {
     },
     orderBy: { sortOrder: 'asc' },
   },
+  /*
+   * Only the one line a card prints, in the other languages.
+   *
+   * The whole overlay would be several paragraphs per car for a list of
+   * twenty-four; this is the short description and nothing else, so a French
+   * visitor reads the same French sentence on the card and on the page it
+   * leads to.
+   */
+  translations: { select: { locale: true, marketingDescription: true } },
   _count: { select: { favorites: true } },
 } satisfies Prisma.CarSelect;
 
@@ -181,6 +191,34 @@ export class CarsService {
    * and a projection that fetches it and forgets to drop it is a projection
    * that publishes it. One place to get right.
    */
+  /**
+   * The rows to write for a vehicle's translated copy.
+   *
+   * An overlay whose every field is blank is not stored: an administrator who
+   * opens the French block, types nothing and saves should leave no trace, and
+   * a row of four nulls would only make the fallback do more work to reach the
+   * same answer.
+   */
+  private translationRows(translations: CarTranslationDto[]) {
+    const blank = (value?: string) => (value?.trim() ? value.trim() : null);
+
+    return translations
+      .map((entry) => ({
+        locale: entry.locale,
+        marketingDescription: blank(entry.marketingDescription),
+        description: blank(entry.description),
+        exteriorDescription: blank(entry.exteriorDescription),
+        interiorDescription: blank(entry.interiorDescription),
+      }))
+      .filter(
+        (row) =>
+          row.marketingDescription ??
+          row.description ??
+          row.exteriorDescription ??
+          row.interiorDescription,
+      );
+  }
+
   private forCustomer<T extends { colors: { stock?: number | null }[] }>(car: T) {
     return {
       ...car,
@@ -389,6 +427,9 @@ export class CarsService {
         ...(dto.technology ? { technology: { create: dto.technology } } : {}),
         ...(dto.safety ? { safety: { create: dto.safety } } : {}),
         ...(dto.dimensions ? { dimensions: { create: dto.dimensions } } : {}),
+        ...(dto.translations?.length
+          ? { translations: { create: this.translationRows(dto.translations) } }
+          : {}),
         ...(dto.colors?.length
           ? {
               colors: {
@@ -558,6 +599,15 @@ export class CarsService {
      * destroyed every interior colour on the car each time it was saved — with
      * no way to notice, since the form never showed them in the first place.
      */
+    /*
+     * Supplying the overlays replaces them all. The form always sends the three
+     * blocks it shows, so a language the admin emptied is one that should stop
+     * being stored rather than one that was not mentioned.
+     */
+    if (dto.translations) {
+      data.translations = { deleteMany: {}, create: this.translationRows(dto.translations) };
+    }
+
     if (dto.colors) {
       const kinds = [...new Set(dto.colors.map((color) => color.kind ?? ColorKind.EXTERIOR))];
 

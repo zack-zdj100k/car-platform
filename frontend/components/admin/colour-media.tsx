@@ -10,6 +10,7 @@ import { uploadsService } from '@/services/uploads.service';
 import { uploadToast, type UploadToastId } from '@/lib/upload-toast';
 import { ApiError } from '@/services/api-client';
 import { useAuth } from '@/providers/auth-provider';
+import { useLocale } from '@/providers/locale-provider';
 import type { CarImageDraft } from './image-uploader';
 
 /**
@@ -34,11 +35,11 @@ import type { CarImageDraft } from './image-uploader';
  * and are told apart by the heading the admin types.
  */
 const GROUPS = [
-  { key: 'EXTERIOR', kind: 'EXTERIOR' as const, label: 'Outside', icon: Car },
-  { key: 'INTERIOR', kind: 'INTERIOR' as const, label: 'Inside', icon: Armchair },
-  { key: 'WHEEL', kind: 'WHEEL' as const, label: 'Wheels', icon: CircleDot },
-  { key: 'ENGINE', kind: 'ENGINE' as const, label: 'Engine', icon: Cog },
-  { key: 'TRUNK', kind: 'TRUNK' as const, label: 'Boot', icon: PackageOpen },
+  { key: 'EXTERIOR', kind: 'EXTERIOR' as const, label: 'groupOutside' as const, icon: Car },
+  { key: 'INTERIOR', kind: 'INTERIOR' as const, label: 'groupInside' as const, icon: Armchair },
+  { key: 'WHEEL', kind: 'WHEEL' as const, label: 'groupWheels' as const, icon: CircleDot },
+  { key: 'ENGINE', kind: 'ENGINE' as const, label: 'groupEngine' as const, icon: Cog },
+  { key: 'TRUNK', kind: 'TRUNK' as const, label: 'groupBoot' as const, icon: PackageOpen },
 ];
 
 /**
@@ -64,6 +65,7 @@ export function ColourMedia({
   onChange: (next: CarImageDraft[]) => void;
 }) {
   const { token } = useAuth();
+  const { t, format } = useLocale();
   const groupId = useId();
   const inputs = useRef<Record<string, HTMLInputElement | null>>({});
   const [busy, setBusy] = useState<string | null>(null);
@@ -103,7 +105,7 @@ export function ColourMedia({
       free?: { slot: number; label: string },
     ) => {
       if (!trimmed) {
-        notify.error('Give the colour a name first — the photographs are filed under it.');
+        notify.error(t.admin.nameColourFirst);
         return;
       }
 
@@ -117,8 +119,8 @@ export function ColourMedia({
         const results = await uploadsService.uploadImages(list, token, (done, total) => {
           card = uploadToast.progress(
             {
-              title: `Uploading ${trimmed} photographs`,
-              description: `${done} of ${total} sent.`,
+              title: format(t.admin.uploadingFor, { name: trimmed }),
+              description: format(t.admin.sentOfTotal, { done, total }),
               progress: (done / total) * 100,
             },
             card,
@@ -137,20 +139,19 @@ export function ColourMedia({
         onChange([...images, ...uploaded]);
         uploadToast.success(
           {
-            title: `${uploaded.length} added to ${trimmed}`,
-            description: 'Save the car to keep them.',
-            primaryText: 'Done',
+            title: format(t.admin.addedTo, { count: uploaded.length, name: trimmed }),
+            description: t.admin.saveToKeep,
+            primaryText: t.common.done,
           },
           card,
         );
       } catch (error) {
         uploadToast.error(
           {
-            title: `Nothing was added to ${trimmed}`,
-            description:
-              error instanceof ApiError ? error.message : 'Those photographs could not be uploaded.',
-            primaryText: 'Try again',
-            secondaryText: 'Cancel',
+            title: format(t.admin.nothingAddedTo, { name: trimmed }),
+            description: error instanceof ApiError ? error.message : t.admin.photosNotUploaded,
+            primaryText: t.common.retry,
+            secondaryText: t.common.cancel,
           },
           card,
         );
@@ -158,7 +159,7 @@ export function ColourMedia({
         setBusy(null);
       }
     },
-    [images, onChange, token, trimmed],
+    [images, onChange, token, trimmed, t, format],
   );
 
   // Removed from the list only; the file is reclaimed after a successful save.
@@ -176,7 +177,7 @@ export function ColourMedia({
       id: group.key,
       kind: group.kind,
       icon: group.icon,
-      heading: group.label,
+      heading: t.admin[group.label],
       free: undefined as { slot: number; label: string } | undefined,
       owned: mine(group.kind),
     })),
@@ -184,7 +185,7 @@ export function ColourMedia({
       id,
       kind: 'OTHER' as const,
       icon: Plus,
-      heading: freeSlotLabel(slot) || `Anything else ${slot + 1}`,
+      heading: freeSlotLabel(slot) || format(t.admin.anythingElse, { number: slot + 1 }),
       free: { slot, label: freeSlotLabel(slot) },
       owned: freeSlotImages(slot),
     })),
@@ -192,11 +193,7 @@ export function ColourMedia({
 
   return (
     <div className="w-full space-y-3">
-      <p className="text-muted-foreground text-xs">
-        Photographs of this colour. A customer who picks it sees these instead of another
-        colour&apos;s. Filed under the colour&apos;s name, so renaming it here and saving will
-        detach them.
-      </p>
+      <p className="text-muted-foreground text-xs">{t.admin.colourPhotosHint}</p>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {panels.map(({ id, kind, icon: Icon, heading, free, owned }) => {
@@ -210,8 +207,11 @@ export function ColourMedia({
                   /* The heading is the field: type what this group is. */
                   <Input
                     value={free.label}
-                    placeholder={`Anything else ${free.slot + 1}`}
-                    aria-label={`Name for extra photograph group ${free.slot + 1} of ${trimmed || 'this colour'}`}
+                    placeholder={format(t.admin.anythingElse, { number: free.slot + 1 })}
+                    aria-label={format(t.admin.nameExtraGroup, {
+                      number: free.slot + 1,
+                      name: trimmed || t.admin.thisColour,
+                    })}
                     onChange={(event) => renameFreeSlot(free.slot, event.target.value)}
                     disabled={owned.length === 0}
                     className="h-7 text-xs"
@@ -252,7 +252,10 @@ export function ColourMedia({
                   size="icon"
                   variant="ghost"
                   className="size-7 shrink-0"
-                  aria-label={`Add ${heading.toLowerCase()} photographs for ${trimmed || 'this colour'}`}
+                  aria-label={format(t.admin.addPhotographsFor, {
+                    group: heading.toLowerCase(),
+                    name: trimmed || t.admin.thisColour,
+                  })}
                   disabled={busy !== null}
                   onClick={() => inputs.current[inputKey]?.click()}
                 >
@@ -266,7 +269,7 @@ export function ColourMedia({
 
               {owned.length === 0 ? (
                 <p className="text-muted-foreground py-2 text-center text-[11px]">
-                  {free ? 'Empty — upload something and name it' : 'None yet'}
+                  {free ? t.admin.emptySlot : t.admin.noneYet}
                 </p>
               ) : (
                 <ul className="grid grid-cols-3 gap-1.5">

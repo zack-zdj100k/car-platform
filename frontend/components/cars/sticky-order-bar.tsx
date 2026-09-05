@@ -27,11 +27,18 @@ export function StickyOrderBar({
   car,
   watch,
   selectedColorId,
+  bookable,
 }: {
   car: CarDetail;
   /** The price block on the page. The pill appears when this leaves the screen. */
   watch: RefObject<HTMLElement | null>;
   selectedColorId: string | null;
+  /**
+   * Whether the colour in front of the reader can still be booked. The page
+   * decides — sold out, or already asked for — and the pill follows it, so the
+   * two never disagree about the same car.
+   */
+  bookable: boolean;
 }) {
   const { t } = useLocale();
   const reduced = useReducedMotion();
@@ -109,14 +116,21 @@ export function StickyOrderBar({
             <Price price={car.price} promoPrice={car.promoPrice} currency={car.currency} size="sm" />
           </div>
 
-          <Button asChild size="sm" className="shrink-0 rounded-full">
-            <Link
-              href={`/car/${car.slug}/order${selectedColorId ? `?color=${selectedColorId}` : ''}`}
-            >
+          {bookable ? (
+            <Button asChild size="sm" className="shrink-0 rounded-full">
+              <Link
+                href={`/car/${car.slug}/order${selectedColorId ? `?color=${selectedColorId}` : ''}`}
+              >
+                <ShoppingCart className="size-4" aria-hidden="true" />
+                {t.car.order}
+              </Link>
+            </Button>
+          ) : (
+            <Button size="sm" className="shrink-0 rounded-full" disabled>
               <ShoppingCart className="size-4" aria-hidden="true" />
               {t.car.order}
-            </Link>
-          </Button>
+            </Button>
+          )}
         </motion.div>
       )}
     </AnimatePresence>,

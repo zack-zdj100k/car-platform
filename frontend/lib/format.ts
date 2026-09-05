@@ -1,4 +1,5 @@
 import type { Locale } from './i18n/config';
+import { enumLabel } from './i18n/spec';
 
 const INTL_LOCALE: Record<Locale, string> = { en: 'en-US', fr: 'fr-FR', ar: 'ar' };
 
@@ -58,18 +59,32 @@ export function formatRelative(value: string | Date, locale: Locale = 'en'): str
   return formatter.format(seconds, 'second');
 }
 
-/** Turns enum values such as PLUG_IN_HYBRID into "Plug in hybrid". */
-export function humaniseEnum(value: string | null | undefined): string {
+/**
+ * A database enum in the reader's language.
+ *
+ * `PLUG_IN_HYBRID` used to become "Plug in hybrid" by lower-casing and
+ * capitalising, which read as English under a French heading and turned SUV
+ * into "Suv". The translated word is used where there is one; the tidying
+ * stays as the fallback so a value added to the schema is still legible
+ * before anybody has translated it.
+ */
+export function humaniseEnum(value: string | null | undefined, locale: Locale = 'en'): string {
   if (!value) return '—';
+  const translated = enumLabel(value, locale);
+  if (translated) return translated;
   const spaced = value.replace(/_/g, ' ').toLowerCase();
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
-/** Short label for drivetrain and transmission acronyms, which stay uppercase. */
-export function formatAcronym(value: string | null | undefined): string {
+/**
+ * Drivetrain and transmission, which are acronyms in English and words in the
+ * other two — "AWD" is "transmission intégrale" in French, not an acronym a
+ * French reader would recognise.
+ */
+export function formatAcronym(value: string | null | undefined, locale: Locale = 'en'): string {
   if (!value) return '—';
-  if (value === 'FOUR_WD') return '4WD';
-  if (value === 'SINGLE_SPEED') return 'Single speed';
+  const translated = enumLabel(value, locale);
+  if (translated) return translated;
   return value.replace(/_/g, ' ');
 }
 

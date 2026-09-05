@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { notify } from '@/lib/notify';
 import { AlertCircle, Loader2, LogOut } from 'lucide-react';
 import { z } from 'zod';
@@ -8,49 +8,54 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { LoadingState, ErrorState } from '@/components/shared/states';
 import { useAsync } from '@/hooks/use-async';
 import { useAuth } from '@/providers/auth-provider';
 import { useLocale } from '@/providers/locale-provider';
+import type { Dictionary } from '@/lib/i18n/dictionaries';
 import { profileService } from '@/services/customer.service';
 import { ApiError } from '@/services/api-client';
 import { formatDate } from '@/lib/format';
+import { ProfilePictureField } from '@/components/dashboard/profile-picture-field';
 import type { UserProfile } from '@/types/api';
 
-const profileSchema = z.object({
-  fullName: z.string().trim().min(2, 'Enter your full name').max(120),
-  phone: z
-    .string()
-    .trim()
-    .regex(/^\+?[0-9 ()-]{6,20}$/, 'Enter a valid phone number')
-    .optional()
-    .or(z.literal('')),
-  profileImage: z.string().trim().max(500).optional().or(z.literal('')),
-});
-
-const passwordSchema = z
-  .object({
-    currentPassword: z.string().min(1, 'Enter your current password'),
-    newPassword: z
+const buildProfileSchema = (v: Dictionary['validation']) =>
+  z.object({
+    fullName: z.string().trim().min(2, v.fullName).max(120),
+    phone: z
       .string()
-      .min(8, 'At least 8 characters')
-      .regex(/[a-z]/, 'Include a lowercase letter')
-      .regex(/[A-Z]/, 'Include an uppercase letter')
-      .regex(/\d/, 'Include a number'),
-    confirmPassword: z.string(),
-  })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
+      .trim()
+      .regex(/^\+?[0-9 ()-]{6,20}$/, v.phone)
+      .optional()
+      .or(z.literal('')),
+    profileImage: z.string().trim().max(500).optional().or(z.literal('')),
   });
+
+const buildPasswordSchema = (v: Dictionary['validation']) =>
+  z
+    .object({
+      currentPassword: z.string().min(1, v.currentPassword),
+      newPassword: z
+        .string()
+        .min(8, v.min8)
+        .regex(/[a-z]/, v.lowercase)
+        .regex(/[A-Z]/, v.uppercase)
+        .regex(/\d/, v.number),
+      confirmPassword: z.string(),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+      message: v.passwordsMatch,
+      path: ['confirmPassword'],
+    });
 
 /** Spec §44 — profile: picture, name, email, phone, creation date, password. */
 export default function ProfilePage() {
   const { token, logout, refresh } = useAuth();
   const { t, locale } = useLocale();
+  const profileSchema = useMemo(() => buildProfileSchema(t.validation), [t]);
+  const passwordSchema = useMemo(() => buildPasswordSchema(t.validation), [t]);
 
   const profile = useAsync<UserProfile>(() => profileService.me({ token }), [token], {
     enabled: Boolean(token),
@@ -165,21 +170,11 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={(event) => void saveDetails(event)} className="space-y-5" noValidate>
-            <div className="flex items-center gap-4">
-              <Avatar className="size-16">
-                {values.profileImage && <AvatarImage src={values.profileImage} alt="" />}
-                <AvatarFallback className="text-lg font-semibold">{initials}</AvatarFallback>
-              </Avatar>
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="profileImage">{t.dashboard.profilePicture}</Label>
-                <Input
-                  id="profileImage"
-                  value={values.profileImage}
-                  onChange={(event) => setField('profileImage', event.target.value)}
-                  placeholder="/images/…"
-                />
-              </div>
-            </div>
+            <ProfilePictureField
+              value={values.profileImage}
+              initials={initials}
+              onChange={(next) => setField('profileImage', next)}
+            />
 
             <div className="space-y-2">
               <Label htmlFor="fullName">{t.auth.fullName}</Label>
