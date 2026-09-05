@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { NavBar, type NavItem } from '@/components/ui/tubelight-navbar';
 import { LanguageSwitcher } from './language-switcher';
 import { ThemeToggle } from './theme-toggle';
@@ -23,6 +23,7 @@ import { useLocale } from '@/providers/locale-provider';
 import { useAuth } from '@/providers/auth-provider';
 import { revealHeader, useHeaderRetreated, useScrolledPast } from '@/hooks/use-client-store';
 import { cn } from '@/lib/utils';
+import { resolveImageUrl } from '@/services/uploads.service';
 
 /**
  * Global header (spec §7): logo, language switcher, theme toggle and navigation.
@@ -155,6 +156,12 @@ export function SiteHeader() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="gap-2 px-2">
                   <Avatar className="size-7">
+                    {/* Their own photograph if they have set one; the initials
+                        otherwise, which is what this has always shown. The URL
+                        is resolved because uploads are served by the API. */}
+                    {user?.profileImage && (
+                      <AvatarImage src={resolveImageUrl(user.profileImage)} alt="" />
+                    )}
                     <AvatarFallback className="text-[11px] font-semibold">{initials || '—'}</AvatarFallback>
                   </Avatar>
                   <span className="hidden max-w-28 truncate text-sm font-medium sm:inline">

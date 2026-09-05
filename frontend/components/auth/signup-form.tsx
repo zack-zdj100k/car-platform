@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { z } from 'zod';
@@ -14,38 +14,49 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AuthShell } from './auth-shell';
 import { GoogleButton } from './google-button';
 import { useLocale } from '@/providers/locale-provider';
+import type { Dictionary } from '@/lib/i18n/dictionaries';
 import { useAuth } from '@/providers/auth-provider';
 import { ApiError } from '@/services/api-client';
 
-/** Mirrors the backend policy exactly (spec §36). */
-const schema = z
-  .object({
-    fullName: z.string().trim().min(2, 'Enter your full name').max(120),
-    email: z.string().trim().toLowerCase().pipe(z.email('Enter a valid email address')),
-    password: z
-      .string()
-      .min(8, 'At least 8 characters')
-      .regex(/[a-z]/, 'Include a lowercase letter')
-      .regex(/[A-Z]/, 'Include an uppercase letter')
-      .regex(/\d/, 'Include a number'),
-    confirmPassword: z.string(),
-    phone: z
-      .string()
-      .trim()
-      .regex(/^\+?[0-9 ()-]{6,20}$/, 'Enter a valid phone number')
-      .optional()
-      .or(z.literal('')),
-    acceptTerms: z.literal(true, { message: 'You must accept the Terms & Conditions' }),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: 'Passwords do not match',
-    path: ['confirmPassword'],
-  });
+/**
+ * Mirrors the backend policy exactly (spec §36).
+ *
+ * Built from the dictionary rather than declared at module scope: the schema's
+ * messages are what the visitor reads, and at module scope no language is
+ * known yet.
+ */
+type Messages = Dictionary['validation'];
+
+const buildSchema = (v: Messages) =>
+  z
+    .object({
+      fullName: z.string().trim().min(2, v.fullName).max(120),
+      email: z.string().trim().toLowerCase().pipe(z.email(v.email)),
+      password: z
+        .string()
+        .min(8, v.min8)
+        .regex(/[a-z]/, v.lowercase)
+        .regex(/[A-Z]/, v.uppercase)
+        .regex(/\d/, v.number),
+      confirmPassword: z.string(),
+      phone: z
+        .string()
+        .trim()
+        .regex(/^\+?[0-9 ()-]{6,20}$/, v.phone)
+        .optional()
+        .or(z.literal('')),
+      acceptTerms: z.literal(true, { message: v.acceptTerms }),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: v.passwordsMatch,
+      path: ['confirmPassword'],
+    });
 
 type Field = 'fullName' | 'email' | 'password' | 'confirmPassword' | 'phone' | 'acceptTerms';
 
 export function SignupForm() {
   const { t } = useLocale();
+  const schema = useMemo(() => buildSchema(t.validation), [t]);
   const { register } = useAuth();
   const router = useRouter();
 
@@ -94,7 +105,7 @@ export function SignupForm() {
       router.replace('/dashboard');
     } catch (error) {
       setFormError(
-        error instanceof ApiError ? error.message : 'We could not create your account. Please try again.',
+        error instanceof ApiError ? error.message : t.validation.signupFailed,
       );
       setSubmitting(false);
     }

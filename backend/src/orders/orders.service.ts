@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -16,6 +17,7 @@ import type { Configuration } from '../config/configuration';
 import type { AuthenticatedUser } from '../common/types/authenticated-request';
 import type { CreateOrderDto } from './dto/create-order.dto';
 import type { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import type { SetMeetingPlaceDto } from './dto/set-meeting-place.dto';
 import type { QueryOrdersDto } from './dto/query-orders.dto';
 
 const orderCarSelect = {
@@ -49,6 +51,15 @@ const orderCarSelect = {
 function allowedFrom(status: OrderStatus): OrderStatus[] {
   return Object.values(OrderStatus).filter((candidate) => candidate !== status);
 }
+
+/**
+ * An appointment that is still going on.
+ *
+ * Pending, been in touch about, or confirmed — all three are one live request
+ * for one car. Cancelled and completed are finished: a customer who withdrew
+ * may ask again, and one who has bought may buy another.
+ */
+const LIVE_STATUSES = [OrderStatus.PENDING, OrderStatus.CONTACTED, OrderStatus.CONFIRMED];
 
 @Injectable()
 export class OrdersService {
@@ -108,6 +119,36 @@ export class OrdersService {
       selectedColorName = color.name;
     }
 
+    /*
+     * One live appointment per vehicle and colour, per customer.
+     *
+     * Somebody who books, hears nothing for a day and books again has not
+     * asked for two meetings — they have asked twice for the same one, and the
+     * showroom then rings them twice about one car. Only a live appointment
+     * blocks — see `LIVE_STATUSES`.
+     *
+     * Guests are not checked. There is no identity to check against, and
+     * matching on an email address would let anybody find out what somebody
+     * else has asked for by watching which requests are refused.
+     */
+    if (user) {
+      const existing = await this.prisma.order.findFirst({
+        where: {
+          userId: user.id,
+          carId: car.id,
+          selectedColorId: dto.selectedColorId ?? null,
+          status: { in: LIVE_STATUSES },
+        },
+        select: { reference: true },
+      });
+
+      if (existing) {
+        throw new ConflictException(
+          `You already have an appointment for this vehicle in this colour (${existing.reference}). We will contact you soon.`,
+        );
+      }
+    }
+
     const order = await this.prisma.order.create({
       data: {
         reference: generateOrderReference(),
@@ -154,6 +195,36 @@ export class OrdersService {
     return order;
   }
 
+  /**
+   * What this customer has already asked for on one vehicle.
+   *
+   * The vehicle's page needs it to decide whether to offer the booking button
+   * or say that somebody will be in touch. Only ids come back — no references,
+   * no dates — because that is all the page needs to make that one decision.
+   */
+  async mineForCar(userId: string, carId: string) {
+    const car = await this.prisma.car.findFirst({
+      where: { OR: [{ id: carId }, { slug: carId }] },
+      select: { id: true },
+    });
+    if (!car) return { colorIds: [], withoutColour: false };
+
+    const orders = await this.prisma.order.findMany({
+      where: {
+        userId,
+        carId: car.id,
+        status: { in: LIVE_STATUSES },
+      },
+      select: { selectedColorId: true },
+    });
+
+    return {
+      colorIds: orders.map((order) => order.selectedColorId).filter((id): id is string => Boolean(id)),
+      // An appointment made before any colour was chosen still counts.
+      withoutColour: orders.some((order) => order.selectedColorId === null),
+    };
+  }
+
   /** Spec §38, §39 — a customer sees only their own orders. */
   async findMine(userId: string, query: QueryOrdersDto) {
     const where: Prisma.OrderWhereInput = {
@@ -171,6 +242,9 @@ export class OrdersService {
           selectedColorName: true,
           createdAt: true,
           updatedAt: true,
+          meetingAddress: true,
+          meetingMapUrl: true,
+          meetingNote: true,
           car: { select: orderCarSelect },
         },
         orderBy: { createdAt: 'desc' },
@@ -180,7 +254,12 @@ export class OrdersService {
       this.prisma.order.count({ where }),
     ]);
 
-    return paginate(rows, total, query.page, query.pageSize);
+    return paginate(
+      rows.map((row) => this.withoutUnconfirmedPlace(row)),
+      total,
+      query.page,
+      query.pageSize,
+    );
   }
 
   /** Spec §45, §46 — admin order management. */
@@ -241,7 +320,31 @@ export class OrdersService {
       throw new ForbiddenException('You do not have access to this order');
     }
 
-    return order;
+    return requester.role === Role.ADMIN ? order : this.withoutUnconfirmedPlace(order);
+  }
+
+  /**
+   * Removes the meeting place from an appointment that is not confirmed.
+   *
+   * The address is written when the owner knows which of their places the car
+   * will be at, which can be before the customer is told anything — and a
+   * customer reading an address on a request nobody has answered, or on one
+   * that was cancelled, turns up to a closed door. Confirmed is the only state
+   * in which the invitation is real, so it is the only state that carries it.
+   *
+   * Stripped here rather than left out of the query: the administration reads
+   * the same record through the same method, and one of them has to see it.
+   */
+  private withoutUnconfirmedPlace<
+    T extends {
+      status: OrderStatus;
+      meetingAddress: string | null;
+      meetingMapUrl: string | null;
+      meetingNote: string | null;
+    },
+  >(order: T): T {
+    if (order.status === OrderStatus.CONFIRMED) return order;
+    return { ...order, meetingAddress: null, meetingMapUrl: null, meetingNote: null };
   }
 
   async findByReference(reference: string, requester: AuthenticatedUser) {
@@ -252,11 +355,71 @@ export class OrdersService {
     return this.findOne(order.id, requester);
   }
 
+  /**
+   * The customer withdrawing their own appointment.
+   *
+   * Separate from the administrator's status change, and deliberately narrow:
+   * it only ever cancels, only ever their own, and only while the appointment
+   * is still open. Somebody who booked the wrong colour at midnight should not
+   * have to telephone a showroom in the morning to undo it, and the alternative
+   * — a customer who cannot correct their own mistake — produces a list of
+   * appointments nobody trusts.
+   *
+   * It is a cancellation, not a deletion. The record stays, with the
+   * cancellation written into its history like any other move, because it is
+   * part of what happened.
+   */
+  async cancelMine(id: string, requester: AuthenticatedUser) {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      select: { id: true, reference: true, status: true, userId: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    if (order.userId !== requester.id) {
+      throw new ForbiddenException('You do not have access to this order');
+    }
+
+    if (order.status === OrderStatus.CANCELLED) {
+      throw new BadRequestException('This appointment is already cancelled');
+    }
+
+    if (order.status === OrderStatus.COMPLETED) {
+      throw new BadRequestException(
+        'This appointment is already completed. Contact us if something is wrong with it.',
+      );
+    }
+
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.order.update({
+        where: { id },
+        data: { status: OrderStatus.CANCELLED },
+        include: { car: { select: orderCarSelect } },
+      }),
+      this.prisma.orderStatusHistory.create({
+        data: {
+          orderId: id,
+          fromStatus: order.status,
+          toStatus: OrderStatus.CANCELLED,
+          changedById: requester.id,
+          note: 'Cancelled by the customer',
+        },
+      }),
+    ]);
+
+    this.logger.log(`Order ${order.reference}: ${order.status} → CANCELLED by its customer`);
+    return updated;
+  }
+
   /** Spec §25 — admin updates the status; every change is recorded. */
   async updateStatus(id: string, dto: UpdateOrderStatusDto, adminId: string) {
     const order = await this.prisma.order.findUnique({
       where: { id },
-      select: { id: true, reference: true, status: true },
+      // The colour comes too: completing a sale takes that car off the floor.
+      select: { id: true, reference: true, status: true, selectedColorId: true },
     });
 
     if (!order) {
@@ -267,13 +430,14 @@ export class OrdersService {
       throw new BadRequestException(`This order is already ${dto.status.toLowerCase()}`);
     }
 
-    const [updated] = await this.prisma.$transaction([
-      this.prisma.order.update({
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.order.update({
         where: { id },
         data: { status: dto.status, adminNote: dto.note ?? undefined },
         include: { car: { select: orderCarSelect } },
-      }),
-      this.prisma.orderStatusHistory.create({
+      });
+
+      await tx.orderStatusHistory.create({
         data: {
           orderId: id,
           fromStatus: order.status,
@@ -281,11 +445,140 @@ export class OrdersService {
           changedById: adminId,
           note: dto.note ?? null,
         },
-      }),
-    ]);
+      });
+
+      /*
+       * A completed sale takes one car off the floor.
+       *
+       * Written here, inside the same transaction as the status, because the
+       * two facts are one fact: the vehicle left in that colour. Doing it by
+       * hand afterwards means a catalogue that offers a car somebody has
+       * already driven away.
+       *
+       * Only on the way *into* COMPLETED, and only for a counted colour. A
+       * colour with no count is one the owner can order in, and decrementing
+       * null into -1 would invent a shortage. A correction back out of
+       * COMPLETED returns the car to the floor, since the sale did not happen
+       * after all — and the owner can always type over the number regardless.
+       */
+      if (order.selectedColorId) {
+        const entering = dto.status === OrderStatus.COMPLETED;
+        const leaving = order.status === OrderStatus.COMPLETED;
+
+        if (entering !== leaving) {
+          const colour = await tx.carColor.findUnique({
+            where: { id: order.selectedColorId },
+            select: { id: true, name: true, stock: true },
+          });
+
+          if (colour?.stock != null) {
+            const next = entering ? Math.max(0, colour.stock - 1) : colour.stock + 1;
+            await tx.carColor.update({ where: { id: colour.id }, data: { stock: next } });
+            this.logger.log(
+              `Order ${order.reference}: ${colour.name} stock ${colour.stock} → ${next}` +
+                (next === 0 ? ' — that colour is now sold out' : ''),
+            );
+          }
+        }
+      }
+
+      return result;
+    });
 
     this.logger.log(`Order ${order.reference}: ${order.status} → ${dto.status} by admin ${adminId}`);
     return updated;
+  }
+
+  /**
+   * Records where a confirmed customer should come.
+   *
+   * Kept apart from the status: confirming an appointment happens on the
+   * telephone, and deciding which of the business's places the car will be at
+   * happens afterwards. The customer sees none of this until the appointment is
+   * confirmed — before that there is nothing to come to, and an address on an
+   * unanswered request sends somebody to a closed door.
+   */
+  async setMeetingPlace(id: string, dto: SetMeetingPlaceDto) {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      select: { id: true, reference: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    // An empty string clears the field; an absent one leaves it alone. The
+    // difference matters when an address is being corrected rather than added.
+    const value = (given: string | undefined) =>
+      given === undefined ? undefined : given.trim() === '' ? null : given.trim();
+
+    const updated = await this.prisma.order.update({
+      where: { id },
+      data: {
+        meetingAddress: value(dto.meetingAddress),
+        meetingMapUrl: value(dto.meetingMapUrl),
+        meetingNote: value(dto.meetingNote),
+      },
+      include: { car: { select: orderCarSelect } },
+    });
+
+    this.logger.log(`Order ${order.reference}: meeting place updated`);
+    return updated;
+  }
+
+  /**
+   * Removes an appointment.
+   *
+   * The administration may remove any of them; a customer only their own, and
+   * only once it has been cancelled — a list of appointments that were called
+   * off is clutter to the person who called them off, and tidying it is
+   * theirs to do. An appointment still open is not: withdrawing it and erasing
+   * it are different acts, and the first has to happen before the second.
+   *
+   * A completed one is kept whatever the caller's rights. It is the record of
+   * a sale, the history of a car leaving the floor, and the only place that
+   * says who bought it.
+   */
+  async remove(id: string, requester: AuthenticatedUser) {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      select: { id: true, reference: true, status: true, userId: true },
+    });
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const isAdmin = requester.role === Role.ADMIN;
+
+    if (!isAdmin) {
+      if (order.userId !== requester.id) {
+        throw new ForbiddenException('You do not have access to this order');
+      }
+      if (order.status !== OrderStatus.CANCELLED) {
+        throw new BadRequestException(
+          'Only a cancelled appointment can be removed. Cancel it first.',
+        );
+      }
+    }
+
+    if (order.status === OrderStatus.COMPLETED) {
+      throw new BadRequestException(
+        'A completed appointment is the record of a sale and cannot be deleted.',
+      );
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.orderStatusHistory.deleteMany({ where: { orderId: id } }),
+      this.prisma.emailLog.deleteMany({ where: { orderId: id } }),
+      this.prisma.order.delete({ where: { id } }),
+    ]);
+
+    this.logger.log(
+      `Order ${order.reference} deleted by ${isAdmin ? `admin ${requester.id}` : 'its customer'}`,
+    );
+    return { deleted: true };
   }
 
   /** Every status the order is not already in — see `allowedFrom`. */

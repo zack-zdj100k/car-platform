@@ -6,6 +6,7 @@ import { FeaturedCars } from '@/components/home/featured-cars';
 import { ShowroomLocation } from '@/components/home/showroom-location';
 import { StatsBento } from '@/components/ui/stats-bento';
 import { fetchFeaturedCars, fetchPublicSettings, readMarketingStats, readSetting } from '@/lib/server-api';
+import { serverDictionary } from '@/lib/i18n/server';
 
 /** Home page (spec §7, §8, §9, §33). */
 export default async function HomePage() {
@@ -14,8 +15,7 @@ export default async function HomePage() {
   // Stated plainly on the section itself: these are editable marketing figures,
   // not measured analytics (spec §33, and docs/DECISIONS.md D-2.1).
   const marketingNote =
-    readSetting(settings, 'about', 'about.mission') ||
-    'Configurable marketing content — not live analytics.';
+    readSetting(settings, 'about', 'about.mission') || (await serverDictionary()).home.marketingNote;
 
   // The showcase illustrates its sections with a real vehicle from the
   // catalogue, so no placeholder path is hard-coded into the component.

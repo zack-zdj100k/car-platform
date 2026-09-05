@@ -142,7 +142,7 @@ test.describe('Public pages are error-free', () => {
     await expect(page).toHaveURL(/\/car\//);
     await page.waitForTimeout(1000);
 
-    await page.getByRole('link', { name: 'Order this car' }).click();
+    await page.getByRole('link', { name: 'Request an appointment' }).click();
     await expect(page).toHaveURL(/\/order/);
     await page.waitForTimeout(1000);
 
@@ -272,7 +272,13 @@ test.describe('Every admin page is error-free', () => {
 
     // The flow that used to crash: the dialog read status history the list
     // endpoint never returns.
-    await page.locator('tbody tr').first().getByRole('button').click();
+    // Named, not "the only button in the row": the row now also carries a
+    // delete button, and on a confirmed appointment a place to set the address.
+    await page
+      .locator('tbody tr')
+      .first()
+      .getByRole('button', { name: /update status/i })
+      .click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText('History')).toBeVisible();

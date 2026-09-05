@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { toast } from 'sonner';
-import { Search } from 'lucide-react';
+import { notify } from '@/lib/notify';
+import { MapPin, Search, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +46,57 @@ export default function AdminOrdersPage() {
 
   const [active, setActive] = useState<AdminOrderRow | null>(null);
   const [nextStatus, setNextStatus] = useState<OrderStatus | ''>('');
+
+  /*
+   * The meeting place, in its own dialog.
+   *
+   * Not folded into the status dialog: confirming an appointment happens while
+   * the customer is on the telephone, and the address is decided afterwards,
+   * once the owner knows which of their places the car will be at. One dialog
+   * for both would mean typing an address in a hurry, or losing it on the next
+   * status edit.
+   */
+  const [placing, setPlacing] = useState<AdminOrderRow | null>(null);
+  const [place, setPlace] = useState({ meetingAddress: '', meetingMapUrl: '', meetingNote: '' });
+  const [savingPlace, setSavingPlace] = useState(false);
+
+  /*
+   * Removing an appointment for good. Behind a confirmation because it takes
+   * the history with it — and refused by the API for a completed one, which is
+   * the record of a sale.
+   */
+  const [deleting, setDeleting] = useState<AdminOrderRow | null>(null);
+  const [busyDelete, setBusyDelete] = useState(false);
+
+  const removeOrder = async () => {
+    if (!deleting) return;
+    setBusyDelete(true);
+    try {
+      await adminOrdersService.remove(deleting.id, { token });
+      notify.success(t.admin.deleteOrderDone, { description: deleting.reference });
+      setDeleting(null);
+      orders.reload();
+    } catch (error) {
+      notify.error(error instanceof Error ? error.message : t.common.error);
+    } finally {
+      setBusyDelete(false);
+    }
+  };
+
+  const savePlace = async () => {
+    if (!placing) return;
+    setSavingPlace(true);
+    try {
+      await adminOrdersService.setMeetingPlace(placing.id, place, { token });
+      notify.success(t.admin.meetingSaved);
+      setPlacing(null);
+      orders.reload();
+    } catch (error) {
+      notify.error(error instanceof Error ? error.message : t.common.error);
+    } finally {
+      setSavingPlace(false);
+    }
+  };
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -85,13 +136,13 @@ export default function AdminOrdersPage() {
     setSaving(true);
     try {
       await adminOrdersService.updateStatus(active.id, { status: nextStatus, note: note || undefined }, { token });
-      toast.success(t.admin.updateStatus);
+      notify.success(t.admin.updateStatus);
       setActive(null);
       setNextStatus('');
       setNote('');
       orders.reload();
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : t.common.error);
+      notify.error(error instanceof ApiError ? error.message : t.common.error);
     } finally {
       setSaving(false);
     }
@@ -118,7 +169,7 @@ export default function AdminOrdersPage() {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Reference, name, email or phone"
+              placeholder={t.admin.searchOrders}
               className="ps-9"
             />
           </div>
@@ -152,12 +203,12 @@ export default function AdminOrdersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>{t.dashboard.reference}</TableHead>
-                <TableHead>Customer</TableHead>
+                <TableHead>{t.admin.customer}</TableHead>
                 <TableHead>{t.dashboard.vehicle}</TableHead>
-                <TableHead>Contact</TableHead>
+                <TableHead>{t.admin.contact}</TableHead>
                 <TableHead>{t.dashboard.status}</TableHead>
                 <TableHead>{t.dashboard.submitted}</TableHead>
-                <TableHead className="text-end">Actions</TableHead>
+                <TableHead className="text-end">{t.admin.actions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -193,17 +244,58 @@ export default function AdminOrdersPage() {
                     {formatDateTime(order.createdAt, locale)}
                   </TableCell>
                   <TableCell className="text-end">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        setActive(order);
-                        setNextStatus('');
-                        setNote('');
-                      }}
-                    >
-                      {t.admin.updateStatus}
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      {/*
+                        Only on a confirmed appointment: before that there is
+                        nothing to send anybody to, and the customer would not
+                        be shown it anyway.
+                      */}
+                      {order.status === 'CONFIRMED' && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          title={t.admin.meetingPlace}
+                          aria-label={`${t.admin.meetingPlace} — ${order.reference}`}
+                          onClick={() => {
+                            setPlacing(order);
+                            setPlace({
+                              meetingAddress: order.meetingAddress ?? '',
+                              meetingMapUrl: order.meetingMapUrl ?? '',
+                              meetingNote: order.meetingNote ?? '',
+                            });
+                          }}
+                        >
+                          <MapPin className="size-4" aria-hidden="true" />
+                        </Button>
+                      )}
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setActive(order);
+                          setNextStatus('');
+                          setNote('');
+                        }}
+                      >
+                        {t.admin.updateStatus}
+                      </Button>
+
+                      {/* Not for a completed one: the API refuses it, and the
+                          button should not pretend otherwise. */}
+                      {order.status !== 'COMPLETED' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-muted-foreground hover:text-destructive"
+                          title={t.admin.deleteOrder}
+                          aria-label={`${t.admin.deleteOrder} — ${order.reference}`}
+                          onClick={() => setDeleting(order)}
+                        >
+                          <Trash2 className="size-4" aria-hidden="true" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -211,6 +303,78 @@ export default function AdminOrdersPage() {
           </Table>
         </div>
       )}
+
+      <Dialog open={Boolean(deleting)} onOpenChange={(open) => !open && setDeleting(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t.admin.deleteOrder}</DialogTitle>
+            <DialogDescription>
+              {deleting?.reference} · {t.admin.deleteOrderConfirm}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setDeleting(null)}>
+              {t.admin.deleteKeep}
+            </Button>
+            <Button variant="destructive" onClick={() => void removeOrder()} disabled={busyDelete}>
+              {t.admin.deleteYes}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(placing)} onOpenChange={(open) => !open && setPlacing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t.admin.meetingPlace}</DialogTitle>
+            <DialogDescription>
+              {placing?.reference} · {t.admin.meetingPlaceHint}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="meeting-address">{t.admin.meetingAddress}</Label>
+              <Input
+                id="meeting-address"
+                value={place.meetingAddress}
+                onChange={(event) => setPlace({ ...place, meetingAddress: event.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="meeting-map">{t.admin.meetingMapUrl}</Label>
+              <Input
+                id="meeting-map"
+                type="url"
+                inputMode="url"
+                placeholder="https://maps.google.com/…"
+                value={place.meetingMapUrl}
+                onChange={(event) => setPlace({ ...place, meetingMapUrl: event.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="meeting-note">{t.admin.meetingNote}</Label>
+              <Textarea
+                id="meeting-note"
+                rows={2}
+                value={place.meetingNote}
+                onChange={(event) => setPlace({ ...place, meetingNote: event.target.value })}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPlacing(null)}>
+              {t.common.cancel}
+            </Button>
+            <Button onClick={() => void savePlace()} disabled={savingPlace}>
+              {savingPlace ? t.common.saving : t.common.save}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={Boolean(active)} onOpenChange={(open) => !open && setActive(null)}>
         <DialogContent>
@@ -257,7 +421,7 @@ export default function AdminOrdersPage() {
             {detail.data && detail.data.statusHistory.length > 0 && (
               <div className="border-border border-t pt-3">
                 <h3 className="text-muted-foreground mb-2 text-xs font-semibold tracking-widest uppercase">
-                  History
+                  {t.admin.history}
                 </h3>
                 <ol className="space-y-1.5 text-xs">
                   {detail.data.statusHistory.map((entry) => (

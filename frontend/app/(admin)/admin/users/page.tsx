@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { toast } from 'sonner';
-import { Search, ShieldCheck, UserRound } from 'lucide-react';
+import { notify } from '@/lib/notify';
+import { Search, ShieldCheck, Trash2, UserRound } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { LoadingState, ErrorState, EmptyState } from '@/components/shared/states';
 import { useAsync } from '@/hooks/use-async';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
@@ -49,15 +57,39 @@ export default function AdminUsersPage() {
     { enabled: Boolean(token), isEmpty: (result) => result.data.length === 0 },
   );
 
+  /*
+   * Deleting an account, behind a confirmation because it takes the person's
+   * appointments with them. The API refuses the administrator's own account and
+   * the last one left — the button is hidden for the first, and the second is
+   * only knowable server-side.
+   */
+  const [deleting, setDeleting] = useState<AdminUser | null>(null);
+  const [busyDelete, setBusyDelete] = useState(false);
+
+  const remove = async () => {
+    if (!deleting) return;
+    setBusyDelete(true);
+    try {
+      await adminUsersService.remove(deleting.id, { token });
+      notify.success(t.admin.deleteUserDone, { description: deleting.email });
+      setDeleting(null);
+      users.reload();
+    } catch (error) {
+      notify.error(error instanceof Error ? error.message : t.common.error);
+    } finally {
+      setBusyDelete(false);
+    }
+  };
+
   const update = async (target: AdminUser, changes: { role?: string; status?: string }) => {
     try {
       await adminUsersService.update(target.id, changes, { token });
-      toast.success(t.common.save);
+      notify.success(t.common.save);
       users.reload();
     } catch (error) {
       // The backend refuses self-demotion and removing the last admin, and
       // returns a clear reason — surface it rather than a generic failure.
-      toast.error(error instanceof ApiError ? error.message : t.common.error);
+      notify.error(error instanceof ApiError ? error.message : t.common.error);
     }
   };
 
@@ -80,7 +112,7 @@ export default function AdminUsersPage() {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Name or email"
+              placeholder={t.admin.searchUsers}
               className="ps-9"
             />
           </div>
@@ -94,8 +126,8 @@ export default function AdminUsersPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t.common.all}</SelectItem>
-              <SelectItem value="CUSTOMER">CUSTOMER</SelectItem>
-              <SelectItem value="ADMIN">ADMIN</SelectItem>
+              <SelectItem value="CUSTOMER">{t.admin.roleCustomer}</SelectItem>
+              <SelectItem value="ADMIN">{t.admin.roleAdmin}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -108,8 +140,8 @@ export default function AdminUsersPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t.common.all}</SelectItem>
-              <SelectItem value="ACTIVE">ACTIVE</SelectItem>
-              <SelectItem value="SUSPENDED">SUSPENDED</SelectItem>
+              <SelectItem value="ACTIVE">{t.admin.statusActive}</SelectItem>
+              <SelectItem value="SUSPENDED">{t.admin.statusSuspended}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -131,7 +163,7 @@ export default function AdminUsersPage() {
                 <TableHead className="text-end">{t.dashboard.favorites}</TableHead>
                 <TableHead className="text-end">{t.dashboard.orders}</TableHead>
                 <TableHead>{t.admin.createdAt}</TableHead>
-                <TableHead className="text-end">Actions</TableHead>
+                <TableHead className="text-end">{t.admin.actions}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -156,7 +188,9 @@ export default function AdminUsersPage() {
                     </TableCell>
                     <TableCell className="text-sm">{entry.email}</TableCell>
                     <TableCell>
-                      <Badge variant={entry.role === 'ADMIN' ? 'default' : 'outline'}>{entry.role}</Badge>
+                      <Badge variant={entry.role === 'ADMIN' ? 'default' : 'outline'}>
+                        {entry.role === 'ADMIN' ? t.admin.roleAdmin : t.admin.roleCustomer}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -167,7 +201,7 @@ export default function AdminUsersPage() {
                             : 'bg-destructive/10 border-destructive/30'
                         }
                       >
-                        {entry.status}
+                        {entry.status === 'ACTIVE' ? t.admin.statusActive : t.admin.statusSuspended}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-end tabular-nums">{entry._count?.favorites ?? 0}</TableCell>
@@ -186,7 +220,7 @@ export default function AdminUsersPage() {
                             void update(entry, { role: entry.role === 'ADMIN' ? 'CUSTOMER' : 'ADMIN' })
                           }
                         >
-                          {entry.role === 'ADMIN' ? 'Make customer' : 'Make admin'}
+                          {entry.role === 'ADMIN' ? t.admin.makeCustomer : t.admin.makeAdmin}
                         </Button>
                         <Button
                           size="sm"
@@ -198,7 +232,18 @@ export default function AdminUsersPage() {
                             })
                           }
                         >
-                          {entry.status === 'ACTIVE' ? 'Suspend' : 'Reinstate'}
+                          {entry.status === 'ACTIVE' ? t.admin.suspend : t.admin.reinstate}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-muted-foreground hover:text-destructive"
+                          disabled={isSelf}
+                          title={t.admin.deleteUser}
+                          aria-label={`${t.admin.deleteUser} — ${entry.email}`}
+                          onClick={() => setDeleting(entry)}
+                        >
+                          <Trash2 className="size-4" aria-hidden="true" />
                         </Button>
                       </div>
                     </TableCell>
@@ -209,6 +254,25 @@ export default function AdminUsersPage() {
           </Table>
         </div>
       )}
+
+      <Dialog open={Boolean(deleting)} onOpenChange={(open) => !open && setDeleting(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t.admin.deleteUser}</DialogTitle>
+            <DialogDescription>
+              {deleting?.email} · {t.admin.deleteUserConfirm}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setDeleting(null)}>
+              {t.admin.deleteKeep}
+            </Button>
+            <Button variant="destructive" onClick={() => void remove()} disabled={busyDelete}>
+              {t.admin.deleteYes}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

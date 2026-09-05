@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
@@ -9,6 +9,7 @@ import type { AuthenticatedUser } from '../common/types/authenticated-request';
 import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { SetMeetingPlaceDto } from './dto/set-meeting-place.dto';
 import { QueryOrdersDto } from './dto/query-orders.dto';
 
 @ApiTags('orders')
@@ -43,6 +44,15 @@ export class OrdersController {
     return this.orders.findMine(user.id, query);
   }
 
+  @Get('mine/for-car/:carId')
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Which colours of one vehicle this customer already has an appointment for',
+  })
+  mineForCar(@CurrentUser() user: AuthenticatedUser, @Param('carId') carId: string) {
+    return this.orders.mineForCar(user.id, carId);
+  }
+
   @Get('admin/all')
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
@@ -72,6 +82,40 @@ export class OrdersController {
   async transitions(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
     const order = await this.orders.findOne(id, user);
     return { status: order.status, allowed: this.orders.allowedTransitions(order.status) };
+  }
+
+  /**
+   * The customer's own withdrawal. Not the admin route with a looser guard:
+   * that one can move an order to any status, and this may only cancel.
+   */
+  @Patch(':id/cancel')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Cancel your own appointment' })
+  cancelMine(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.orders.cancelMine(id, user);
+  }
+
+  /**
+   * Where a confirmed customer should come. Administration only, and separate
+   * from the status: the two are decided at different moments.
+   */
+  /**
+   * Removes an appointment. The service decides who may: an administrator any
+   * of them, a customer only their own and only once it is cancelled.
+   */
+  @Delete(':id')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete an appointment' })
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.orders.remove(id, user);
+  }
+
+  @Patch(':id/meeting')
+  @Roles(Role.ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Set the meeting place for an appointment (admin)' })
+  setMeetingPlace(@Param('id') id: string, @Body() dto: SetMeetingPlaceDto) {
+    return this.orders.setMeetingPlace(id, dto);
   }
 
   @Patch(':id/status')

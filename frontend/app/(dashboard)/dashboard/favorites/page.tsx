@@ -1,6 +1,6 @@
 'use client';
 
-import { toast } from 'sonner';
+import { notify } from '@/lib/notify';
 import { Heart, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CarRow } from '@/components/dashboard/car-row';
@@ -26,10 +26,10 @@ export default function FavoritesPage() {
   const remove = async (carId: string) => {
     try {
       await favoritesService.remove(carId, { token });
-      toast.success(t.dashboard.removeFavorite);
+      notify.success(t.dashboard.removeFavorite);
       favorites.reload();
     } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : t.common.error);
+      notify.error(error instanceof ApiError ? error.message : t.common.error);
     }
   };
 

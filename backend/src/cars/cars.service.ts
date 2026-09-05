@@ -9,7 +9,9 @@ import type { Configuration } from '../config/configuration';
 import { CarSort, QueryCarsDto } from './dto/query-cars.dto';
 import type { CarImageDto } from './dto/car-spec-groups.dto';
 import type { CreateCarDto } from './dto/create-car.dto';
+import type { CarTranslationDto } from './dto/car-spec-groups.dto';
 import type { UpdateCarDto } from './dto/update-car.dto';
+import { colourAvailable, vehicleAvailable, withoutStockCounts } from './availability';
 
 /** Public listing shape — deliberately lighter than the detail payload. */
 const listSelect = {
@@ -40,9 +42,26 @@ const listSelect = {
   },
   colors: {
     where: { kind: ColorKind.EXTERIOR },
-    select: { id: true, name: true, hexCode: true, finish: true, isDefault: true, imageUrl: true },
+    select: {
+      id: true,
+      name: true,
+      hexCode: true,
+      finish: true,
+      isDefault: true,
+      imageUrl: true,
+      stock: true,
+    },
     orderBy: { sortOrder: 'asc' },
   },
+  /*
+   * Only the one line a card prints, in the other languages.
+   *
+   * The whole overlay would be several paragraphs per car for a list of
+   * twenty-four; this is the short description and nothing else, so a French
+   * visitor reads the same French sentence on the card and on the page it
+   * leads to.
+   */
+  translations: { select: { locale: true, marketingDescription: true } },
   _count: { select: { favorites: true } },
 } satisfies Prisma.CarSelect;
 
@@ -161,7 +180,51 @@ export class CarsService {
       this.prisma.car.count({ where }),
     ]);
 
-    return paginate(rows, total, query.page, query.pageSize);
+    return paginate(rows.map((row) => this.forCustomer(row)), total, query.page, query.pageSize);
+  }
+
+  /**
+   * Strips the stock counts and states availability instead.
+   *
+   * Applied on the way out of every route a customer can reach, rather than
+   * left out of the queries: the count has to be read to work availability out,
+   * and a projection that fetches it and forgets to drop it is a projection
+   * that publishes it. One place to get right.
+   */
+  /**
+   * The rows to write for a vehicle's translated copy.
+   *
+   * An overlay whose every field is blank is not stored: an administrator who
+   * opens the French block, types nothing and saves should leave no trace, and
+   * a row of four nulls would only make the fallback do more work to reach the
+   * same answer.
+   */
+  private translationRows(translations: CarTranslationDto[]) {
+    const blank = (value?: string) => (value?.trim() ? value.trim() : null);
+
+    return translations
+      .map((entry) => ({
+        locale: entry.locale,
+        marketingDescription: blank(entry.marketingDescription),
+        description: blank(entry.description),
+        exteriorDescription: blank(entry.exteriorDescription),
+        interiorDescription: blank(entry.interiorDescription),
+      }))
+      .filter(
+        (row) =>
+          row.marketingDescription ??
+          row.description ??
+          row.exteriorDescription ??
+          row.interiorDescription,
+      );
+  }
+
+  private forCustomer<T extends { colors: { stock?: number | null }[] }>(car: T) {
+    return {
+      ...car,
+      colors: withoutStockCounts(car.colors),
+      isAvailable: vehicleAvailable(car.colors),
+    };
   }
 
   /**
@@ -230,16 +293,17 @@ export class CarsService {
       throw new NotFoundException('Vehicle not found');
     }
 
-    return car;
+    return this.forCustomer(car);
   }
 
   async findFeatured(limit = 6) {
-    return this.prisma.car.findMany({
+    const rows = await this.prisma.car.findMany({
       where: { ...this.publicScope, isFeatured: true },
       select: listSelect,
       orderBy: [{ publishedAt: 'desc' }],
       take: limit,
     });
+    return rows.map((row) => this.forCustomer(row));
   }
 
   /** Admin listing — includes drafts and archived vehicles. */
@@ -247,8 +311,34 @@ export class CarsService {
     return this.findAll(query, { deletedAt: null });
   }
 
+  /**
+   * The administration's own read, counts included — and not `findOne`, which
+   * strips them for customers. The owner needs the number to type over.
+   */
   async findOneForAdmin(idOrSlug: string) {
-    return this.findOne(idOrSlug, {});
+    const car = await this.prisma.car.findFirst({
+      where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
+      include: detailInclude,
+    });
+
+    if (!car) {
+      throw new NotFoundException('Vehicle not found');
+    }
+
+    return this.forAdmin(car);
+  }
+
+  /**
+   * What the administration sees: the counts, and the availability they add up
+   * to. Used by its read and by both of its writes, so a vehicle looks the same
+   * immediately after saving as it does when the page is opened again.
+   */
+  private forAdmin<T extends { colors: { stock?: number | null }[] }>(car: T) {
+    return {
+      ...car,
+      isAvailable: vehicleAvailable(car.colors),
+      colors: car.colors.map((colour) => ({ ...colour, isAvailable: colourAvailable(colour) })),
+    };
   }
 
   private async uniqueSlug(brandId: string, model: string, year: number, trim?: string | null, excludeId?: string) {
@@ -337,6 +427,9 @@ export class CarsService {
         ...(dto.technology ? { technology: { create: dto.technology } } : {}),
         ...(dto.safety ? { safety: { create: dto.safety } } : {}),
         ...(dto.dimensions ? { dimensions: { create: dto.dimensions } } : {}),
+        ...(dto.translations?.length
+          ? { translations: { create: this.translationRows(dto.translations) } }
+          : {}),
         ...(dto.colors?.length
           ? {
               colors: {
@@ -349,6 +442,7 @@ export class CarsService {
                   priceDelta: color.priceDelta !== undefined ? new Prisma.Decimal(color.priceDelta) : null,
                   isDefault: color.isDefault ?? index === 0,
                   sortOrder: color.sortOrder ?? index,
+                  stock: color.stock ?? null,
                 })),
               },
             }
@@ -365,7 +459,8 @@ export class CarsService {
     if (dto.images?.length) {
       const withImages = await this.prisma.$transaction(async (tx) => {
         await this.writeImages(tx, car.id, dto.images!);
-        return tx.car.findUniqueOrThrow({ where: { id: car.id }, include: detailInclude });
+        const saved = await tx.car.findUniqueOrThrow({ where: { id: car.id }, include: detailInclude });
+        return this.forAdmin(saved);
       });
 
       this.logger.log(`Car ${car.id} (${car.slug}) created by admin ${adminId}`);
@@ -504,6 +599,15 @@ export class CarsService {
      * destroyed every interior colour on the car each time it was saved — with
      * no way to notice, since the form never showed them in the first place.
      */
+    /*
+     * Supplying the overlays replaces them all. The form always sends the three
+     * blocks it shows, so a language the admin emptied is one that should stop
+     * being stored rather than one that was not mentioned.
+     */
+    if (dto.translations) {
+      data.translations = { deleteMany: {}, create: this.translationRows(dto.translations) };
+    }
+
     if (dto.colors) {
       const kinds = [...new Set(dto.colors.map((color) => color.kind ?? ColorKind.EXTERIOR))];
 
@@ -518,6 +622,7 @@ export class CarsService {
           priceDelta: color.priceDelta !== undefined ? new Prisma.Decimal(color.priceDelta) : null,
           isDefault: color.isDefault ?? index === 0,
           sortOrder: color.sortOrder ?? index,
+          stock: color.stock ?? null,
         })),
       };
     }
@@ -531,7 +636,8 @@ export class CarsService {
         await this.writeImages(tx, id, dto.images);
       }
 
-      return tx.car.findUniqueOrThrow({ where: { id }, include: detailInclude });
+      const saved = await tx.car.findUniqueOrThrow({ where: { id }, include: detailInclude });
+      return this.forAdmin(saved);
     });
 
     this.logger.log(`Car ${id} updated by admin ${adminId}`);

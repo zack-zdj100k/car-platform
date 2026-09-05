@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useId, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { useCallback, useId, useMemo, useRef, useState } from 'react';
+import { notify } from '@/lib/notify';
 import { Check, Loader2, Rotate3d, Trash2, Upload } from 'lucide-react';
 import { MediaImage } from '@/components/shared/media-image';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,8 @@ import { uploadsService } from '@/services/uploads.service';
 import { uploadToast, type UploadToastId } from '@/lib/upload-toast';
 import { ApiError } from '@/services/api-client';
 import { useAuth } from '@/providers/auth-provider';
-import { SPIN_MINIMUM, SPIN_PLAN } from '@/lib/spin-plan';
+import { useLocale } from '@/providers/locale-provider';
+import { SPIN_MINIMUM, SPIN_PLAN, spinPlan } from '@/lib/spin-plan';
 import { cn } from '@/lib/utils';
 import type { CarImageDraft } from './image-uploader';
 
@@ -47,6 +48,10 @@ export function SpinUploader({
   onChange: (next: CarImageDraft[]) => void;
 }) {
   const { token } = useAuth();
+  const { t, locale, format } = useLocale();
+  /* Where to stand, in the administrator's language. The list is the same
+     length in all three — only the wording changes. */
+  const plan = useMemo(() => spinPlan(locale), [locale]);
   const fieldId = useId();
   const slotInputs = useRef<Record<number, HTMLInputElement | null>>({});
   const bulkInput = useRef<HTMLInputElement | null>(null);
@@ -54,7 +59,7 @@ export function SpinUploader({
   const [bulk, setBulk] = useState<{ done: number; total: number } | null>(null);
 
   const at = (index: number) => frames.find((frame) => (frame.sortOrder ?? 0) === index);
-  const filled = SPIN_PLAN.filter((slot) => at(slot.index)).length;
+  const filled = plan.filter((slot) => at(slot.index)).length;
 
   /** Puts one photograph in one slot, replacing whatever was there. */
   const uploadToSlot = useCallback(
@@ -78,17 +83,19 @@ export function SpinUploader({
         void previous; // Reclaimed by the form after the save, not here.
       } catch (error) {
         uploadToast.error({
-          title: `Frame ${index + 1} was not uploaded`,
+          title: format(t.admin.spinFrameFailed, { number: index + 1 }),
           description:
-            error instanceof ApiError ? error.message : `${file.name} could not be uploaded.`,
-          primaryText: 'Try again',
+            error instanceof ApiError
+              ? error.message
+              : format(t.admin.spinFileFailed, { name: file.name }),
+          primaryText: t.common.retry,
           onPrimary: () => slotInputs.current[index]?.click(),
         });
       } finally {
         setBusySlot(null);
       }
     },
-    [frames, onChange, token],
+    [frames, onChange, token, t, format],
   );
 
   /** A whole set at once, in file-name order, filling slot 1 upwards. */
@@ -100,7 +107,7 @@ export function SpinUploader({
         .slice(0, SPIN_PLAN.length);
 
       if (files.length === 0) {
-        toast.error('Those files are not images.');
+        notify.error(t.admin.notImages);
         return;
       }
 
@@ -116,8 +123,8 @@ export function SpinUploader({
           setBulk({ done, total });
           card = uploadToast.progress(
             {
-              title: 'Uploading the 360° set',
-              description: `${done} of ${total} photographs sent. Keep this page open until it finishes.`,
+              title: t.admin.spinUploading,
+              description: format(t.admin.spinProgress, { done, total }),
               progress: (done / total) * 100,
             },
             card,
@@ -136,23 +143,23 @@ export function SpinUploader({
 
         uploadToast.success(
           {
-            title: 'The set is uploaded',
-            description: `${results.length} frames, in order. Save the car to attach them to it.`,
-            primaryText: 'Done',
+            title: t.admin.spinUploaded,
+            description: format(t.admin.spinInOrder, { count: results.length }),
+            primaryText: t.common.done,
           },
           card,
         );
       } catch (error) {
         uploadToast.error(
           {
-            title: 'The set was not uploaded',
+            title: t.admin.spinFailed,
             description:
               error instanceof ApiError
-                ? `${error.message} Nothing was changed — your previous set is untouched.`
-                : 'Nothing was changed. Your previous set is untouched.',
-            primaryText: 'Try again',
+                ? `${error.message} ${t.admin.spinUntouched}`
+                : t.admin.spinUnchanged,
+            primaryText: t.common.retry,
             onPrimary: () => bulkInput.current?.click(),
-            secondaryText: 'Cancel',
+            secondaryText: t.common.cancel,
           },
           card,
         );
@@ -161,7 +168,7 @@ export function SpinUploader({
       }
     },
     // `frames` is no longer read here: a batch replaces the set outright.
-    [onChange, token],
+    [onChange, token, t, format],
   );
 
   // Both only edit the list. Files are reclaimed by the form after a save.
@@ -171,7 +178,7 @@ export function SpinUploader({
 
   const clearAll = () => {
     onChange([]);
-    uploadToast.success({ title: '360° set removed', description: 'Save the car to confirm it.' });
+    uploadToast.success({ title: t.admin.spinRemoved, description: t.admin.spinSaveToConfirm });
   };
 
   return (
@@ -179,12 +186,10 @@ export function SpinUploader({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-2 text-sm font-medium">
           <Rotate3d className="text-primary size-4" aria-hidden="true" />
-          <span>
-            {filled} of {SPIN_PLAN.length} positions filled
-          </span>
+          <span>{format(t.admin.spinPositionsFilled, { filled, total: plan.length })}</span>
           {filled > 0 && filled < SPIN_MINIMUM && (
             <span className="text-muted-foreground text-xs font-normal">
-              — at least {SPIN_MINIMUM} before it turns properly
+              {format(t.admin.spinMinimum, { minimum: SPIN_MINIMUM })}
             </span>
           )}
         </p>
@@ -219,7 +224,7 @@ export function SpinUploader({
             ) : (
               <>
                 <Upload className="size-4" aria-hidden="true" />
-                All at once
+                {t.admin.spinAllAtOnce}
               </>
             )}
           </Button>
@@ -227,14 +232,14 @@ export function SpinUploader({
           {filled > 0 && bulk === null && (
             <Button type="button" variant="ghost" size="sm" onClick={clearAll}>
               <Trash2 className="size-4" aria-hidden="true" />
-              Clear
+              {t.admin.spinClear}
             </Button>
           )}
         </div>
       </div>
 
       <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-        {SPIN_PLAN.map((slot) => {
+        {plan.map((slot) => {
           const image = at(slot.index);
           const inputId = `${fieldId}-slot-${slot.index}`;
 
@@ -253,7 +258,7 @@ export function SpinUploader({
                 {image ? (
                   <Check className="text-primary size-3.5 shrink-0" aria-hidden="true" />
                 ) : (
-                  <span className="text-muted-foreground text-[10px]">empty</span>
+                  <span className="text-muted-foreground text-[10px]">{t.admin.spinEmpty}</span>
                 )}
               </div>
 
@@ -261,7 +266,12 @@ export function SpinUploader({
                 type="button"
                 disabled={bulk !== null}
                 onClick={() => slotInputs.current[slot.index]?.click()}
-                aria-label={`Frame ${slot.index + 1} at ${slot.angle} degrees. ${slot.position}. ${slot.sees}.${image ? ' Filled — choose to replace.' : ''}`}
+                aria-label={`${format(t.admin.spinSlotLabel, {
+                  number: slot.index + 1,
+                  angle: slot.angle,
+                  position: slot.position,
+                  sees: slot.sees,
+                })}${image ? ` ${t.admin.spinFilled}` : ''}`}
                 className="bg-secondary focus-visible:outline-primary relative block aspect-4/3 w-full overflow-hidden rounded-md focus-visible:outline-2 focus-visible:outline-offset-2"
               >
                 {image ? (
@@ -306,7 +316,7 @@ export function SpinUploader({
                   className="h-6 w-full text-[10px]"
                   onClick={() => clearSlot(slot.index)}
                 >
-                  Remove
+                  {t.admin.remove}
                 </Button>
               )}
             </li>

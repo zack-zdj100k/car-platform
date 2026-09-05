@@ -86,6 +86,32 @@ export const ordersService = {
   detail(id: string, options: RequestOptions = {}) {
     return apiRequest<OrderDetail>(`/orders/${id}`, options);
   },
+  /**
+   * Which colours of one vehicle this customer already has an open appointment
+   * for. Ids only — enough for the vehicle's page to decide what to offer, and
+   * nothing more.
+   */
+  forCar(carId: string, options: RequestOptions = {}) {
+    return apiRequest<{ colorIds: string[]; withoutColour: boolean }>(
+      `/orders/mine/for-car/${carId}`,
+      options,
+    );
+  },
+  /**
+   * Withdraws one's own appointment. Not the administrator's status route with
+   * a different argument — the API keeps them apart, and this one can only ever
+   * cancel, and only the caller's own.
+   */
+  cancel(id: string, options: RequestOptions = {}) {
+    return apiRequest<OrderDetail>(`/orders/${id}/cancel`, { ...options, method: 'PATCH' });
+  },
+  /**
+   * Clears a cancelled appointment out of one's own list. The API refuses
+   * anything still open — withdrawing and erasing are different acts.
+   */
+  remove(id: string, options: RequestOptions = {}) {
+    return apiRequest<{ deleted: boolean }>(`/orders/${id}`, { ...options, method: 'DELETE' });
+  },
 };
 
 export const profileService = {
@@ -94,6 +120,10 @@ export const profileService = {
   },
   update(body: { fullName?: string; phone?: string; profileImage?: string; locale?: 'EN' | 'FR' | 'AR' }, options: RequestOptions = {}) {
     return apiRequest<UserProfile>('/users/me', { ...options, method: 'PATCH', body });
+  },
+  /** Takes the photograph off the account, and off the server. */
+  removePicture(options: RequestOptions = {}) {
+    return apiRequest<UserProfile>('/users/me/picture', { ...options, method: 'DELETE' });
   },
   changePassword(
     body: { currentPassword: string; newPassword: string; confirmPassword: string },

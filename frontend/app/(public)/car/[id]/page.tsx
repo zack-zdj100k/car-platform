@@ -1,5 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { serverDictionary, serverLocale } from '@/lib/i18n/server';
+import { carCopy } from '@/lib/i18n/car-copy';
 import { CarDetailView } from '@/components/cars/car-detail-view';
 import { RecordView } from '@/components/cars/record-view';
 import { carsService } from '@/services/cars.service';
@@ -27,15 +29,21 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
+  const locale = await serverLocale();
   const car = await loadCar(id).catch(() => null);
-  if (!car) return { title: 'Vehicle not found' };
+  if (!car) return { title: (await serverDictionary()).common.pageNotFound };
+
+  const name = `${car.brand.name} ${car.model} ${car.year}`;
+  /* The showroom's own words, in the reader's language — the same overlay the
+     page below uses, so the tab and the page never disagree. */
+  const description = carCopy(car, locale).marketingDescription ?? undefined;
 
   return {
-    title: `${car.brand.name} ${car.model} ${car.year}`,
-    description: car.marketingDescription ?? undefined,
+    title: name,
+    description,
     openGraph: {
-      title: `${car.brand.name} ${car.model} ${car.year}`,
-      description: car.marketingDescription ?? undefined,
+      title: name,
+      description,
       images: car.images[0] ? [car.images[0].url] : undefined,
     },
   };

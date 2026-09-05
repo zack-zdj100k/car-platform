@@ -1,11 +1,16 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { serverDictionary } from '@/lib/i18n/server';
 import { OrderForm } from '@/components/orders/order-form';
 import { carsService } from '@/services/cars.service';
+import { fetchPublicSettings, readSetting } from '@/lib/server-api';
 import { ApiError } from '@/services/api-client';
 import type { CarDetail } from '@/types/api';
 
-export const metadata: Metadata = { title: 'Order request', robots: { index: false, follow: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await serverDictionary();
+  return { title: t.meta.appointmentTitle, robots: { index: false, follow: false } };
+}
 
 /** Order form route from the final route map: /car/:id/order (spec §24). */
 export default async function OrderPage({
@@ -17,6 +22,11 @@ export default async function OrderPage({
 }) {
   const [{ id }, { color }] = await Promise.all([params, searchParams]);
 
+  // The number the confirmation offers to open a conversation on. Read here
+  // rather than in the form: it is a setting, and settings are the server's.
+  const settings = await fetchPublicSettings();
+  const whatsappPhone = readSetting(settings, 'general', 'site.contactPhone');
+
   // Data is resolved first, so no JSX is constructed inside the try block.
   let car: CarDetail;
   try {
@@ -26,5 +36,5 @@ export default async function OrderPage({
     throw error;
   }
 
-  return <OrderForm car={car} initialColorId={color} />;
+  return <OrderForm car={car} initialColorId={color} whatsappPhone={whatsappPhone} />;
 }

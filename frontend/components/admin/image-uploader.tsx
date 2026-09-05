@@ -2,7 +2,7 @@
 
 import { MediaImage } from '@/components/shared/media-image';
 import { useCallback, useId, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { notify } from '@/lib/notify';
 import { GripVertical, ImagePlus, Loader2, Star, Trash2, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ import {
 import { uploadsService } from '@/services/uploads.service';
 import { ApiError } from '@/services/api-client';
 import { useAuth } from '@/providers/auth-provider';
+import { useLocale } from '@/providers/locale-provider';
 import { cn } from '@/lib/utils';
 import type { ImageKind } from '@/types/api';
 
@@ -57,13 +58,7 @@ export interface CarImageDraft {
  * because they are always photographs *of a colour*, uploaded beside that
  * colour by ColourMedia.
  */
-const KIND_LABELS: Record<'MAIN' | 'GALLERY' | 'EXTERIOR' | 'INTERIOR' | 'WHEEL', string> = {
-  MAIN: 'Main photo',
-  GALLERY: 'Gallery',
-  EXTERIOR: 'Exterior',
-  INTERIOR: 'Interior',
-  WHEEL: 'Wheels',
-};
+const KINDS = ['MAIN', 'GALLERY', 'EXTERIOR', 'INTERIOR', 'WHEEL'] as const;
 
 const ACCEPTED = 'image/jpeg,image/png,image/webp,image/avif,image/gif';
 
@@ -85,7 +80,17 @@ export function ImageUploader({
   onChange: (next: CarImageDraft[]) => void;
 }) {
   const { token } = useAuth();
+  const { t, format } = useLocale();
   const inputId = useId();
+
+  /* The kinds, named in the administrator's language. */
+  const kindLabel: Record<(typeof KINDS)[number], string> = {
+    MAIN: t.admin.mainPhoto,
+    GALLERY: t.admin.gallery,
+    EXTERIOR: t.car.exterior,
+    INTERIOR: t.car.interior,
+    WHEEL: t.car.wheels,
+  };
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -94,7 +99,7 @@ export function ImageUploader({
     async (files: FileList | File[]) => {
       const list = Array.from(files).filter((file) => file.type.startsWith('image/'));
       if (list.length === 0) {
-        toast.error('Those files are not images.');
+        notify.error(t.admin.notImages);
         return;
       }
 
@@ -114,8 +119,8 @@ export function ImageUploader({
             filename: result.filename,
           });
         } catch (error) {
-          toast.error(
-            `${file.name}: ${error instanceof ApiError ? error.message : 'could not be uploaded'}`,
+          notify.error(
+            `${file.name}: ${error instanceof ApiError ? error.message : t.admin.couldNotUpload}`,
           );
         } finally {
           setUploading((count) => count - 1);
@@ -124,10 +129,10 @@ export function ImageUploader({
 
       if (uploaded.length > 0) {
         onChange([...images, ...uploaded]);
-        toast.success(`${uploaded.length} image${uploaded.length === 1 ? '' : 's'} uploaded`);
+        notify.success(format(t.admin.uploadedCount, { count: uploaded.length }));
       }
     },
-    [images, onChange, token],
+    [images, onChange, token, t, format],
   );
 
   const update = (index: number, patch: Partial<CarImageDraft>) => {
@@ -204,10 +209,8 @@ export function ImageUploader({
           <ImagePlus className="size-6" aria-hidden="true" />
         </span>
 
-        <p className="mt-3 text-sm font-medium">Drag car photos here</p>
-        <p className="text-muted-foreground mt-1 text-xs">
-          JPG, PNG, WebP, AVIF or GIF — up to 8 MB each
-        </p>
+        <p className="mt-3 text-sm font-medium">{t.admin.dropPhotos}</p>
+        <p className="text-muted-foreground mt-1 text-xs">{t.admin.fileTypes}</p>
 
         <Button
           type="button"
@@ -221,13 +224,13 @@ export function ImageUploader({
           ) : (
             <Upload className="size-4" aria-hidden="true" />
           )}
-          {uploading > 0 ? `Uploading ${uploading}…` : 'Choose photos'}
+          {uploading > 0 ? format(t.admin.uploadingCount, { count: uploading }) : t.admin.choosePhotos}
         </Button>
       </div>
 
       {images.length > 0 && !hasMain && (
         <p className="border-warning/40 bg-warning/10 rounded-lg border p-3 text-xs">
-          No main photo is set. The listing card uses the main photo — pick one with the star.
+          {t.admin.noMainPhoto}
         </p>
       )}
 
@@ -242,7 +245,7 @@ export function ImageUploader({
               <div className="bg-secondary relative size-24 shrink-0 overflow-hidden rounded-lg">
                 <MediaImage
                   src={image.url}
-                  alt={image.alt || 'Uploaded car photo'}
+                  alt={image.alt || t.admin.uploadedPhoto}
                   fill
                   sizes="96px"
                   className="object-cover"
@@ -250,7 +253,7 @@ export function ImageUploader({
                 {image.kind === 'MAIN' && (
                   <Badge className="absolute start-1 top-1 gap-1 px-1.5 py-0 text-[10px]">
                     <Star className="size-2.5 fill-current" aria-hidden="true" />
-                    Main
+                    {t.admin.main}
                   </Badge>
                 )}
               </div>
@@ -258,7 +261,7 @@ export function ImageUploader({
               <div className="grid min-w-56 flex-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor={`${inputId}-kind-${index}`} className="text-xs">
-                    Type
+                    {t.admin.photoType}
                   </Label>
                   <Select
                     value={image.kind}
@@ -268,9 +271,9 @@ export function ImageUploader({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {(Object.keys(KIND_LABELS) as (keyof typeof KIND_LABELS)[]).map((kind) => (
+                      {KINDS.map((kind) => (
                         <SelectItem key={kind} value={kind}>
-                          {KIND_LABELS[kind]}
+                          {kindLabel[kind]}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -279,12 +282,12 @@ export function ImageUploader({
 
                 <div className="space-y-1.5">
                   <Label htmlFor={`${inputId}-alt-${index}`} className="text-xs">
-                    Description for screen readers
+                    {t.admin.altText}
                   </Label>
                   <Input
                     id={`${inputId}-alt-${index}`}
                     value={image.alt}
-                    placeholder="BYD Seal, front three-quarter view"
+                    placeholder={t.admin.altPlaceholder}
                     onChange={(event) => update(index, { alt: event.target.value })}
                   />
                 </div>
@@ -295,8 +298,8 @@ export function ImageUploader({
                   type="button"
                   size="icon"
                   variant="ghost"
-                  aria-label="Set as main photo"
-                  title="Set as main photo"
+                  aria-label={t.admin.setMain}
+                  title={t.admin.setMain}
                   disabled={image.kind === 'MAIN'}
                   onClick={() => makeMain(index)}
                 >
@@ -306,7 +309,7 @@ export function ImageUploader({
                   type="button"
                   size="icon"
                   variant="ghost"
-                  aria-label="Move up"
+                  aria-label={t.admin.moveUp}
                   disabled={index === 0}
                   onClick={() => move(index, -1)}
                 >
@@ -316,7 +319,7 @@ export function ImageUploader({
                   type="button"
                   size="icon"
                   variant="ghost"
-                  aria-label="Remove photo"
+                  aria-label={t.admin.removePhoto}
                   onClick={() => remove(index)}
                 >
                   <Trash2 className="text-destructive size-4" aria-hidden="true" />

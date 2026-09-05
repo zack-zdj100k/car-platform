@@ -78,6 +78,16 @@ export interface CarColor {
   imageUrl?: string | null;
   isDefault: boolean;
   sortOrder?: number;
+  /**
+   * Whether this colour can still be booked.
+   *
+   * The API sends this instead of the count on every public route — a customer
+   * is told what is available, not how thin it is. The administration's own
+   * routes send `stock` as well, which is where the number belongs.
+   */
+  isAvailable?: boolean;
+  /** Administration only: how many are on the floor. Null means "not counted". */
+  stock?: number | null;
 }
 
 export interface CarEngine {
@@ -212,6 +222,15 @@ export interface CarDimensions {
 
 /** Listing shape returned by GET /cars. */
 export interface CarListItem {
+  /**
+   * Whether any colour of this vehicle can still be booked.
+   *
+   * False only when every counted colour is sold out — and a vehicle in that
+   * state stays in the catalogue, readable and photographed, with no way to
+   * book it. Hiding it would throw away the page somebody found last week over
+   * a stock level that changes on Monday.
+   */
+  isAvailable?: boolean;
   id: string;
   slug: string;
   model: string;
@@ -234,12 +253,23 @@ export interface CarListItem {
   engine: Pick<CarEngine, 'fuelType' | 'transmission' | 'drivetrain' | 'powerHp' | 'displacementL'> | null;
   images: Pick<CarImage, 'url' | 'alt'>[];
   // `imageUrl` lets the card swap its photograph when a colour is chosen.
-  colors: Pick<CarColor, 'id' | 'name' | 'hexCode' | 'finish' | 'isDefault' | 'imageUrl'>[];
+  colors: Pick<CarColor, 'id' | 'name' | 'hexCode' | 'finish' | 'isDefault' | 'imageUrl' | 'isAvailable'>[];
+  /** The card's one line, in the other languages. Absent fields fall back. */
+  translations?: { locale: 'EN' | 'FR' | 'AR'; marketingDescription: string | null }[];
   _count?: { favorites: number };
 }
 
 /** Full detail returned by GET /cars/:idOrSlug. */
 export interface CarDetail {
+  /**
+   * Whether any colour of this vehicle can still be booked.
+   *
+   * False only when every counted colour is sold out — and a vehicle in that
+   * state stays in the catalogue, readable and photographed, with no way to
+   * book it. Hiding it would throw away the page somebody found last week over
+   * a stock level that changes on Monday.
+   */
+  isAvailable?: boolean;
   id: string;
   slug: string;
   model: string;
@@ -274,7 +304,14 @@ export interface CarDetail {
   dimensions: CarDimensions | null;
   colors: CarColor[];
   images: CarImage[];
-  translations: { locale: 'EN' | 'FR' | 'AR'; marketingDescription: string | null; description: string | null }[];
+  /** Optional per-language overlays for the authored copy; empty fields fall back to the car's own. */
+  translations: {
+    locale: 'EN' | 'FR' | 'AR';
+    marketingDescription: string | null;
+    description?: string | null;
+    exteriorDescription?: string | null;
+    interiorDescription?: string | null;
+  }[];
   _count?: { favorites: number; views: number };
 }
 
@@ -367,6 +404,16 @@ export interface OrderSummary {
   createdAt: string;
   updatedAt: string;
   car: Pick<CarListItem, 'id' | 'slug' | 'model' | 'year' | 'price' | 'currency' | 'brand' | 'images'>;
+  /**
+   * Where the customer should come, and when.
+   *
+   * Only ever present on a confirmed appointment: the API removes it from
+   * every other status before the customer sees the record, because an address
+   * on a request nobody has answered sends somebody to a closed door.
+   */
+  meetingAddress?: string | null;
+  meetingMapUrl?: string | null;
+  meetingNote?: string | null;
 }
 
 /**

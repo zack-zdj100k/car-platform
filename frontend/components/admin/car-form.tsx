@@ -21,8 +21,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { useAuth } from '@/providers/auth-provider';
 import { BrandPicker } from '@/components/admin/brand-picker';
 import { useLocale } from '@/providers/locale-provider';
+import { specLabels, type SpecKey } from '@/lib/i18n/spec';
+import { LOCALES, LOCALE_META, type Locale } from '@/lib/i18n/config';
 import { carsService } from '@/services/cars.service';
 import { ApiError } from '@/services/api-client';
+import { formatAcronym, humaniseEnum } from '@/lib/format';
 import { uploadsService } from '@/services/uploads.service';
 import { uploadToast } from '@/lib/upload-toast';
 import { ImageUploader, type CarImageDraft } from './image-uploader';
@@ -46,77 +49,85 @@ const FUEL_TYPES = ['PETROL','DIESEL','HYBRID','PLUG_IN_HYBRID','ELECTRIC','LPG'
 const TRANSMISSIONS = ['MANUAL','AUTOMATIC','CVT','DCT','AMT','SINGLE_SPEED'] as const;
 const DRIVETRAINS = ['FWD','RWD','AWD','FOUR_WD'] as const;
 
-type TextField = { key: string; label: string; textarea?: boolean };
+/*
+ * A field is a database column plus the name of the thing it holds.
+ *
+ * The name is a key into the shared specification labels rather than English
+ * text, so the editor's field and the row it fills on the vehicle's page carry
+ * the same wording — and both follow the language the administrator chose.
+ */
+type TextField = { key: string; spec: SpecKey; textarea?: boolean };
+type Labels = Record<SpecKey, string>;
 
 const EXTERIOR_FIELDS: TextField[] = [
-  { key: 'description', label: 'Exterior description', textarea: true },
-  { key: 'frontGrille', label: 'Front grille' },
-  { key: 'headlights', label: 'Headlights' },
-  { key: 'daytimeRunningLights', label: 'Daytime running lights' },
-  { key: 'frontBumper', label: 'Front bumper' },
-  { key: 'hoodDesign', label: 'Hood' },
-  { key: 'sideProfile', label: 'Side profile' },
-  { key: 'doorDesign', label: 'Doors' },
-  { key: 'sideMirrors', label: 'Mirrors' },
-  { key: 'wheelArches', label: 'Wheel arches' },
-  { key: 'alloyWheels', label: 'Alloy wheels' },
-  { key: 'rearLights', label: 'Rear lights' },
-  { key: 'rearBumper', label: 'Rear bumper' },
-  { key: 'exhaust', label: 'Exhaust' },
-  { key: 'roofline', label: 'Roofline' },
-  { key: 'roof', label: 'Roof' },
-  { key: 'spoiler', label: 'Spoiler' },
-  { key: 'bodyLines', label: 'Body lines' },
-  { key: 'aerodynamics', label: 'Aerodynamics' },
+  { key: 'description', spec: 'exteriorDescription', textarea: true },
+  { key: 'frontGrille', spec: 'frontGrille' },
+  { key: 'headlights', spec: 'headlights' },
+  { key: 'daytimeRunningLights', spec: 'daytimeRunningLights' },
+  { key: 'frontBumper', spec: 'frontBumper' },
+  { key: 'hoodDesign', spec: 'hood' },
+  { key: 'sideProfile', spec: 'sideProfile' },
+  { key: 'doorDesign', spec: 'doorDesign' },
+  { key: 'sideMirrors', spec: 'mirrors' },
+  { key: 'wheelArches', spec: 'wheelArches' },
+  { key: 'alloyWheels', spec: 'alloyWheels' },
+  { key: 'rearLights', spec: 'rearLights' },
+  { key: 'rearBumper', spec: 'rearBumper' },
+  { key: 'exhaust', spec: 'exhaust' },
+  { key: 'roofline', spec: 'roofline' },
+  { key: 'roof', spec: 'roof' },
+  { key: 'spoiler', spec: 'spoiler' },
+  { key: 'bodyLines', spec: 'bodyLines' },
+  { key: 'aerodynamics', spec: 'aerodynamics' },
 ];
 
 const INTERIOR_FIELDS: TextField[] = [
-  { key: 'description', label: 'Interior description', textarea: true },
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'steeringWheel', label: 'Steering wheel' },
-  { key: 'instrumentCluster', label: 'Instrument cluster' },
-  { key: 'infotainmentScreen', label: 'Infotainment' },
-  { key: 'centerConsole', label: 'Centre console' },
-  { key: 'gearSelector', label: 'Gear selector' },
-  { key: 'frontSeats', label: 'Front seats' },
-  { key: 'rearSeats', label: 'Rear seats' },
-  { key: 'seatMaterial', label: 'Seat material' },
-  { key: 'interiorColor', label: 'Interior colour' },
-  { key: 'ambientLighting', label: 'Ambient lighting' },
-  { key: 'airConditioning', label: 'Air conditioning' },
-  { key: 'storage', label: 'Storage' },
-  { key: 'soundSystem', label: 'Sound system' },
-  { key: 'interiorTechnology', label: 'Interior technology' },
+  { key: 'description', spec: 'interiorDescription', textarea: true },
+  { key: 'dashboard', spec: 'dashboard' },
+  { key: 'steeringWheel', spec: 'steeringWheel' },
+  { key: 'instrumentCluster', spec: 'instrumentCluster' },
+  { key: 'infotainmentScreen', spec: 'infotainment' },
+  { key: 'centerConsole', spec: 'centreConsole' },
+  { key: 'gearSelector', spec: 'gearSelector' },
+  { key: 'frontSeats', spec: 'frontSeats' },
+  { key: 'rearSeats', spec: 'rearSeats' },
+  { key: 'seatMaterial', spec: 'seatMaterial' },
+  { key: 'interiorColor', spec: 'interiorColour' },
+  { key: 'ambientLighting', spec: 'ambientLighting' },
+  { key: 'airConditioning', spec: 'airConditioning' },
+  { key: 'storage', spec: 'storage' },
+  { key: 'soundSystem', spec: 'soundSystem' },
+  { key: 'interiorTechnology', spec: 'interiorTechnology' },
 ];
 
-const TECH_FLAGS: { key: string; label: string }[] = [
-  { key: 'touchscreen', label: 'Touchscreen' },
-  { key: 'appleCarPlay', label: 'Apple CarPlay' },
-  { key: 'androidAuto', label: 'Android Auto' },
-  { key: 'bluetooth', label: 'Bluetooth' },
-  { key: 'navigation', label: 'Navigation' },
-  { key: 'digitalInstrumentCluster', label: 'Digital cluster' },
-  { key: 'wirelessCharging', label: 'Wireless charging' },
-  { key: 'keylessEntry', label: 'Keyless entry' },
-  { key: 'pushButtonStart', label: 'Push-button start' },
-  { key: 'parkingSensors', label: 'Parking sensors' },
-  { key: 'rearCamera', label: 'Rear camera' },
-  { key: 'camera360', label: '360° camera' },
-  { key: 'adaptiveCruiseControl', label: 'Adaptive cruise control' },
+const TECH_FLAGS: { key: string; spec: SpecKey }[] = [
+  { key: 'touchscreen', spec: 'touchscreen' },
+  { key: 'appleCarPlay', spec: 'appleCarPlay' },
+  { key: 'androidAuto', spec: 'androidAuto' },
+  { key: 'bluetooth', spec: 'bluetooth' },
+  { key: 'navigation', spec: 'navigation' },
+  { key: 'digitalInstrumentCluster', spec: 'digitalCluster' },
+  { key: 'wirelessCharging', spec: 'wirelessCharging' },
+  { key: 'keylessEntry', spec: 'keylessEntry' },
+  { key: 'pushButtonStart', spec: 'pushButtonStart' },
+  { key: 'parkingSensors', spec: 'parkingSensors' },
+  { key: 'rearCamera', spec: 'rearCamera' },
+  { key: 'camera360', spec: 'camera360' },
+  { key: 'adaptiveCruiseControl', spec: 'adaptiveCruiseControl' },
 ];
 
-const SAFETY_FLAGS: { key: string; label: string }[] = [
-  { key: 'abs', label: 'ABS' },
-  { key: 'electronicStabilityControl', label: 'Stability control' },
-  { key: 'tractionControl', label: 'Traction control' },
-  { key: 'hillStartAssist', label: 'Hill start assist' },
-  { key: 'autonomousEmergencyBraking', label: 'Emergency braking' },
-  { key: 'forwardCollisionWarning', label: 'Collision warning' },
-  { key: 'laneKeepingAssist', label: 'Lane keeping assist' },
-  { key: 'blindSpotMonitoring', label: 'Blind spot monitoring' },
-  { key: 'rearCrossTrafficAlert', label: 'Rear cross-traffic alert' },
-  { key: 'adaptiveCruiseControl', label: 'Adaptive cruise control' },
-  { key: 'parkingAssistance', label: 'Parking assistance' },
+const SAFETY_FLAGS: { key: string; spec: SpecKey }[] = [
+  { key: 'abs', spec: 'abs' },
+  { key: 'electronicStabilityControl', spec: 'stabilityControl' },
+  { key: 'tractionControl', spec: 'tractionControl' },
+  { key: 'hillStartAssist', spec: 'hillStartAssist' },
+  { key: 'autonomousEmergencyBraking', spec: 'emergencyBraking' },
+  { key: 'forwardCollisionWarning', spec: 'collisionWarning' },
+  { key: 'laneKeepingAssist', spec: 'laneKeepingAssist' },
+  { key: 'blindSpotMonitoring', spec: 'blindSpotMonitoring' },
+  { key: 'rearCrossTrafficAlert', spec: 'rearCrossTrafficAlert' },
+  { key: 'adaptiveCruiseControl', spec: 'adaptiveCruiseControl' },
+  { key: 'parkingAssistance', spec: 'parkingAssistance' },
 ];
 
 type Dict = Record<string, unknown>;
@@ -149,17 +160,19 @@ function TextGrid({
   values,
   onChange,
   prefix,
+  labels,
 }: {
   fields: TextField[];
   values: Dict;
   onChange: (next: Dict) => void;
   prefix: string;
+  labels: Labels;
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       {fields.map((field) => (
         <div key={field.key} className={field.textarea ? 'space-y-2 sm:col-span-2' : 'space-y-2'}>
-          <Label htmlFor={`${prefix}-${field.key}`}>{field.label}</Label>
+          <Label htmlFor={`${prefix}-${field.key}`}>{labels[field.spec]}</Label>
           {field.textarea ? (
             <Textarea
               id={`${prefix}-${field.key}`}
@@ -185,11 +198,13 @@ function FlagGrid({
   values,
   onChange,
   prefix,
+  labels,
 }: {
-  flags: { key: string; label: string }[];
+  flags: { key: string; spec: SpecKey }[];
   values: Dict;
   onChange: (next: Dict) => void;
   prefix: string;
+  labels: Labels;
 }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -201,7 +216,7 @@ function FlagGrid({
             onCheckedChange={(checked) => onChange({ ...values, [flag.key]: checked === true })}
           />
           <Label htmlFor={`${prefix}-${flag.key}`} className="cursor-pointer text-sm font-normal">
-            {flag.label}
+            {labels[flag.spec]}
           </Label>
         </div>
       ))}
@@ -214,17 +229,24 @@ function NumberGrid({
   values,
   onChange,
   prefix,
+  labels,
 }: {
-  fields: { key: string; label: string }[];
+  /* `unit` is appended as written — "mm" and "kWh" are the same in all three
+     languages, and translating them would be wrong rather than helpful. */
+  fields: { key: string; spec: SpecKey; unit?: string }[];
   values: Dict;
   onChange: (next: Dict) => void;
   prefix: string;
+  labels: Labels;
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-3">
       {fields.map((field) => (
         <div key={field.key} className="space-y-2">
-          <Label htmlFor={`${prefix}-${field.key}`}>{field.label}</Label>
+          <Label htmlFor={`${prefix}-${field.key}`}>
+            {labels[field.spec]}
+            {field.unit ? ` (${field.unit})` : ''}
+          </Label>
           <Input
             id={`${prefix}-${field.key}`}
             type="number"
@@ -245,7 +267,9 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
    */
   const [knownBrands, setKnownBrands] = useState<Brand[]>(brands);
   const { token } = useAuth();
-  const { t } = useLocale();
+  const { t, locale, format } = useLocale();
+  /* The same field names the vehicle's public page prints. */
+  const labels = specLabels(locale);
   const router = useRouter();
   const isEdit = Boolean(car);
 
@@ -341,6 +365,32 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
     kerbWeightKg: car?.dimensions?.kerbWeightKg ?? '',
   });
 
+  /*
+   * The authored copy in the other languages.
+   *
+   * One block per language, always all three, because the save replaces them:
+   * a block the admin emptied should stop being stored, and that is only
+   * distinguishable from "not mentioned" if every block is sent.
+   */
+  const [translations, setTranslations] = useState<
+    Record<Locale, { marketingDescription: string; description: string; exteriorDescription: string; interiorDescription: string }>
+  >(() =>
+    Object.fromEntries(
+      LOCALES.map((code) => {
+        const existing = car?.translations?.find((entry) => entry.locale === code.toUpperCase());
+        return [
+          code,
+          {
+            marketingDescription: existing?.marketingDescription ?? '',
+            description: existing?.description ?? '',
+            exteriorDescription: existing?.exteriorDescription ?? '',
+            interiorDescription: existing?.interiorDescription ?? '',
+          },
+        ];
+      }),
+    ) as Record<Locale, { marketingDescription: string; description: string; exteriorDescription: string; interiorDescription: string }>,
+  );
+
   const [colors, setColors] = useState(
     car?.colors
       .filter((color) => color.kind === 'EXTERIOR')
@@ -349,7 +399,13 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
         hexCode: color.hexCode,
         finish: color.finish ?? '',
         imageUrl: color.imageUrl ?? '',
-      })) ?? [{ name: '', hexCode: '#000000', finish: '', imageUrl: '' }],
+        /*
+         * Kept as the typed text, not a number. Empty and zero are different
+         * answers — "I do not count this colour" against "there are none left"
+         * — and a numeric field cannot hold the difference.
+         */
+        stock: color.stock == null ? '' : String(color.stock),
+      })) ?? [{ name: '', hexCode: '#000000', finish: '', imageUrl: '', stock: '' }],
   );
 
   const [images, setImages] = useState<CarImageDraft[]>(
@@ -429,7 +485,7 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
     setError(null);
 
     if (!basic.brandId || !basic.model || !basic.price) {
-      setError('Brand, model and price are required.');
+      setError(t.admin.requiredBasics);
       return;
     }
 
@@ -507,7 +563,13 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
           imageUrl: color.imageUrl || undefined,
           isDefault: index === 0,
           sortOrder: index,
+          // Blank means "not counted", which is not the same as none left.
+          stock: color.stock.trim() === '' ? null : Number(color.stock),
         })),
+      translations: LOCALES.map((code) => ({
+        locale: code.toUpperCase() as 'EN' | 'FR' | 'AR',
+        ...translations[code],
+      })),
       images: images
         .filter((image) => image.url)
         .map((image, index) => ({
@@ -552,18 +614,18 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
       filesOnOpen.current = kept;
 
       uploadToast.success({
-        title: isEdit ? 'The car is saved' : 'The car is added',
+        title: isEdit ? t.admin.carSaved : t.admin.carAdded,
         description: `${saved.brand?.name ?? ''} ${saved.model} ${saved.year} — ${
-          saved.status === 'PUBLISHED' ? 'visible on the site' : 'saved as a draft, not yet published'
+          saved.status === 'PUBLISHED' ? t.admin.carPublishedNote : t.admin.carDraftNote
         }.`,
-        primaryText: 'Done',
+        primaryText: t.common.done,
       });
       router.push(`/admin/cars/${saved.id}/edit`);
     } catch (caught) {
       const message = caught instanceof ApiError ? caught.message : t.common.error;
       setError(message);
       uploadToast.error({
-        title: isEdit ? 'The car was not saved' : 'The car was not added',
+        title: isEdit ? t.admin.carNotSaved : t.admin.carNotAdded,
         description: message,
         /*
          * No retry button here. Submitting again needs the form event this
@@ -571,7 +633,7 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
          * never asked for. The message stays on the form as well, so pressing
          * Save again is the retry.
          */
-        primaryText: 'Close',
+        primaryText: t.common.close,
       });
     } finally {
       setSaving(false);
@@ -588,7 +650,7 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Basic</CardTitle>
+          <CardTitle className="text-base">{t.admin.basic}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
@@ -625,7 +687,7 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
               <SelectContent>
                 {BODY_TYPES.map((type) => (
                   <SelectItem key={type} value={type}>
-                    {type}
+                    {humaniseEnum(type, locale)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -633,42 +695,42 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="generation">Generation</Label>
+            <Label htmlFor="generation">{labels.generation}</Label>
             <Input id="generation" value={basic.generation} onChange={(event) => setBasic({ ...basic, generation: event.target.value })} />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="trim">Trim</Label>
+            <Label htmlFor="trim">{labels.trim}</Label>
             <Input id="trim" value={basic.trim} onChange={(event) => setBasic({ ...basic, trim: event.target.value })} />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="segment">Segment</Label>
+            <Label htmlFor="segment">{labels.segment}</Label>
             <Input id="segment" value={basic.segment} onChange={(event) => setBasic({ ...basic, segment: event.target.value })} />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
+            <Label htmlFor="category">{labels.category}</Label>
             <Input id="category" value={basic.category} onChange={(event) => setBasic({ ...basic, category: event.target.value })} />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="doors">Doors</Label>
+            <Label htmlFor="doors">{labels.doors}</Label>
             <Input id="doors" type="number" value={basic.doors} onChange={(event) => setBasic({ ...basic, doors: event.target.value })} />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="seats">Seats</Label>
+            <Label htmlFor="seats">{labels.seats}</Label>
             <Input id="seats" type="number" value={basic.seats} onChange={(event) => setBasic({ ...basic, seats: event.target.value })} />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="price">Price *</Label>
+            <Label htmlFor="price">{labels.price} *</Label>
             <Input id="price" type="number" step="0.01" required value={String(basic.price)} onChange={(event) => setBasic({ ...basic, price: event.target.value })} />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="promoPrice">Promotional price</Label>
+            <Label htmlFor="promoPrice">{labels.promoPrice}</Label>
             <Input
               id="promoPrice"
               type="number"
@@ -678,14 +740,11 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
               value={String(basic.promoPrice)}
               onChange={(event) => setBasic({ ...basic, promoPrice: event.target.value })}
             />
-            <p className="text-muted-foreground text-xs">
-              While this is set it is the price customers pay, with the normal price struck through
-              beside it. It must be lower than the price. Clear the field to end the promotion.
-            </p>
+            <p className="text-muted-foreground text-xs">{t.admin.promoHint}</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="currency">Currency</Label>
+            <Label htmlFor="currency">{labels.currency}</Label>
             <Input id="currency" maxLength={3} value={basic.currency} onChange={(event) => setBasic({ ...basic, currency: event.target.value.toUpperCase() })} />
           </div>
 
@@ -697,12 +756,12 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
           </div>
 
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="marketingDescription">Short description</Label>
+            <Label htmlFor="marketingDescription">{labels.shortDescription}</Label>
             <Textarea id="marketingDescription" rows={2} value={basic.marketingDescription} onChange={(event) => setBasic({ ...basic, marketingDescription: event.target.value })} />
           </div>
 
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="description">Full description</Label>
+            <Label htmlFor="description">{labels.fullDescription}</Label>
             <Textarea id="description" rows={6} value={basic.description} onChange={(event) => setBasic({ ...basic, description: event.target.value })} />
           </div>
 
@@ -721,7 +780,7 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
           <AccordionContent className="space-y-4 pb-4">
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="engineType">Engine type</Label>
+                <Label htmlFor="engineType">{labels.engineType}</Label>
                 <Input id="engineType" value={String(engine.engineType ?? '')} onChange={(event) => setEngine({ ...engine, engineType: event.target.value })} />
               </div>
               <div className="space-y-2">
@@ -733,14 +792,14 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
                   <SelectContent>
                     {FUEL_TYPES.map((type) => (
                       <SelectItem key={type} value={type}>
-                        {type}
+                        {humaniseEnum(type, locale)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="transmission">Transmission</Label>
+                <Label htmlFor="transmission">{labels.transmission}</Label>
                 <Select value={String(engine.transmission ?? '')} onValueChange={(value) => setEngine({ ...engine, transmission: value })}>
                   <SelectTrigger id="transmission" className="w-full">
                     <SelectValue placeholder="—" />
@@ -748,14 +807,14 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
                   <SelectContent>
                     {TRANSMISSIONS.map((type) => (
                       <SelectItem key={type} value={type}>
-                        {type}
+                        {formatAcronym(type, locale)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="drivetrain">Drivetrain</Label>
+                <Label htmlFor="drivetrain">{labels.drivetrain}</Label>
                 <Select value={String(engine.drivetrain ?? '')} onValueChange={(value) => setEngine({ ...engine, drivetrain: value })}>
                   <SelectTrigger id="drivetrain" className="w-full">
                     <SelectValue placeholder="—" />
@@ -763,7 +822,7 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
                   <SelectContent>
                     {DRIVETRAINS.map((type) => (
                       <SelectItem key={type} value={type}>
-                        {type}
+                        {formatAcronym(type, locale)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -775,17 +834,18 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
               prefix="engine"
               values={engine}
               onChange={setEngine}
+              labels={labels}
               fields={[
-                { key: 'displacementL', label: 'Displacement (L)' },
-                { key: 'cylinders', label: 'Cylinders' },
-                { key: 'powerHp', label: 'Power (hp)' },
-                { key: 'torqueNm', label: 'Torque (Nm)' },
-                { key: 'gears', label: 'Gears' },
-                { key: 'topSpeedKph', label: 'Top speed (km/h)' },
-                { key: 'acceleration0100', label: '0–100 (s)' },
-                { key: 'fuelConsumptionCombined', label: 'Consumption (L/100km)' },
-                { key: 'batteryCapacityKwh', label: 'Battery (kWh)' },
-                { key: 'electricRangeKm', label: 'Range (km)' },
+                { key: 'displacementL', spec: 'displacement', unit: 'L' },
+                { key: 'cylinders', spec: 'cylinders' },
+                { key: 'powerHp', spec: 'power', unit: 'hp' },
+                { key: 'torqueNm', spec: 'torque', unit: 'Nm' },
+                { key: 'gears', spec: 'gears' },
+                { key: 'topSpeedKph', spec: 'topSpeed', unit: 'km/h' },
+                { key: 'acceleration0100', spec: 'acceleration', unit: 's' },
+                { key: 'fuelConsumptionCombined', spec: 'fuelConsumption', unit: 'L/100 km' },
+                { key: 'batteryCapacityKwh', spec: 'battery', unit: 'kWh' },
+                { key: 'electricRangeKm', spec: 'electricRange', unit: 'km' },
               ]}
             />
           </AccordionContent>
@@ -798,13 +858,14 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
               prefix="wheels"
               values={wheels}
               onChange={setWheels}
+              labels={labels}
               fields={[
-                { key: 'wheelSizeInch', label: 'Wheel size (inch)' },
-                { key: 'wheelType', label: 'Wheel type' },
-                { key: 'wheelDesign', label: 'Wheel design' },
-                { key: 'frontTyreSize', label: 'Front tyre size' },
-                { key: 'rearTyreSize', label: 'Rear tyre size' },
-                { key: 'tyreType', label: 'Tyre type' },
+                { key: 'wheelSizeInch', spec: 'wheelSize' },
+                { key: 'wheelType', spec: 'wheelType' },
+                { key: 'wheelDesign', spec: 'wheelDesign' },
+                { key: 'frontTyreSize', spec: 'frontTyres' },
+                { key: 'rearTyreSize', spec: 'rearTyres' },
+                { key: 'tyreType', spec: 'tyreType' },
               ]}
             />
           </AccordionContent>
@@ -813,24 +874,24 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
         <AccordionItem value="exterior" className="border-border rounded-xl border px-4">
           <AccordionTrigger className="text-base font-medium">{t.car.exterior}</AccordionTrigger>
           <AccordionContent className="pb-4">
-            <TextGrid prefix="ext" fields={EXTERIOR_FIELDS} values={exterior} onChange={setExterior} />
+            <TextGrid prefix="ext" fields={EXTERIOR_FIELDS} values={exterior} onChange={setExterior} labels={labels} />
           </AccordionContent>
         </AccordionItem>
 
         <AccordionItem value="interior" className="border-border rounded-xl border px-4">
           <AccordionTrigger className="text-base font-medium">{t.car.interior}</AccordionTrigger>
           <AccordionContent className="pb-4">
-            <TextGrid prefix="int" fields={INTERIOR_FIELDS} values={interior} onChange={setInterior} />
+            <TextGrid prefix="int" fields={INTERIOR_FIELDS} values={interior} onChange={setInterior} labels={labels} />
           </AccordionContent>
         </AccordionItem>
 
         <AccordionItem value="technology" className="border-border rounded-xl border px-4">
           <AccordionTrigger className="text-base font-medium">{t.car.technology}</AccordionTrigger>
           <AccordionContent className="space-y-4 pb-4">
-            <FlagGrid prefix="tech" flags={TECH_FLAGS} values={technology} onChange={setTechnology} />
+            <FlagGrid prefix="tech" flags={TECH_FLAGS} values={technology} onChange={setTechnology} labels={labels} />
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="touchscreenSizeInch">Touchscreen size (inch)</Label>
+                <Label htmlFor="touchscreenSizeInch">{labels.touchscreenSize} (inch)</Label>
                 <Input
                   id="touchscreenSizeInch"
                   type="number"
@@ -840,7 +901,7 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="driveModes">Drive modes (comma separated)</Label>
+                <Label htmlFor="driveModes">{`${labels.driveModes} (${t.admin.commaSeparated})`}</Label>
                 <Input
                   id="driveModes"
                   value={String(technology.driveModes ?? '')}
@@ -854,18 +915,18 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
         <AccordionItem value="safety" className="border-border rounded-xl border px-4">
           <AccordionTrigger className="text-base font-medium">{t.car.safety}</AccordionTrigger>
           <AccordionContent className="space-y-4 pb-4">
-            <FlagGrid prefix="safety" flags={SAFETY_FLAGS} values={safety} onChange={setSafety} />
+            <FlagGrid prefix="safety" flags={SAFETY_FLAGS} values={safety} onChange={setSafety} labels={labels} />
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="airbagCount">Airbags</Label>
+                <Label htmlFor="airbagCount">{labels.airbags}</Label>
                 <Input id="airbagCount" type="number" value={String(safety.airbagCount ?? '')} onChange={(event) => setSafety({ ...safety, airbagCount: event.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="airbagTypes">Airbag types (comma separated)</Label>
+                <Label htmlFor="airbagTypes">{`${labels.airbagTypes} (${t.admin.commaSeparated})`}</Label>
                 <Input id="airbagTypes" value={String(safety.airbagTypes ?? '')} onChange={(event) => setSafety({ ...safety, airbagTypes: event.target.value })} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="ncapRating">NCAP rating</Label>
+                <Label htmlFor="ncapRating">{labels.ncapRating}</Label>
                 <Input id="ncapRating" type="number" min={0} max={5} value={String(safety.ncapRating ?? '')} onChange={(event) => setSafety({ ...safety, ncapRating: event.target.value })} />
               </div>
             </div>
@@ -879,29 +940,72 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
               prefix="dim"
               values={dimensions}
               onChange={setDimensions}
+              labels={labels}
               fields={[
-                { key: 'lengthMm', label: 'Length (mm)' },
-                { key: 'widthMm', label: 'Width (mm)' },
-                { key: 'heightMm', label: 'Height (mm)' },
-                { key: 'wheelbaseMm', label: 'Wheelbase (mm)' },
-                { key: 'groundClearanceMm', label: 'Ground clearance (mm)' },
-                { key: 'bootCapacityL', label: 'Boot (L)' },
-                { key: 'fuelTankL', label: 'Fuel tank (L)' },
-                { key: 'kerbWeightKg', label: 'Kerb weight (kg)' },
+                { key: 'lengthMm', spec: 'length', unit: 'mm' },
+                { key: 'widthMm', spec: 'width', unit: 'mm' },
+                { key: 'heightMm', spec: 'height', unit: 'mm' },
+                { key: 'wheelbaseMm', spec: 'wheelbase', unit: 'mm' },
+                { key: 'groundClearanceMm', spec: 'groundClearance', unit: 'mm' },
+                { key: 'bootCapacityL', spec: 'bootCapacity', unit: 'L' },
+                { key: 'fuelTankL', spec: 'fuelTank', unit: 'L' },
+                { key: 'kerbWeightKg', spec: 'kerbWeight', unit: 'kg' },
               ]}
             />
           </AccordionContent>
         </AccordionItem>
 
+        <AccordionItem value="translations" className="border-border rounded-xl border px-4">
+          <AccordionTrigger className="text-base font-medium">{t.admin.translations}</AccordionTrigger>
+          <AccordionContent className="space-y-5 pb-4">
+            <p className="text-muted-foreground text-xs">{t.admin.translationsHint}</p>
+
+            {LOCALES.map((code) => (
+              <div key={code} className="border-border/70 space-y-3 rounded-lg border p-3">
+                <h3 className="text-sm font-medium" dir={LOCALE_META[code].dir}>
+                  {LOCALE_META[code].native}
+                </h3>
+
+                {(
+                  [
+                    ['marketingDescription', labels.shortDescription, 2],
+                    ['description', labels.fullDescription, 5],
+                    ['exteriorDescription', labels.exteriorDescription, 3],
+                    ['interiorDescription', labels.interiorDescription, 3],
+                  ] as const
+                ).map(([field, label, rows]) => (
+                  <div key={field} className="space-y-2">
+                    <Label htmlFor={`tr-${code}-${field}`}>{label}</Label>
+                    <Textarea
+                      id={`tr-${code}-${field}`}
+                      rows={rows}
+                      /* The field is written in the language it is for, so it
+                         is laid out that way whatever the interface is set to. */
+                      dir={LOCALE_META[code].dir}
+                      value={translations[code][field]}
+                      onChange={(event) =>
+                        setTranslations((current) => ({
+                          ...current,
+                          [code]: { ...current[code], [field]: event.target.value },
+                        }))
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            ))}
+          </AccordionContent>
+        </AccordionItem>
+
         <AccordionItem value="media" className="border-border rounded-xl border px-4">
-          <AccordionTrigger className="text-base font-medium">Photos & colours</AccordionTrigger>
+          <AccordionTrigger className="text-base font-medium">{t.admin.media}</AccordionTrigger>
           <AccordionContent className="space-y-6 pb-4">
             <div className="space-y-3">
               <h3 className="text-sm font-medium">{t.car.exteriorColours}</h3>
               {colors.map((color, index) => (
                 <div key={index} className="border-border/70 flex flex-wrap items-end gap-3 rounded-lg border p-3">
                   <div className="flex-1 space-y-2">
-                    <Label htmlFor={`color-name-${index}`}>Name</Label>
+                    <Label htmlFor={`color-name-${index}`}>{t.admin.colourName}</Label>
                     <Input
                       id={`color-name-${index}`}
                       value={color.name}
@@ -911,7 +1015,7 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
                     />
                   </div>
                   <div className="w-28 space-y-2">
-                    <Label htmlFor={`color-hex-${index}`}>Hex</Label>
+                    <Label htmlFor={`color-hex-${index}`}>{t.admin.colourHex}</Label>
                     <Input
                       id={`color-hex-${index}`}
                       type="color"
@@ -923,12 +1027,40 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
                     />
                   </div>
                   <div className="w-32 space-y-2">
-                    <Label htmlFor={`color-finish-${index}`}>Finish</Label>
+                    <Label htmlFor={`color-finish-${index}`}>{t.admin.colourFinish}</Label>
                     <Input
                       id={`color-finish-${index}`}
                       value={color.finish}
                       onChange={(event) =>
                         setColors(colors.map((entry, i) => (i === index ? { ...entry, finish: event.target.value } : entry)))
+                      }
+                    />
+                  </div>
+
+                  {/*
+                    How many are on the floor in this colour.
+                    
+                    Never shown to a customer — they are told whether it is
+                    available, not how thin it is. Left blank the colour is not
+                    counted, which is the right answer for one that can always
+                    be ordered in; 0 means sold out, and the swatch says so.
+                    Completing a sale takes one off this number on its own.
+                  */}
+                  <div className="w-28 space-y-2">
+                    <Label htmlFor={`color-stock-${index}`}>{t.admin.stock}</Label>
+                    <Input
+                      id={`color-stock-${index}`}
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      placeholder={t.admin.stockUncounted}
+                      value={color.stock}
+                      onChange={(event) =>
+                        setColors(
+                          colors.map((entry, i) =>
+                            i === index ? { ...entry, stock: event.target.value } : entry,
+                          ),
+                        )
                       }
                     />
                   </div>
@@ -950,7 +1082,9 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
                   */}
                   <div className="w-full">
                     <SettingImageField
-                      label={`${color.name || `Colour ${index + 1}`} — the one picture the swatch shows`}
+                      label={format(t.admin.colourPicture, {
+                        name: color.name || format(t.admin.colourNumber, { number: index + 1 }),
+                      })}
                       value={color.imageUrl}
                       onChange={(next) =>
                         setColors(
@@ -972,35 +1106,27 @@ export function CarForm({ brands, car }: { brands: Brand[]; car?: CarDetail }) {
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  setColors([...colors, { name: '', hexCode: '#000000', finish: '', imageUrl: '' }])
+                  setColors([...colors, { name: '', hexCode: '#000000', finish: '', imageUrl: '', stock: '' }])
                 }
               >
                 <Plus className="size-4" aria-hidden="true" />
-                Add colour
+                {t.admin.addColour}
               </Button>
             </div>
 
             <Separator />
 
             <div className="space-y-3">
-              <h3 className="text-sm font-medium">Photos</h3>
-              <p className="text-muted-foreground text-xs">
-                Upload real photographs of the vehicle. The main photo is what appears on the
-                listing card and in search results.
-              </p>
+              <h3 className="text-sm font-medium">{t.admin.photos}</h3>
+              <p className="text-muted-foreground text-xs">{t.admin.photosHint}</p>
               <ImageUploader images={photographs} onChange={setPhotographs} />
             </div>
 
             <Separator />
 
             <div className="space-y-3">
-              <h3 className="text-sm font-medium">360° view</h3>
-              <p className="text-muted-foreground text-xs">
-                One turn around the car, so a customer can spin it on the vehicle&apos;s page. Keep
-                the camera at the same height and distance for every shot, and the light and
-                background the same. Optional — a car without a set shows its photographs as
-                usual.
-              </p>
+              <h3 className="text-sm font-medium">{t.admin.spin}</h3>
+              <p className="text-muted-foreground text-xs">{t.admin.spinHint}</p>
               <SpinUploader frames={spinSet} onChange={setSpinSet} />
             </div>
           </AccordionContent>

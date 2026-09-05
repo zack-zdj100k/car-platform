@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
-import { ArrowLeft, Heart, Play, Scale, ShoppingCart } from 'lucide-react';
+import { notify } from '@/lib/notify';
+import { Clock, Heart, Play, Scale, ShoppingCart } from 'lucide-react';
+import { BackLink } from '@/components/shared/back-link';
 import { Badge } from '@/components/ui/badge';
 import { Price } from '@/components/shared/price';
 import { Button } from '@/components/ui/button';
@@ -19,7 +20,10 @@ import { useLocale } from '@/providers/locale-provider';
 import { useAuth } from '@/providers/auth-provider';
 import { useFavorites } from '@/hooks/use-favorites';
 import { useCompare } from '@/hooks/use-compare';
+import { useRequestedColours } from '@/hooks/use-requested-colours';
 import { formatAcronym, formatMeasure, humaniseEnum } from '@/lib/format';
+import { specLabels } from '@/lib/i18n/spec';
+import { carCopy } from '@/lib/i18n/car-copy';
 import { cn } from '@/lib/utils';
 import type { CarDetail } from '@/types/api';
 
@@ -30,17 +34,30 @@ import type { CarDetail } from '@/types/api';
  * record does not contain are omitted rather than filled in (spec §14).
  */
 export function CarDetailView({ car }: { car: CarDetail }) {
-  const { t, locale } = useLocale();
+  const { t, locale, format } = useLocale();
   const { isAuthenticated } = useAuth();
   const router = useRouter();
   const favorites = useFavorites();
   const compare = useCompare();
+  /* What this customer has already asked for on this car. */
+  const requested = useRequestedColours(car.id);
 
   const exteriorColors = car.colors.filter((color) => color.kind === 'EXTERIOR');
   const interiorColors = car.colors.filter((color) => color.kind === 'INTERIOR');
-  const [selectedColorId, setSelectedColorId] = useState(
-    () => exteriorColors.find((color) => color.isDefault)?.id ?? exteriorColors[0]?.id ?? '',
-  );
+  /*
+   * The colour the page opens on: the default one, unless it is sold out.
+   *
+   * A vehicle whose default colour has gone opens on "Not available" with the
+   * booking button dead, which reads as "this car cannot be had" — when three
+   * other colours are sitting on the floor. Opening on one that can be booked
+   * shows the offer that exists; the sold-out swatch is still there, still
+   * selectable, and still says so when chosen.
+   */
+  const [selectedColorId, setSelectedColorId] = useState(() => {
+    const preferred = exteriorColors.find((color) => color.isDefault) ?? exteriorColors[0];
+    if (!preferred || preferred.isAvailable !== false) return preferred?.id ?? '';
+    return (exteriorColors.find((color) => color.isAvailable !== false) ?? preferred).id;
+  });
 
   const selectedColor = exteriorColors.find((color) => color.id === selectedColorId);
   const alt = `${car.brand.name} ${car.model} ${car.year}`;
@@ -128,122 +145,128 @@ export function CarDetailView({ car }: { car: CarDetail }) {
   }, [car.brand.name, car.images, car.model, selectedColor]);
 
   const labels = { fitted: t.car.fitted, notFitted: t.car.notFitted };
+  /* Every field name, in the reader's language — the same list the editor
+     fills in and the comparison table compares. */
+  const s = specLabels(locale);
+  /* The showroom's own words, in the reader's language where they have been
+     translated and as written where they have not. */
+  const copy = carCopy(car, locale);
 
   const identityRows: SpecRow[] = [
     { label: t.cars.brand, value: car.brand.name },
     { label: t.cars.model, value: car.model },
     { label: t.cars.year, value: car.year },
-    { label: 'Generation', value: car.generation },
-    { label: 'Trim', value: car.trim },
-    { label: t.cars.bodyType, value: humaniseEnum(car.bodyType) },
-    { label: 'Segment', value: car.segment },
-    { label: 'Doors', value: car.doors },
-    { label: 'Seats', value: car.seats },
+    { label: s.generation, value: car.generation },
+    { label: s.trim, value: car.trim },
+    { label: t.cars.bodyType, value: humaniseEnum(car.bodyType, locale) },
+    { label: s.segment, value: car.segment },
+    { label: s.doors, value: car.doors },
+    { label: s.seats, value: car.seats },
   ];
 
   const engineRows: SpecRow[] = car.engine
     ? [
-        { label: 'Engine type', value: car.engine.engineType },
-        { label: 'Displacement', value: car.engine.displacementL ? `${car.engine.displacementL} L` : null },
-        { label: 'Cylinders', value: car.engine.cylinders },
-        { label: t.cars.fuelType, value: humaniseEnum(car.engine.fuelType) },
-        { label: 'Power', value: car.engine.powerHp ? `${car.engine.powerHp} hp` : null },
-        { label: 'Torque', value: car.engine.torqueNm ? `${car.engine.torqueNm} Nm` : null },
-        { label: 'Transmission', value: formatAcronym(car.engine.transmission) },
-        { label: 'Gears', value: car.engine.gears },
-        { label: 'Drivetrain', value: formatAcronym(car.engine.drivetrain) },
-        { label: '0–100 km/h', value: car.engine.acceleration0100 ? `${car.engine.acceleration0100} s` : null },
-        { label: 'Top speed', value: formatMeasure(car.engine.topSpeedKph, 'km/h', locale) },
+        { label: s.engineType, value: car.engine.engineType },
+        { label: s.displacement, value: car.engine.displacementL ? `${car.engine.displacementL} L` : null },
+        { label: s.cylinders, value: car.engine.cylinders },
+        { label: t.cars.fuelType, value: humaniseEnum(car.engine.fuelType, locale) },
+        { label: s.power, value: car.engine.powerHp ? `${car.engine.powerHp} hp` : null },
+        { label: s.torque, value: car.engine.torqueNm ? `${car.engine.torqueNm} Nm` : null },
+        { label: s.transmission, value: formatAcronym(car.engine.transmission, locale) },
+        { label: s.gears, value: car.engine.gears },
+        { label: s.drivetrain, value: formatAcronym(car.engine.drivetrain, locale) },
+        { label: s.acceleration, value: car.engine.acceleration0100 ? `${car.engine.acceleration0100} s` : null },
+        { label: s.topSpeed, value: formatMeasure(car.engine.topSpeedKph, 'km/h', locale) },
         {
-          label: 'Fuel consumption',
+          label: s.fuelConsumption,
           value: car.engine.fuelConsumptionCombined ? `${car.engine.fuelConsumptionCombined} L/100 km` : null,
         },
-        { label: 'Battery', value: car.engine.batteryCapacityKwh ? `${car.engine.batteryCapacityKwh} kWh` : null },
-        { label: 'Electric range', value: formatMeasure(car.engine.electricRangeKm, 'km', locale) },
-        { label: 'DC charging', value: car.engine.chargingDcKw ? `${car.engine.chargingDcKw} kW` : null },
-        { label: 'Emission standard', value: car.engine.emissionStandard },
+        { label: s.battery, value: car.engine.batteryCapacityKwh ? `${car.engine.batteryCapacityKwh} kWh` : null },
+        { label: s.electricRange, value: formatMeasure(car.engine.electricRangeKm, 'km', locale) },
+        { label: s.chargingDc, value: car.engine.chargingDcKw ? `${car.engine.chargingDcKw} kW` : null },
+        { label: s.emissionStandard, value: car.engine.emissionStandard },
       ]
     : [];
 
   const wheelRows: SpecRow[] = car.wheels
     ? [
-        { label: 'Wheel size', value: car.wheels.wheelSizeInch ? `${car.wheels.wheelSizeInch}"` : null },
-        { label: 'Wheel type', value: car.wheels.wheelType },
-        { label: 'Wheel design', value: car.wheels.wheelDesign },
-        { label: 'Front tyres', value: car.wheels.frontTyreSize },
-        { label: 'Rear tyres', value: car.wheels.rearTyreSize },
-        { label: 'Tyre type', value: car.wheels.tyreType },
-        { label: 'Spare wheel', value: car.wheels.spareWheel },
+        { label: s.wheelSize, value: car.wheels.wheelSizeInch ? `${car.wheels.wheelSizeInch}"` : null },
+        { label: s.wheelType, value: car.wheels.wheelType },
+        { label: s.wheelDesign, value: car.wheels.wheelDesign },
+        { label: s.frontTyres, value: car.wheels.frontTyreSize },
+        { label: s.rearTyres, value: car.wheels.rearTyreSize },
+        { label: s.tyreType, value: car.wheels.tyreType },
+        { label: s.spareWheel, value: car.wheels.spareWheel },
       ]
     : [];
 
   const exteriorRows: SpecRow[] = car.exterior
     ? [
-        { label: 'Front grille', value: car.exterior.frontGrille },
-        { label: 'Headlights', value: car.exterior.headlights },
-        { label: 'Daytime running lights', value: car.exterior.daytimeRunningLights },
-        { label: 'Front bumper', value: car.exterior.frontBumper },
-        { label: 'Hood', value: car.exterior.hoodDesign },
-        { label: 'Side profile', value: car.exterior.sideProfile },
-        { label: 'Doors', value: car.exterior.doorDesign },
-        { label: 'Mirrors', value: car.exterior.sideMirrors },
-        { label: 'Wheel arches', value: car.exterior.wheelArches },
-        { label: 'Alloy wheels', value: car.exterior.alloyWheels },
-        { label: 'Rear lights', value: car.exterior.rearLights },
-        { label: 'Rear bumper', value: car.exterior.rearBumper },
-        { label: 'Exhaust', value: car.exterior.exhaust },
-        { label: 'Roofline', value: car.exterior.roofline },
-        { label: 'Roof', value: car.exterior.roof },
-        { label: 'Spoiler', value: car.exterior.spoiler },
-        { label: 'Body lines', value: car.exterior.bodyLines },
-        { label: 'Aerodynamics', value: car.exterior.aerodynamics },
+        { label: s.frontGrille, value: car.exterior.frontGrille },
+        { label: s.headlights, value: car.exterior.headlights },
+        { label: s.daytimeRunningLights, value: car.exterior.daytimeRunningLights },
+        { label: s.frontBumper, value: car.exterior.frontBumper },
+        { label: s.hood, value: car.exterior.hoodDesign },
+        { label: s.sideProfile, value: car.exterior.sideProfile },
+        { label: s.doorDesign, value: car.exterior.doorDesign },
+        { label: s.mirrors, value: car.exterior.sideMirrors },
+        { label: s.wheelArches, value: car.exterior.wheelArches },
+        { label: s.alloyWheels, value: car.exterior.alloyWheels },
+        { label: s.rearLights, value: car.exterior.rearLights },
+        { label: s.rearBumper, value: car.exterior.rearBumper },
+        { label: s.exhaust, value: car.exterior.exhaust },
+        { label: s.roofline, value: car.exterior.roofline },
+        { label: s.roof, value: car.exterior.roof },
+        { label: s.spoiler, value: car.exterior.spoiler },
+        { label: s.bodyLines, value: car.exterior.bodyLines },
+        { label: s.aerodynamics, value: car.exterior.aerodynamics },
       ]
     : [];
 
   const interiorRows: SpecRow[] = car.interior
     ? [
-        { label: 'Dashboard', value: car.interior.dashboard },
-        { label: 'Steering wheel', value: car.interior.steeringWheel },
-        { label: 'Instrument cluster', value: car.interior.instrumentCluster },
-        { label: 'Infotainment', value: car.interior.infotainmentScreen },
-        { label: 'Centre console', value: car.interior.centerConsole },
-        { label: 'Gear selector', value: car.interior.gearSelector },
-        { label: 'Front seats', value: car.interior.frontSeats },
-        { label: 'Rear seats', value: car.interior.rearSeats },
-        { label: 'Seat material', value: car.interior.seatMaterial },
-        { label: 'Interior colour', value: car.interior.interiorColor },
-        { label: 'Ambient lighting', value: car.interior.ambientLighting },
-        { label: 'Air conditioning', value: car.interior.airConditioning },
-        { label: 'Storage', value: car.interior.storage },
-        { label: 'USB ports', value: car.interior.usbPorts },
-        { label: 'Sound system', value: car.interior.soundSystem },
-        { label: 'Speakers', value: car.interior.speakerCount },
-        { label: 'Cargo capacity', value: formatMeasure(car.interior.cargoCapacityL, 'L', locale) },
+        { label: s.dashboard, value: car.interior.dashboard },
+        { label: s.steeringWheel, value: car.interior.steeringWheel },
+        { label: s.instrumentCluster, value: car.interior.instrumentCluster },
+        { label: s.infotainment, value: car.interior.infotainmentScreen },
+        { label: s.centreConsole, value: car.interior.centerConsole },
+        { label: s.gearSelector, value: car.interior.gearSelector },
+        { label: s.frontSeats, value: car.interior.frontSeats },
+        { label: s.rearSeats, value: car.interior.rearSeats },
+        { label: s.seatMaterial, value: car.interior.seatMaterial },
+        { label: s.interiorColour, value: car.interior.interiorColor },
+        { label: s.ambientLighting, value: car.interior.ambientLighting },
+        { label: s.airConditioning, value: car.interior.airConditioning },
+        { label: s.storage, value: car.interior.storage },
+        { label: s.usbPorts, value: car.interior.usbPorts },
+        { label: s.soundSystem, value: car.interior.soundSystem },
+        { label: s.speakers, value: car.interior.speakerCount },
+        { label: s.cargoCapacity, value: formatMeasure(car.interior.cargoCapacityL, 'L', locale) },
       ]
     : [];
 
   const technologyRows: SpecRow[] = car.technology
     ? [
         {
-          label: 'Touchscreen',
+          label: s.touchscreen,
           value: car.technology.touchscreenSizeInch
             ? `${car.technology.touchscreenSizeInch}"`
             : car.technology.touchscreen,
         },
-        { label: 'Apple CarPlay', value: car.technology.appleCarPlay },
-        { label: 'Android Auto', value: car.technology.androidAuto },
-        { label: 'Bluetooth', value: car.technology.bluetooth },
-        { label: 'Navigation', value: car.technology.navigation },
-        { label: 'Digital cluster', value: car.technology.digitalInstrumentCluster },
-        { label: 'Wireless charging', value: car.technology.wirelessCharging },
-        { label: 'Keyless entry', value: car.technology.keylessEntry },
-        { label: 'Push-button start', value: car.technology.pushButtonStart },
-        { label: 'Parking sensors', value: car.technology.parkingSensors },
-        { label: 'Rear camera', value: car.technology.rearCamera },
-        { label: '360° camera', value: car.technology.camera360 },
-        { label: 'Adaptive cruise control', value: car.technology.adaptiveCruiseControl },
+        { label: s.appleCarPlay, value: car.technology.appleCarPlay },
+        { label: s.androidAuto, value: car.technology.androidAuto },
+        { label: s.bluetooth, value: car.technology.bluetooth },
+        { label: s.navigation, value: car.technology.navigation },
+        { label: s.digitalCluster, value: car.technology.digitalInstrumentCluster },
+        { label: s.wirelessCharging, value: car.technology.wirelessCharging },
+        { label: s.keylessEntry, value: car.technology.keylessEntry },
+        { label: s.pushButtonStart, value: car.technology.pushButtonStart },
+        { label: s.parkingSensors, value: car.technology.parkingSensors },
+        { label: s.rearCamera, value: car.technology.rearCamera },
+        { label: s.camera360, value: car.technology.camera360 },
+        { label: s.adaptiveCruiseControl, value: car.technology.adaptiveCruiseControl },
         {
-          label: 'Drive modes',
+          label: s.driveModes,
           value: car.technology.driveModes.length > 0 ? car.technology.driveModes.join(', ') : null,
         },
       ]
@@ -251,37 +274,37 @@ export function CarDetailView({ car }: { car: CarDetail }) {
 
   const safetyRows: SpecRow[] = car.safety
     ? [
-        { label: 'ABS', value: car.safety.abs },
-        { label: 'Stability control', value: car.safety.electronicStabilityControl },
-        { label: 'Traction control', value: car.safety.tractionControl },
-        { label: 'Hill start assist', value: car.safety.hillStartAssist },
-        { label: 'Emergency braking', value: car.safety.autonomousEmergencyBraking },
-        { label: 'Collision warning', value: car.safety.forwardCollisionWarning },
-        { label: 'Lane keeping assist', value: car.safety.laneKeepingAssist },
-        { label: 'Blind spot monitoring', value: car.safety.blindSpotMonitoring },
-        { label: 'Rear cross-traffic alert', value: car.safety.rearCrossTrafficAlert },
-        { label: 'Adaptive cruise control', value: car.safety.adaptiveCruiseControl },
-        { label: 'Parking assistance', value: car.safety.parkingAssistance },
-        { label: 'Airbags', value: car.safety.airbagCount },
+        { label: s.abs, value: car.safety.abs },
+        { label: s.stabilityControl, value: car.safety.electronicStabilityControl },
+        { label: s.tractionControl, value: car.safety.tractionControl },
+        { label: s.hillStartAssist, value: car.safety.hillStartAssist },
+        { label: s.emergencyBraking, value: car.safety.autonomousEmergencyBraking },
+        { label: s.collisionWarning, value: car.safety.forwardCollisionWarning },
+        { label: s.laneKeepingAssist, value: car.safety.laneKeepingAssist },
+        { label: s.blindSpotMonitoring, value: car.safety.blindSpotMonitoring },
+        { label: s.rearCrossTrafficAlert, value: car.safety.rearCrossTrafficAlert },
+        { label: s.adaptiveCruiseControl, value: car.safety.adaptiveCruiseControl },
+        { label: s.parkingAssistance, value: car.safety.parkingAssistance },
+        { label: s.airbags, value: car.safety.airbagCount },
         {
-          label: 'Airbag types',
+          label: s.airbagTypes,
           value: car.safety.airbagTypes.length > 0 ? car.safety.airbagTypes.join(', ') : null,
         },
-        { label: 'NCAP rating', value: car.safety.ncapRating ? `${car.safety.ncapRating} / 5` : null },
+        { label: s.ncapRating, value: car.safety.ncapRating ? `${car.safety.ncapRating} / 5` : null },
       ]
     : [];
 
   const dimensionRows: SpecRow[] = car.dimensions
     ? [
-        { label: 'Length', value: formatMeasure(car.dimensions.lengthMm, 'mm', locale) },
-        { label: 'Width', value: formatMeasure(car.dimensions.widthMm, 'mm', locale) },
-        { label: 'Height', value: formatMeasure(car.dimensions.heightMm, 'mm', locale) },
-        { label: 'Wheelbase', value: formatMeasure(car.dimensions.wheelbaseMm, 'mm', locale) },
-        { label: 'Ground clearance', value: formatMeasure(car.dimensions.groundClearanceMm, 'mm', locale) },
-        { label: 'Boot capacity', value: formatMeasure(car.dimensions.bootCapacityL, 'L', locale) },
-        { label: 'Max boot capacity', value: formatMeasure(car.dimensions.bootCapacityMaxL, 'L', locale) },
-        { label: 'Fuel tank', value: car.dimensions.fuelTankL ? `${car.dimensions.fuelTankL} L` : null },
-        { label: 'Kerb weight', value: formatMeasure(car.dimensions.kerbWeightKg, 'kg', locale) },
+        { label: s.length, value: formatMeasure(car.dimensions.lengthMm, 'mm', locale) },
+        { label: s.width, value: formatMeasure(car.dimensions.widthMm, 'mm', locale) },
+        { label: s.height, value: formatMeasure(car.dimensions.heightMm, 'mm', locale) },
+        { label: s.wheelbase, value: formatMeasure(car.dimensions.wheelbaseMm, 'mm', locale) },
+        { label: s.groundClearance, value: formatMeasure(car.dimensions.groundClearanceMm, 'mm', locale) },
+        { label: s.bootCapacity, value: formatMeasure(car.dimensions.bootCapacityL, 'L', locale) },
+        { label: s.bootCapacityMax, value: formatMeasure(car.dimensions.bootCapacityMaxL, 'L', locale) },
+        { label: s.fuelTank, value: car.dimensions.fuelTankL ? `${car.dimensions.fuelTankL} L` : null },
+        { label: s.kerbWeight, value: formatMeasure(car.dimensions.kerbWeightKg, 'kg', locale) },
       ]
     : [];
 
@@ -289,8 +312,8 @@ export function CarDetailView({ car }: { car: CarDetail }) {
     { key: 'identity', title: t.car.identity, rows: identityRows },
     { key: 'engine', title: t.car.engine, rows: engineRows },
     { key: 'wheels', title: t.car.wheels, rows: wheelRows },
-    { key: 'exterior', title: t.car.exterior, rows: exteriorRows, description: car.exterior?.description },
-    { key: 'interior', title: t.car.interior, rows: interiorRows, description: car.interior?.description },
+    { key: 'exterior', title: t.car.exterior, rows: exteriorRows, description: copy.exteriorDescription },
+    { key: 'interior', title: t.car.interior, rows: interiorRows, description: copy.interiorDescription },
     { key: 'technology', title: t.car.technology, rows: technologyRows },
     { key: 'safety', title: t.car.safety, rows: safetyRows },
     { key: 'dimensions', title: t.car.dimensions, rows: dimensionRows },
@@ -302,28 +325,56 @@ export function CarDetailView({ car }: { car: CarDetail }) {
       return;
     }
     const result = await favorites.toggle(car.id);
-    if ('error' in result) toast.error(result.error);
-    else toast.success(result.favorited ? t.car.favorited : t.car.removeFavorite);
+    if ('error' in result) notify.error(result.error);
+    else notify.success(result.favorited ? t.car.favorited : t.car.removeFavorite);
   };
+
+  /*
+   * Whether the colour in front of the customer can be booked.
+   *
+   * Read from the selected colour rather than the vehicle: a car with four
+   * colours and one sold out is available, but not in that one, and the answer
+   * has to change when they tap a different swatch. An uncounted colour is
+   * available — the API decides that, and sends the verdict rather than the
+   * number.
+   */
+  const colourAvailable = selectedColor?.isAvailable !== false;
+  const carAvailable = car.isAvailable !== false;
+  /*
+   * Already asked for, in this colour.
+   *
+   * The button is not offered again: a second request for the same car in the
+   * same colour is the same appointment asked for twice, and the API refuses
+   * it. Saying so here means the customer learns it before they fill the form
+   * in, and the sentence beneath points them at what they can still do —
+   * choose a different colour.
+   */
+  const alreadyRequested = requested.has(selectedColorId || null);
+  const bookable = carAvailable && colourAvailable && !alreadyRequested;
 
   const handleCompare = () => {
     const result = compare.toggle(car.id);
-    if (result.full) toast.error(`${t.car.compare}: ${compare.max}`);
-    else toast.success(result.added ? t.car.inCompare : t.dashboard.removeCar);
+    if (result.full) notify.error(`${t.car.compare}: ${compare.max}`);
+    else notify.success(result.added ? t.car.inCompare : t.dashboard.removeCar);
   };
 
   const isFavorite = favorites.isFavorite(car.id);
 
   return (
     <div className="mx-auto w-full max-w-7xl px-5 py-8 sm:px-8 sm:py-12">
-      <StickyOrderBar car={car} watch={priceBlock} selectedColorId={selectedColorId} />
+      <StickyOrderBar
+        car={car}
+        watch={priceBlock}
+        selectedColorId={selectedColorId}
+        bookable={bookable}
+      />
 
-      <Button asChild variant="ghost" size="sm" className="text-muted-foreground -ms-2 mb-6">
-        <Link href="/cars">
-          <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
-          {t.car.backToCars}
-        </Link>
-      </Button>
+      {/*
+        Back to wherever the reader came from — their favourites, their
+        appointments, the home page — and to the catalogue only when there is no
+        history, which is how a shared link or a search result arrives.
+      */}
+      <BackLink href="/cars" label={t.car.backToCars} className="text-muted-foreground -ms-2 mb-6" />
 
       <div className="grid gap-10 lg:grid-cols-[1.35fr_1fr] lg:gap-12">
         <div className="min-w-0">
@@ -348,7 +399,7 @@ export function CarDetailView({ car }: { car: CarDetail }) {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary">{car.brand.name}</Badge>
-            <Badge variant="outline">{humaniseEnum(car.bodyType)}</Badge>
+            <Badge variant="outline">{humaniseEnum(car.bodyType, locale)}</Badge>
             {car.isDemoData && <DemoBadge label={t.admin.demoData} />}
           </div>
 
@@ -360,7 +411,7 @@ export function CarDetailView({ car }: { car: CarDetail }) {
           <p className="text-muted-foreground mt-1.5 text-sm">
             {car.year}
             {car.generation ? ` · ${car.generation}` : ''}
-            {car.seats ? ` · ${car.seats} seats` : ''}
+            {car.seats ? ` · ${format(t.car.seatsCount, { count: car.seats })}` : ''}
           </p>
 
           {/* Watched by the bar below, which appears once this has scrolled away. */}
@@ -374,8 +425,8 @@ export function CarDetailView({ car }: { car: CarDetail }) {
             />
           </div>
 
-          {car.marketingDescription && (
-            <p className="text-muted-foreground mt-4 text-base/7">{car.marketingDescription}</p>
+          {copy.marketingDescription && (
+            <p className="text-muted-foreground mt-4 text-base/7">{copy.marketingDescription}</p>
           )}
 
           {/* Colour swatches — clickable, as spec §13 requires */}
@@ -448,15 +499,44 @@ export function CarDetailView({ car }: { car: CarDetail }) {
             </Button>
           )}
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button asChild size="lg" className="flex-1 sm:flex-none">
-              <Link
-                href={`/car/${car.slug}/order${selectedColorId ? `?color=${selectedColorId}` : ''}`}
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            {/*
+              The appointment button, and only while there is something to book.
+              A sold-out colour keeps the button in place but inert, rather than
+              removing it: a control that disappears reads as a fault, and the
+              customer is left wondering what they did.
+            */}
+            {bookable ? (
+              <Button asChild size="lg" className="flex-1 sm:flex-none">
+                <Link
+                  href={`/car/${car.slug}/order${selectedColorId ? `?color=${selectedColorId}` : ''}`}
+                >
+                  <ShoppingCart className="size-4" aria-hidden="true" />
+                  {t.car.order}
+                </Link>
+              </Button>
+            ) : alreadyRequested ? (
+              /*
+               * Not a disabled booking button — a different message. A greyed
+               * "Request an appointment" says the car cannot be booked, which
+               * is the opposite of what has happened: it already is.
+               */
+              <div
+                role="status"
+                className="border-success/30 bg-success/10 flex-1 rounded-lg border px-4 py-3 sm:flex-none"
               >
+                <p className="flex items-center gap-2 text-sm font-medium">
+                  <Clock className="text-success size-4 shrink-0" aria-hidden="true" />
+                  {t.car.alreadyRequested}
+                </p>
+                <p className="text-muted-foreground mt-1 text-xs">{t.car.alreadyRequestedBody}</p>
+              </div>
+            ) : (
+              <Button size="lg" className="flex-1 sm:flex-none" disabled>
                 <ShoppingCart className="size-4" aria-hidden="true" />
                 {t.car.order}
-              </Link>
-            </Button>
+              </Button>
+            )}
 
             <Button
               size="lg"
@@ -481,7 +561,38 @@ export function CarDetailView({ car }: { car: CarDetail }) {
               <Scale className="size-4" aria-hidden="true" />
               {compare.has(car.id) ? t.car.inCompare : t.car.compare}
             </Button>
+
+            {/*
+              Whether this colour can be had, in the same row and at the same
+              height as the buttons it sits with — a statement rather than a
+              control, so it is not a button, but it should not look like an
+              afterthought either.
+            */}
+            <span
+              role="status"
+              className={cn(
+                'inline-flex h-11 items-center gap-2 rounded-md border px-4 text-sm font-medium',
+                bookable
+                  ? 'border-success/30 bg-success/10 text-success'
+                  : 'border-border bg-secondary text-muted-foreground',
+              )}
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  'size-2 rounded-full',
+                  bookable ? 'bg-success' : 'bg-muted-foreground/60',
+                )}
+              />
+              {bookable ? t.car.available : t.car.unavailable}
+            </span>
           </div>
+
+          {!bookable && (
+            <p className="text-muted-foreground mt-3 text-sm">
+              {carAvailable ? t.car.unavailableHint : t.car.unavailableCar}
+            </p>
+          )}
 
           {car.isDemoData && (
             <p className="border-warning/30 bg-warning/5 text-muted-foreground mt-6 rounded-lg border p-3 text-xs/5">
@@ -491,12 +602,12 @@ export function CarDetailView({ car }: { car: CarDetail }) {
         </div>
       </div>
 
-      {car.description && (
+      {copy.description && (
         <>
           <Separator className="my-12" />
           <div className="max-w-3xl">
             <h2 className="text-2xl font-semibold">{t.car.overview}</h2>
-            <p className="text-muted-foreground mt-4 text-base/7 whitespace-pre-line">{car.description}</p>
+            <p className="text-muted-foreground mt-4 text-base/7 whitespace-pre-line">{copy.description}</p>
           </div>
         </>
       )}

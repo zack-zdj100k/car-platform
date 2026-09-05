@@ -34,3 +34,34 @@ test.describe('Translations', () => {
     });
   }
 });
+
+/**
+ * What a first-time visitor is shown.
+ *
+ * The rest of the suite runs with the language pinned to English by a cookie
+ * in `playwright.config.ts`, so without this nothing would notice if the
+ * default reverted. This clears that cookie and asks for the page the way a
+ * stranger does.
+ */
+test.describe('The default language', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test('is French for somebody arriving with no preference', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'fr');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'ltr');
+
+    // The switch reads "FR", and the navigation is in French.
+    await expect(page.getByRole('link', { name: 'Accueil' }).first()).toBeVisible();
+    await expect(page).toHaveTitle(/voitures/i);
+  });
+
+  test('an Arabic reader who chooses it gets a right-to-left page', async ({ page }) => {
+    await page.context().addCookies([
+      { name: 'cp_locale', value: 'ar', domain: 'localhost', path: '/' },
+    ]);
+    await page.goto('/');
+    await expect(page.locator('html')).toHaveAttribute('lang', 'ar');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  });
+});

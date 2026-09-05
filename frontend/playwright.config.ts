@@ -41,6 +41,31 @@ export default defineConfig({
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:3100',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
+
+    /*
+     * These tests read the interface in English.
+     *
+     * The site's default is French — that is what a first-time visitor gets,
+     * and `dictionaries.spec.ts` checks that a visitor with no cookie is shown
+     * it. Every other test is about behaviour rather than wording, and pinning
+     * the language here means one selector per string instead of three, and a
+     * translation reworded tomorrow does not fail a test about booking.
+     */
+    storageState: {
+      cookies: [
+        {
+          name: 'cp_locale',
+          value: 'en',
+          domain: 'localhost',
+          path: '/',
+          expires: -1,
+          httpOnly: false,
+          secure: false,
+          sameSite: 'Lax',
+        },
+      ],
+      origins: [],
+    },
   },
 
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],

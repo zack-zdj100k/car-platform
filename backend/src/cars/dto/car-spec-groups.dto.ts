@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsBoolean,
@@ -12,8 +12,9 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateIf,
 } from 'class-validator';
-import { ColorKind, Drivetrain, FuelType, ImageKind, Transmission } from '@prisma/client';
+import { ColorKind, Drivetrain, FuelType, ImageKind, Locale, Transmission } from '@prisma/client';
 
 /** Spec §16, §47 — engine & performance */
 export class CarEngineDto {
@@ -176,6 +177,33 @@ export class CarColorDto {
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsNumber() priceDelta?: number;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() isDefault?: boolean;
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(0) sortOrder?: number;
+
+  /**
+   * How many are on the floor in this colour. Administration only — customers
+   * are told whether a colour is available, never how thin it is.
+   *
+   * Null is meaningful and is the default: "not counted", for a colour that can
+   * always be ordered in. Zero means sold out. Sending nothing leaves whatever
+   * was there alone.
+   */
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
+  /*
+   * Transformed by hand, because `@Type(() => Number)` turns null into 0.
+   *
+   * That is not a rounding detail: null means "not counted" and 0 means "sold
+   * out", and the conversion silently changed every colour saved through the
+   * administration into one nobody could book. The catalogue went unavailable
+   * without anybody touching a stock field.
+   */
+  @Transform(({ value }: { value: unknown }) =>
+    value === null || value === undefined || value === '' ? null : Number(value),
+  )
+  @ValidateIf((_object: unknown, value: unknown) => value !== null)
+  @IsInt()
+  @Min(0)
+  @Max(9999)
+  stock?: number | null;
 }
 
 /** Spec §47 (Media), §63 */
@@ -215,4 +243,21 @@ export class CarImageDto {
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(0) width?: number;
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(0) height?: number;
   @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsInt() @Min(0) sortOrder?: number;
+}
+
+/**
+ * The authored copy of one vehicle, in one other language (spec §7).
+ *
+ * The car's own columns hold the text as it was written; these are overlays.
+ * A field left empty falls back to what is on the car, so an administrator who
+ * translates the short description but not the long one gets a page that is
+ * translated where it has been translated and readable everywhere else —
+ * rather than a blank section.
+ */
+export class CarTranslationDto {
+  @ApiPropertyOptional({ enum: Locale }) @IsEnum(Locale) locale: Locale;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(500) marketingDescription?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(20000) description?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(5000) exteriorDescription?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(5000) interiorDescription?: string;
 }

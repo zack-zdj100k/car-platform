@@ -197,15 +197,15 @@ test.describe('Customer journey', () => {
     // ---- order it ----
     await page.goto('/cars');
     await page.getByTestId('car-card').first().getByRole('link').first().click();
-    await page.getByRole('link', { name: 'Order this car' }).click();
+    await page.getByRole('link', { name: 'Request an appointment' }).click();
 
     await expect(page).toHaveURL(/\/order/);
     await page.getByLabel('Full name').fill('E2E Customer');
     await page.getByLabel('Email address').fill(email);
     await page.getByLabel('Phone number').fill('+213600000123');
-    await page.getByRole('button', { name: 'Submit request' }).click();
+    await page.getByRole('button', { name: 'Request an appointment' }).click();
 
-    await expect(page.getByRole('heading', { name: 'Request received' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Appointment requested' })).toBeVisible();
     const reference = await page.locator('dd.font-mono').textContent();
     expect(reference).toMatch(/^ORD-\d{4}-/);
 

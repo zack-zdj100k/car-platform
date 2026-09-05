@@ -11,6 +11,7 @@ import { useCompare } from '@/hooks/use-compare';
 import { useLocale } from '@/providers/locale-provider';
 import { carsService } from '@/services/cars.service';
 import { formatAcronym, formatMeasure, formatPrice, humaniseEnum } from '@/lib/format';
+import { specLabels } from '@/lib/i18n/spec';
 import type { CarDetail } from '@/types/api';
 
 /**
@@ -39,48 +40,50 @@ export default function ComparePage() {
     if (list.length === 0) return [];
 
     const boolLabel = (value: boolean | undefined) => (value ? t.car.fitted : t.car.notFitted);
+    // The same field names the vehicle page and the editor use.
+    const s = specLabels(locale);
 
     return [
       { label: t.cars.brand, values: list.map((car) => car.brand.name) },
       { label: t.cars.model, values: list.map((car) => car.model) },
       { label: t.cars.year, values: list.map((car) => String(car.year)) },
-      { label: t.cars.bodyType, values: list.map((car) => humaniseEnum(car.bodyType)) },
-      { label: 'Seats', values: list.map((car) => (car.seats ? String(car.seats) : '—')) },
-      { label: 'Price', values: list.map((car) => formatPrice(car.price, car.currency, locale)) },
-      { label: 'Engine', values: list.map((car) => car.engine?.engineType ?? '—') },
+      { label: t.cars.bodyType, values: list.map((car) => humaniseEnum(car.bodyType, locale)) },
+      { label: s.seats, values: list.map((car) => (car.seats ? String(car.seats) : '—')) },
+      { label: s.price, values: list.map((car) => formatPrice(car.price, car.currency, locale)) },
+      { label: s.engineType, values: list.map((car) => car.engine?.engineType ?? '—') },
       {
-        label: 'Displacement',
+        label: s.displacement,
         values: list.map((car) => (car.engine?.displacementL ? `${car.engine.displacementL} L` : '—')),
       },
-      { label: 'Power', values: list.map((car) => (car.engine?.powerHp ? `${car.engine.powerHp} hp` : '—')) },
-      { label: 'Torque', values: list.map((car) => (car.engine?.torqueNm ? `${car.engine.torqueNm} Nm` : '—')) },
-      { label: 'Transmission', values: list.map((car) => formatAcronym(car.engine?.transmission)) },
-      { label: 'Drivetrain', values: list.map((car) => formatAcronym(car.engine?.drivetrain)) },
-      { label: t.cars.fuelType, values: list.map((car) => humaniseEnum(car.engine?.fuelType)) },
+      { label: s.power, values: list.map((car) => (car.engine?.powerHp ? `${car.engine.powerHp} hp` : '—')) },
+      { label: s.torque, values: list.map((car) => (car.engine?.torqueNm ? `${car.engine.torqueNm} Nm` : '—')) },
+      { label: s.transmission, values: list.map((car) => formatAcronym(car.engine?.transmission, locale)) },
+      { label: s.drivetrain, values: list.map((car) => formatAcronym(car.engine?.drivetrain, locale)) },
+      { label: t.cars.fuelType, values: list.map((car) => humaniseEnum(car.engine?.fuelType, locale)) },
       {
-        label: '0–100 km/h',
+        label: s.acceleration,
         values: list.map((car) => (car.engine?.acceleration0100 ? `${car.engine.acceleration0100} s` : '—')),
       },
       {
-        label: 'Wheels',
+        label: s.wheelSize,
         values: list.map((car) => (car.wheels?.wheelSizeInch ? `${car.wheels.wheelSizeInch}"` : '—')),
       },
-      { label: 'Front tyres', values: list.map((car) => car.wheels?.frontTyreSize ?? '—') },
-      { label: 'Rear tyres', values: list.map((car) => car.wheels?.rearTyreSize ?? '—') },
-      { label: 'Length', values: list.map((car) => formatMeasure(car.dimensions?.lengthMm, 'mm', locale)) },
-      { label: 'Wheelbase', values: list.map((car) => formatMeasure(car.dimensions?.wheelbaseMm, 'mm', locale)) },
-      { label: 'Boot', values: list.map((car) => formatMeasure(car.dimensions?.bootCapacityL, 'L', locale)) },
-      { label: 'Seat material', values: list.map((car) => car.interior?.seatMaterial ?? '—') },
-      { label: 'Infotainment', values: list.map((car) => car.interior?.infotainmentScreen ?? '—') },
-      { label: 'Apple CarPlay', values: list.map((car) => boolLabel(car.technology?.appleCarPlay)) },
-      { label: '360° camera', values: list.map((car) => boolLabel(car.technology?.camera360)) },
+      { label: s.frontTyres, values: list.map((car) => car.wheels?.frontTyreSize ?? '—') },
+      { label: s.rearTyres, values: list.map((car) => car.wheels?.rearTyreSize ?? '—') },
+      { label: s.length, values: list.map((car) => formatMeasure(car.dimensions?.lengthMm, 'mm', locale)) },
+      { label: s.wheelbase, values: list.map((car) => formatMeasure(car.dimensions?.wheelbaseMm, 'mm', locale)) },
+      { label: s.bootCapacity, values: list.map((car) => formatMeasure(car.dimensions?.bootCapacityL, 'L', locale)) },
+      { label: s.seatMaterial, values: list.map((car) => car.interior?.seatMaterial ?? '—') },
+      { label: s.infotainment, values: list.map((car) => car.interior?.infotainmentScreen ?? '—') },
+      { label: s.appleCarPlay, values: list.map((car) => boolLabel(car.technology?.appleCarPlay)) },
+      { label: s.camera360, values: list.map((car) => boolLabel(car.technology?.camera360)) },
       {
-        label: 'Adaptive cruise',
+        label: s.adaptiveCruiseControl,
         values: list.map((car) => boolLabel(car.technology?.adaptiveCruiseControl)),
       },
-      { label: 'Emergency braking', values: list.map((car) => boolLabel(car.safety?.autonomousEmergencyBraking)) },
-      { label: 'Lane keeping', values: list.map((car) => boolLabel(car.safety?.laneKeepingAssist)) },
-      { label: 'Airbags', values: list.map((car) => (car.safety?.airbagCount ? String(car.safety.airbagCount) : '—')) },
+      { label: s.emergencyBraking, values: list.map((car) => boolLabel(car.safety?.autonomousEmergencyBraking)) },
+      { label: s.laneKeepingAssist, values: list.map((car) => boolLabel(car.safety?.laneKeepingAssist)) },
+      { label: s.airbags, values: list.map((car) => (car.safety?.airbagCount ? String(car.safety.airbagCount) : '—')) },
     ];
   }, [cars.data, locale, t]);
 
@@ -130,7 +133,18 @@ export default function ComparePage() {
             <caption className="sr-only">{t.dashboard.compare}</caption>
             <thead>
               <tr>
-                <th scope="col" className="bg-card sticky start-0 w-40 p-4 text-start align-bottom">
+                {/*
+                  `z-20` on the frozen column, and a solid background.
+
+                  A sticky cell with no z-index of its own is painted in
+                  document order, so every scrolling cell after it — the
+                  photographs, the values — slid over the top of it instead of
+                  under. The column of labels appeared to be printed on the cars.
+                */}
+                <th
+                  scope="col"
+                  className="bg-card sticky start-0 z-20 w-40 p-4 text-start align-bottom"
+                >
                   <span className="sr-only">{t.car.specifications}</span>
                 </th>
                 {list.map((car) => (
@@ -167,7 +181,7 @@ export default function ComparePage() {
                 <tr key={row.label} className={index % 2 === 1 ? 'bg-secondary/40' : undefined}>
                   <th
                     scope="row"
-                    className="bg-card text-muted-foreground sticky start-0 p-3 text-start font-normal"
+                    className="bg-card text-muted-foreground sticky start-0 z-20 p-3 text-start font-normal"
                   >
                     {row.label}
                   </th>

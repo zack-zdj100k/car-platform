@@ -2,9 +2,10 @@
 
 import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, ArrowLeft, CheckCircle2, Info, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Info, Loader2 } from 'lucide-react';
+import { BackLink } from '@/components/shared/back-link';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,10 +16,13 @@ import { Separator } from '@/components/ui/separator';
 import { Price } from '@/components/shared/price';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useLocale } from '@/providers/locale-provider';
+import type { Dictionary } from '@/lib/i18n/dictionaries';
 import { useAuth } from '@/providers/auth-provider';
 import { ordersService } from '@/services/customer.service';
 import { ApiError } from '@/services/api-client';
 import { cn } from '@/lib/utils';
+import { whatsappLink } from '@/lib/whatsapp';
+import { WhatsAppIcon } from '@/components/ui/whatsapp-icon';
 import type { CarDetail, OrderDetail } from '@/types/api';
 
 /**
@@ -29,20 +33,31 @@ import type { CarDetail, OrderDetail } from '@/types/api';
  * before a round trip; the backend validates independently and remains the
  * authority.
  */
-const schema = z.object({
-  buyerName: z.string().trim().min(2, 'Please enter your full name').max(120),
-  buyerEmail: z.string().trim().toLowerCase().pipe(z.email('Enter a valid email address')),
-  buyerPhone: z
-    .string()
-    .trim()
-    .regex(/^\+?[0-9 ()-]{6,20}$/, 'Enter a valid phone number'),
-  message: z.string().trim().max(2000).optional(),
-});
+const buildSchema = (v: Dictionary['validation']) =>
+  z.object({
+    buyerName: z.string().trim().min(2, v.fullName).max(120),
+    buyerEmail: z.string().trim().toLowerCase().pipe(z.email(v.email)),
+    buyerPhone: z
+      .string()
+      .trim()
+      .regex(/^\+?[0-9 ()-]{6,20}$/, v.phone),
+    message: z.string().trim().max(2000).optional(),
+  });
 
 type FieldErrors = Partial<Record<'buyerName' | 'buyerEmail' | 'buyerPhone' | 'message', string>>;
 
-export function OrderForm({ car, initialColorId }: { car: CarDetail; initialColorId?: string }) {
+export function OrderForm({
+  car,
+  initialColorId,
+  whatsappPhone = '',
+}: {
+  car: CarDetail;
+  initialColorId?: string;
+  /** The showroom's number, from settings. No number, no button. */
+  whatsappPhone?: string;
+}) {
   const { t, format } = useLocale();
+  const schema = useMemo(() => buildSchema(t.validation), [t]);
   const { user, token, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -108,8 +123,18 @@ export function OrderForm({ car, initialColorId }: { car: CarDetail; initialColo
         router.push(`/login?next=${encodeURIComponent(`/car/${car.slug}/order`)}`);
         return;
       }
+      /*
+       * 409 is the one case with its own wording: the customer already has
+       * this appointment. The API's sentence is English and names a reference;
+       * the reader wants to know they are already in the queue, in their own
+       * language, which is what the vehicle's page says too.
+       */
+      if (error instanceof ApiError && error.status === 409) {
+        setFormError(`${t.car.alreadyRequested}. ${t.car.alreadyRequestedBody}`);
+        return;
+      }
       setFormError(
-        error instanceof ApiError ? error.message : 'We could not send your request. Please try again.',
+        error instanceof ApiError ? error.message : t.validation.requestFailed,
       );
     } finally {
       setSubmitting(false);
@@ -118,6 +143,16 @@ export function OrderForm({ car, initialColorId }: { car: CarDetail; initialColo
 
   // ---- success ----
   if (order) {
+    const whatsapp = whatsappPhone
+      ? whatsappLink(
+          whatsappPhone,
+          format(t.order.whatsappBody, {
+            reference: order.reference,
+            vehicle: `${car.brand.name} ${car.model} ${car.year}`,
+          }),
+        )
+      : null;
+
     return (
       <div className="mx-auto w-full max-w-2xl px-5 py-16 sm:px-8">
         <div className="border-border bg-card rounded-xl border p-8 text-center shadow-[var(--shadow-card)]">
@@ -149,13 +184,37 @@ export function OrderForm({ car, initialColorId }: { car: CarDetail; initialColo
             <div className="flex justify-between gap-4">
               <dt className="text-muted-foreground">{t.dashboard.status}</dt>
               <dd>
-                <Badge variant="secondary">{order.status}</Badge>
+                <Badge variant="secondary">{t.orderStatus[order.status] ?? order.status}</Badge>
               </dd>
             </div>
           </dl>
 
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Button asChild>
+          {/*
+            WhatsApp, first and in its own colour.
+
+            The appointment is a request for a conversation, and this is the
+            moment the customer has the most to say — a time that suits them, a
+            question they did not put in the form. Waiting for us to call is the
+            slower half of that exchange, and a business that runs on contact
+            should not make the customer wait to make contact.
+          */}
+          {whatsapp && (
+            <div className="mt-8">
+              <Button
+                asChild
+                size="lg"
+                className="w-full bg-[#25D366] text-black hover:bg-[#1FB855] sm:w-auto"
+              >
+                <a href={whatsapp} target="_blank" rel="noreferrer noopener">
+                  <WhatsAppIcon className="size-5" aria-hidden="true" />
+                  {t.order.whatsapp}
+                </a>
+              </Button>
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-wrap justify-center gap-3">
+            <Button asChild variant={whatsapp ? 'outline' : 'default'}>
               <Link href="/dashboard/orders">{t.order.viewOrders}</Link>
             </Button>
             <Button asChild variant="outline">
@@ -169,12 +228,11 @@ export function OrderForm({ car, initialColorId }: { car: CarDetail; initialColo
 
   return (
     <div className="mx-auto w-full max-w-5xl px-5 py-8 sm:px-8 sm:py-12">
-      <Button asChild variant="ghost" size="sm" className="text-muted-foreground -ms-2 mb-6">
-        <Link href={`/car/${car.slug}`}>
-          <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
-          {car.brand.name} {car.model}
-        </Link>
-      </Button>
+      <BackLink
+        href={`/car/${car.slug}`}
+        label={`${car.brand.name} ${car.model}`}
+        className="text-muted-foreground -ms-2 mb-6"
+      />
 
       <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr]">
         <div>

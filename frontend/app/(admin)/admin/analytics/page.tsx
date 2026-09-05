@@ -154,7 +154,7 @@ export default function AdminAnalyticsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Mail className="size-4" aria-hidden="true" />
-            Email delivery
+            {t.admin.emailDelivery}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

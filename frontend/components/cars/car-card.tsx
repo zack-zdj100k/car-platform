@@ -14,6 +14,7 @@ import { useAuth } from '@/providers/auth-provider';
 import { useTilt } from '@/hooks/use-tilt';
 import { formatAcronym, humaniseEnum } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { carCopy } from '@/lib/i18n/car-copy';
 import type { CarListItem } from '@/types/api';
 
 /**
@@ -38,7 +39,9 @@ export function CarCard({
   onToggleCompare?: (carId: string) => void;
   priority?: boolean;
 }) {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
+  /* The showroom's own line, in the reader's language where it has one. */
+  const summary = carCopy(car, locale).marketingDescription;
   const { isAuthenticated } = useAuth();
   const router = useRouter();
 
@@ -169,13 +172,13 @@ export function CarCard({
         <div className="text-muted-foreground mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <span>{car.year}</span>
           <span aria-hidden="true">·</span>
-          <span>{humaniseEnum(car.bodyType)}</span>
+          <span>{humaniseEnum(car.bodyType, locale)}</span>
           {car.engine?.fuelType && (
             <>
               <span aria-hidden="true">·</span>
               <span className="inline-flex items-center gap-1">
                 <Fuel className="size-3.5" aria-hidden="true" />
-                {humaniseEnum(car.engine.fuelType)}
+                {humaniseEnum(car.engine.fuelType, locale)}
               </span>
             </>
           )}
@@ -190,8 +193,8 @@ export function CarCard({
           )}
         </div>
 
-        {car.marketingDescription && (
-          <p className="text-muted-foreground mt-3 line-clamp-2 text-sm/6">{car.marketingDescription}</p>
+        {summary && (
+          <p className="text-muted-foreground mt-3 line-clamp-2 text-sm/6">{summary}</p>
         )}
 
         {/*
@@ -225,8 +228,8 @@ export function CarCard({
             <Price price={car.price} promoPrice={car.promoPrice} currency={car.currency} />
             {car.engine?.transmission && (
               <p className="text-muted-foreground mt-0.5 text-xs">
-                {formatAcronym(car.engine.transmission)}
-                {car.engine.drivetrain ? ` · ${formatAcronym(car.engine.drivetrain)}` : ''}
+                {formatAcronym(car.engine.transmission, locale)}
+                {car.engine.drivetrain ? ` · ${formatAcronym(car.engine.drivetrain, locale)}` : ''}
               </p>
             )}
           </div>
@@ -277,8 +280,24 @@ export function CarCard({
         </div>
 
         {defaultColor && (
-          <p className="text-muted-foreground mt-2 text-xs">
-            {t.car.colours}: {defaultColor.name}
+          <p className="text-muted-foreground mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+            <span>
+              {t.car.colours}: {(shownColor ?? defaultColor).name}
+            </span>
+
+            {/*
+              Whether the colour being shown can be had, on the card and not
+              only on the vehicle's page. Tapping a swatch here already swaps
+              the photograph, so it should answer the next question too — and
+              the alternative is a customer choosing a colour, opening the page
+              and finding out it is gone.
+            */}
+            {(shownColor ?? defaultColor).isAvailable === false && (
+              <span className="border-border bg-secondary text-muted-foreground inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium">
+                <span aria-hidden="true" className="bg-muted-foreground/60 size-1.5 rounded-full" />
+                {t.car.unavailable}
+              </span>
+            )}
           </p>
         )}
       </div>

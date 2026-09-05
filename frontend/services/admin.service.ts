@@ -37,6 +37,13 @@ export const adminUsersService = {
   update(id: string, body: { role?: string; status?: string }, options: RequestOptions = {}) {
     return apiRequest<AdminUser>(`/users/${id}`, { ...options, method: 'PATCH', body });
   },
+  /**
+   * Deletes an account and everything of theirs. The API refuses the acting
+   * administrator's own account and the last one left.
+   */
+  remove(id: string, options: RequestOptions = {}) {
+    return apiRequest<{ deleted: boolean }>(`/users/${id}`, { ...options, method: 'DELETE' });
+  },
 };
 
 export const adminOrdersService = {
@@ -58,6 +65,21 @@ export const adminOrdersService = {
   },
   updateStatus(id: string, body: { status: OrderStatus; note?: string }, options: RequestOptions = {}) {
     return apiRequest<OrderDetail>(`/orders/${id}/status`, { ...options, method: 'PATCH', body });
+  },
+  /**
+   * Where this customer should come. Separate from the status because the two
+   * are decided at different moments — the appointment on the telephone, the
+   * address once the owner knows which of their places the car will be at.
+   */
+  remove(id: string, options: RequestOptions = {}) {
+    return apiRequest<{ deleted: boolean }>(`/orders/${id}`, { ...options, method: 'DELETE' });
+  },
+  setMeetingPlace(
+    id: string,
+    body: { meetingAddress?: string; meetingMapUrl?: string; meetingNote?: string },
+    options: RequestOptions = {},
+  ) {
+    return apiRequest<OrderDetail>(`/orders/${id}/meeting`, { ...options, method: 'PATCH', body });
   },
 };
 

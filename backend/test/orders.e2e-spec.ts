@@ -281,6 +281,286 @@ describe('Orders', () => {
     });
   });
 
+  describe('a customer withdrawing their own appointment', () => {
+    it('cancels it, and records who cancelled it', async () => {
+      const car = await seedCar(context);
+      const created = await context
+        .http()
+        .post('/api/orders')
+        .set(auth)
+        .send(orderBody(car.id))
+        .expect(201);
+
+      const cancelled = await context
+        .http()
+        .patch(`/api/orders/${created.body.id}/cancel`)
+        .set(auth)
+        .expect(200);
+      expect(cancelled.body.status).toBe('CANCELLED');
+
+      // The record stays, with the withdrawal in its history — it is part of
+      // what happened, not something to erase.
+      const detail = await context
+        .http()
+        .get(`/api/orders/${created.body.id}`)
+        .set(auth)
+        .expect(200);
+      const last = detail.body.statusHistory.at(-1);
+      expect(last.toStatus).toBe('CANCELLED');
+      expect(last.note).toMatch(/customer/i);
+    });
+
+    it('refuses to cancel somebody else’s', async () => {
+      const car = await seedCar(context);
+      const created = await context
+        .http()
+        .post('/api/orders')
+        .set(auth)
+        .send(orderBody(car.id))
+        .expect(201);
+
+      const other = await registerCustomer(context, 'stranger@test.local');
+      await context
+        .http()
+        .patch(`/api/orders/${created.body.id}/cancel`)
+        .set('Authorization', `Bearer ${other.token}`)
+        .expect(403);
+    });
+
+    it('refuses once the appointment has been completed', async () => {
+      const car = await seedCar(context);
+      const created = await context
+        .http()
+        .post('/api/orders')
+        .set(auth)
+        .send(orderBody(car.id))
+        .expect(201);
+
+      await context
+        .http()
+        .patch(`/api/orders/${created.body.id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'COMPLETED' })
+        .expect(200);
+
+      await context
+        .http()
+        .patch(`/api/orders/${created.body.id}/cancel`)
+        .set(auth)
+        .expect(400);
+    });
+
+    it('cannot be used to set any other status', async () => {
+      // The customer's route only ever cancels; anything else is the
+      // administrator's, and that one is behind the admin guard.
+      const car = await seedCar(context);
+      const created = await context
+        .http()
+        .post('/api/orders')
+        .set(auth)
+        .send(orderBody(car.id))
+        .expect(201);
+
+      await context
+        .http()
+        .patch(`/api/orders/${created.body.id}/status`)
+        .set(auth)
+        .send({ status: 'CONFIRMED' })
+        .expect(403);
+    });
+  });
+
+  describe('deleting an appointment', () => {
+    async function book() {
+      const car = await seedCar(context);
+      const created = await context
+        .http()
+        .post('/api/orders')
+        .set(auth)
+        .send(orderBody(car.id))
+        .expect(201);
+      return created.body.id as string;
+    }
+
+    it('lets a customer clear one they have cancelled', async () => {
+      const id = await book();
+      await context.http().patch(`/api/orders/${id}/cancel`).set(auth).expect(200);
+      await context.http().delete(`/api/orders/${id}`).set(auth).expect(200);
+      await context.http().get(`/api/orders/${id}`).set(auth).expect(404);
+    });
+
+    it('refuses to let a customer delete one that is still open', async () => {
+      // Withdrawing and erasing are different acts, and the first comes first.
+      const id = await book();
+      await context.http().delete(`/api/orders/${id}`).set(auth).expect(400);
+    });
+
+    it('refuses somebody else’s', async () => {
+      const id = await book();
+      await context.http().patch(`/api/orders/${id}/cancel`).set(auth).expect(200);
+
+      const other = await registerCustomer(context, 'nosy@test.local');
+      await context
+        .http()
+        .delete(`/api/orders/${id}`)
+        .set('Authorization', `Bearer ${other.token}`)
+        .expect(403);
+    });
+
+    it('lets an administrator remove any appointment', async () => {
+      const id = await book();
+      await context
+        .http()
+        .delete(`/api/orders/${id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+    });
+
+    it('keeps a completed one, whoever asks', async () => {
+      // It is the record of a sale — who bought the car, and when it left.
+      const id = await book();
+      await context
+        .http()
+        .patch(`/api/orders/${id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'COMPLETED' })
+        .expect(200);
+
+      await context
+        .http()
+        .delete(`/api/orders/${id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(400);
+    });
+  });
+
+  describe('the meeting place', () => {
+    const place = {
+      meetingAddress: 'Cité 1000 Logements, El Khroub, Constantine',
+      meetingMapUrl: 'https://maps.google.com/?q=36.2639,6.6903',
+      meetingNote: 'Saturday morning, ask for Karim',
+    };
+
+    async function bookAndSetPlace() {
+      const car = await seedCar(context);
+      const created = await context
+        .http()
+        .post('/api/orders')
+        .set(auth)
+        .send(orderBody(car.id))
+        .expect(201);
+
+      await context
+        .http()
+        .patch(`/api/orders/${created.body.id}/meeting`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send(place)
+        .expect(200);
+
+      return created.body.id as string;
+    }
+
+    it('is kept from the customer until the appointment is confirmed', async () => {
+      const id = await bookAndSetPlace();
+
+      // Still pending: there is nothing to come to yet, and an address on an
+      // unanswered request sends somebody to a closed door.
+      const pending = await context.http().get(`/api/orders/${id}`).set(auth).expect(200);
+      expect(pending.body.meetingAddress).toBeNull();
+      expect(pending.body.meetingMapUrl).toBeNull();
+
+      await context
+        .http()
+        .patch(`/api/orders/${id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'CONFIRMED' })
+        .expect(200);
+
+      const confirmed = await context.http().get(`/api/orders/${id}`).set(auth).expect(200);
+      expect(confirmed.body.meetingAddress).toBe(place.meetingAddress);
+      expect(confirmed.body.meetingMapUrl).toBe(place.meetingMapUrl);
+      expect(confirmed.body.meetingNote).toBe(place.meetingNote);
+    });
+
+    it('is taken away again if the appointment is cancelled', async () => {
+      const id = await bookAndSetPlace();
+
+      await context
+        .http()
+        .patch(`/api/orders/${id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'CONFIRMED' })
+        .expect(200);
+      await context
+        .http()
+        .patch(`/api/orders/${id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'CANCELLED' })
+        .expect(200);
+
+      const cancelled = await context.http().get(`/api/orders/${id}`).set(auth).expect(200);
+      expect(cancelled.body.meetingAddress).toBeNull();
+
+      // The administration still has it: the appointment may come back.
+      const asAdmin = await context
+        .http()
+        .get(`/api/orders/${id}`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      expect(asAdmin.body.meetingAddress).toBe(place.meetingAddress);
+    });
+
+    it('appears in the customer’s own list under the same rule', async () => {
+      const id = await bookAndSetPlace();
+      await context
+        .http()
+        .patch(`/api/orders/${id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ status: 'CONFIRMED' })
+        .expect(200);
+
+      const mine = await context.http().get('/api/orders/mine').set(auth).expect(200);
+      const row = (mine.body.data as { id: string; meetingAddress: string | null }[]).find(
+        (entry) => entry.id === id,
+      );
+      expect(row?.meetingAddress).toBe(place.meetingAddress);
+    });
+
+    it('is the administration’s to write, not the customer’s', async () => {
+      const car = await seedCar(context);
+      const created = await context
+        .http()
+        .post('/api/orders')
+        .set(auth)
+        .send(orderBody(car.id))
+        .expect(201);
+
+      await context
+        .http()
+        .patch(`/api/orders/${created.body.id}/meeting`)
+        .set(auth)
+        .send(place)
+        .expect(403);
+    });
+
+    it('refuses a map link that is not a full address', async () => {
+      const car = await seedCar(context);
+      const created = await context
+        .http()
+        .post('/api/orders')
+        .set(auth)
+        .send(orderBody(car.id))
+        .expect(201);
+
+      await context
+        .http()
+        .patch(`/api/orders/${created.body.id}/meeting`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .send({ meetingMapUrl: 'maps.google.com/?q=here' })
+        .expect(400);
+    });
+  });
+
   describe('visibility', () => {
     it('shows a customer only their own orders', async () => {
       const car = await seedCar(context);

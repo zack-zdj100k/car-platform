@@ -16,7 +16,7 @@ export const settings: {
   description: string;
 }[] = [
   { key: 'site.name', value: 'ZODIC CAR', group: 'general', isPublic: true, description: 'Site name shown in the header and metadata. The brand name, shown in the header, the tab title and the footer.' },
-  { key: 'site.tagline', value: 'Chinese cars: The best choice for quality & innovation', group: 'general', isPublic: true, description: 'Home hero headline (spec §8).' },
+  { key: 'site.tagline', value: 'Cars from China, Germany, France, Asia and Algeria', group: 'general', isPublic: true, description: 'Home hero headline (spec §8).' },
   { key: 'site.defaultLocale', value: 'EN', group: 'general', isPublic: true, description: 'Fallback locale — EN / FR / AR (spec §7).' },
   { key: 'site.contactEmail', value: 'contact@example.com', group: 'general', isPublic: true, description: 'Placeholder until the real address is provided.' },
   { key: 'site.contactPhone', value: '', group: 'general', isPublic: true, description: 'Placeholder until the real number is provided.' },

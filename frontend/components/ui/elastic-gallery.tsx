@@ -107,7 +107,17 @@ export function ElasticGallery({
               <div className="pointer-events-none absolute inset-0 flex flex-col justify-end p-4 md:p-8">
                 <div
                   className={cn(
-                    'flex flex-col gap-2 transition-all duration-500',
+                    /*
+                     * `z-20` on this wrapper, not only on the link inside it.
+                     *
+                     * The wrapper fades, and an element with opacity below 1
+                     * creates its own stacking context — which trapped the
+                     * link's z-20 inside a box that had no z-index of its own,
+                     * and left it underneath the panel's full-size button. The
+                     * link was visible, and every click opened the panel
+                     * instead of following it.
+                     */
+                    'relative z-20 flex flex-col gap-2 transition-all duration-500',
                     active ? 'translate-y-0 opacity-100 delay-200' : 'translate-y-12 opacity-0',
                   )}
                 >
@@ -126,10 +136,18 @@ export function ElasticGallery({
                   {item.href && (
                     <Link
                       href={item.href}
-                      // Above the panel's own control, and clickable again —
-                      // the wrapper turns pointer events off so the photograph
-                      // does not swallow this link.
-                      className="pointer-events-auto relative z-20 mt-2 inline-flex w-fit items-center gap-2 text-xs font-bold tracking-widest text-white/85 uppercase transition-colors hover:text-white md:mt-4 md:text-sm"
+                      /*
+                       * Reachable only on the open panel. The wrapper turns
+                       * pointer events off so the photograph does not swallow
+                       * this link — and a closed panel's link is invisible, so
+                       * it should not be clickable or reachable by tab either.
+                       */
+                      tabIndex={active ? undefined : -1}
+                      aria-hidden={!active}
+                      className={cn(
+                        'relative z-20 mt-2 inline-flex w-fit items-center gap-2 text-xs font-bold tracking-widest text-white/85 uppercase transition-colors hover:text-white md:mt-4 md:text-sm',
+                        active ? 'pointer-events-auto' : 'pointer-events-none',
+                      )}
                     >
                       {actionLabel}
                       <ArrowUpRight className="size-3 md:size-4 rtl:-scale-x-100" aria-hidden="true" />

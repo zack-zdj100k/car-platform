@@ -25,6 +25,7 @@ import {
   CarInteriorDto,
   CarSafetyDto,
   CarTechnologyDto,
+  CarTranslationDto,
   CarWheelsDto,
 } from './car-spec-groups.dto';
 import { trim } from '../../common/transforms';
@@ -183,4 +184,12 @@ export class CreateCarDto {
   @ValidateNested({ each: true })
   @Type(() => CarImageDto)
   images?: CarImageDto[];
+
+  @ApiPropertyOptional({ type: [CarTranslationDto], description: 'Optional FR/AR/EN overlays for the authored copy' })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(3)
+  @ValidateNested({ each: true })
+  @Type(() => CarTranslationDto)
+  translations?: CarTranslationDto[];
 }

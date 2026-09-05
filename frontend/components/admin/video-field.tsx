@@ -8,6 +8,7 @@ import { ApiError } from '@/services/api-client';
 import { resolveImageUrl, uploadsService } from '@/services/uploads.service';
 import { uploadToast, type UploadToastId } from '@/lib/upload-toast';
 import { useAuth } from '@/providers/auth-provider';
+import { useLocale } from '@/providers/locale-provider';
 
 /**
  * The car's own video.
@@ -32,6 +33,7 @@ export function VideoField({
   onChange: (next: string) => void;
 }) {
   const { token } = useAuth();
+  const { t, format } = useLocale();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
@@ -44,8 +46,8 @@ export function VideoField({
       const result = await uploadsService.uploadVideo(file, token, (percent) => {
         card = uploadToast.progress(
           {
-            title: 'Uploading the video',
-            description: `${file.name} — ${megabytes} MB. Keep this page open until it finishes.`,
+            title: t.admin.videoUploading,
+            description: format(t.admin.videoProgress, { name: file.name, size: megabytes }),
             progress: percent,
           },
           card,
@@ -55,21 +57,22 @@ export function VideoField({
       onChange(result.url);
       uploadToast.success(
         {
-          title: 'The video is uploaded',
-          description: `${(result.sizeBytes / (1024 * 1024)).toFixed(1)} MB. Save the car to attach it.`,
-          primaryText: 'Done',
+          title: t.admin.videoUploaded,
+          description: format(t.admin.videoAttached, {
+            size: (result.sizeBytes / (1024 * 1024)).toFixed(1),
+          }),
+          primaryText: t.common.done,
         },
         card,
       );
     } catch (error) {
       uploadToast.error(
         {
-          title: 'The video was not uploaded',
-          description:
-            error instanceof ApiError ? error.message : 'That video could not be uploaded.',
-          primaryText: 'Try again',
+          title: t.admin.videoFailed,
+          description: error instanceof ApiError ? error.message : t.admin.videoNotUploaded,
+          primaryText: t.common.retry,
           onPrimary: () => input.current?.click(),
-          secondaryText: 'Cancel',
+          secondaryText: t.common.cancel,
         },
         card,
       );
@@ -80,7 +83,7 @@ export function VideoField({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="car-video">Video</Label>
+      <Label htmlFor="car-video">{t.admin.video}</Label>
 
       <input
         ref={input}
@@ -107,11 +110,11 @@ export function VideoField({
           <div className="flex flex-wrap gap-2 p-2.5">
             <Button type="button" size="sm" variant="secondary" disabled={busy} onClick={() => input.current?.click()}>
               <Upload className="size-4" aria-hidden="true" />
-              Replace
+              {t.admin.replace}
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => onChange('')}>
               <Trash2 className="size-4" aria-hidden="true" />
-              Remove
+              {t.admin.remove}
             </Button>
           </div>
         </div>
@@ -119,9 +122,7 @@ export function VideoField({
         <div className="border-border rounded-xl border border-dashed p-5 text-center">
           <Film className="text-primary mx-auto size-6" aria-hidden="true" />
           <p className="text-muted-foreground mx-auto mt-2 max-w-sm text-xs">
-            MP4, MOV or WebM, up to 80 MB. It plays on the car&rsquo;s page and puts the car on the
-            Videos page with a &ldquo;watch video&rdquo; button on its card. Leave it empty and none
-            of that appears.
+            {t.admin.videoHint}
           </p>
           <Button
             type="button"
@@ -134,12 +135,12 @@ export function VideoField({
             {busy ? (
               <>
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                Uploading…
+                {t.admin.uploading}
               </>
             ) : (
               <>
                 <Upload className="size-4" aria-hidden="true" />
-                Choose a video
+                {t.admin.chooseVideo}
               </>
             )}
           </Button>

@@ -11,7 +11,7 @@ test.describe('Sticky order bar', () => {
   const CAR = '/car/jetour-x70-plus-2024';
 
   const bar = (page: import('@playwright/test').Page) =>
-    page.locator('div.fixed').filter({ has: page.getByRole('link', { name: /order/i }) });
+    page.locator('div.fixed').filter({ has: page.getByRole('link', { name: /appointment/i }) });
 
   /**
    * Scrolls until the price is above the window.
@@ -85,7 +85,7 @@ test.describe('Sticky order bar', () => {
     // The price and a way to order, and nothing else: it used to repeat the
     // car's name across the full width of the page at a reader who is looking
     // at that very car.
-    await expect(bar(page).getByRole('link', { name: /order/i })).toBeVisible();
+    await expect(bar(page).getByRole('link', { name: /appointment/i })).toBeVisible();
     await expect(bar(page)).not.toContainText('X70 Plus');
 
     // Small, and out of the way rather than across the top.
@@ -120,7 +120,7 @@ test.describe('Sticky order bar', () => {
       await scrollPastThePrice(page);
       await expect(bar(page)).toBeVisible();
       // The colour travels with the order, as it does from the button above.
-      await expect(bar(page).getByRole('link', { name: /order/i })).toHaveAttribute(
+      await expect(bar(page).getByRole('link', { name: /appointment/i })).toHaveAttribute(
         'href',
         /color=/,
       );
