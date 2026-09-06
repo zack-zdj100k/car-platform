@@ -26,85 +26,49 @@ export interface SpinSlot {
 
 type Position = { position: string; sees: string };
 
+/*
+ * Eight stops, not twenty-four.
+ *
+ * Twenty-four meant walking a full circle holding the camera steady, and a
+ * phone in a hand does not hold steady: the height drifted, the distance
+ * drifted, the shadow moved, and every one of those showed up as a jolt in the
+ * turn. Eight stops are eight photographs somebody can actually take — stand,
+ * frame it, shoot, move a step.
+ *
+ * They are the eight a buyer asks for anyway, and the ones every car listing
+ * in the world already uses.
+ */
 const POSITIONS_EN: Position[] = [
-  { position: 'Directly in front', sees: 'The front, straight on — grille and headlights' },
-  { position: 'Front, edging right', sees: 'The front with the right flank appearing' },
-  { position: 'Front, edging right', sees: 'The front turning towards the side' },
-  { position: 'Front three-quarter, right', sees: 'The best angle of any car — front and side together' },
-  { position: 'Front three-quarter, right', sees: 'Front and side, a step further round' },
-  { position: 'Beside the right flank', sees: 'The side coming into full profile' },
-  { position: 'Beside the right flank', sees: 'The full side profile — wheels and doors' },
-  { position: 'Behind the right flank', sees: 'The side with the rear appearing' },
-  { position: 'Behind the right flank', sees: 'Side and rear together' },
-  { position: 'Rear three-quarter, right', sees: 'Rear and side — the second best angle' },
-  { position: 'Rear three-quarter, right', sees: 'Rear and side, a step further round' },
-  { position: 'Behind, edging right', sees: 'The rear turning towards you' },
-  { position: 'Directly behind', sees: 'The rear, straight on — lights and tailgate' },
-  { position: 'Behind, edging left', sees: 'The rear with the left flank appearing' },
-  { position: 'Rear three-quarter, left', sees: 'Rear and left side together' },
-  { position: 'Rear three-quarter, left', sees: 'Rear and left side, a step further round' },
-  { position: 'Behind the left flank', sees: 'The left side coming round' },
-  { position: 'Beside the left flank', sees: 'The left side nearly in profile' },
-  { position: 'Beside the left flank', sees: 'The full left profile' },
-  { position: 'Front of the left flank', sees: 'The left side with the front appearing' },
-  { position: 'Front three-quarter, left', sees: 'Front and left side together' },
-  { position: 'Front three-quarter, left', sees: 'Front and left side, closing in' },
-  { position: 'Front, edging left', sees: 'The front with the left flank' },
-  { position: 'Almost back in front', sees: 'One step short of where you began — not the same as frame 1' },
+  { position: 'Front', sees: 'The front, straight on — grille and headlights' },
+  { position: 'Front right', sees: 'Front and right side together — the best angle of any car' },
+  { position: 'Right side', sees: 'The full right profile — wheels and doors' },
+  { position: 'Back right', sees: 'Rear and right side together' },
+  { position: 'Back', sees: 'The rear, straight on — lights and tailgate' },
+  { position: 'Back left', sees: 'Rear and left side together' },
+  { position: 'Left side', sees: 'The full left profile — wheels and doors' },
+  { position: 'Front left', sees: 'Front and left side together' },
 ];
 
 const POSITIONS_FR: Position[] = [
-  { position: 'Juste devant', sees: 'L’avant, de face — calandre et phares' },
-  { position: 'Devant, en glissant vers la droite', sees: 'L’avant, le flanc droit apparaît' },
-  { position: 'Devant, en glissant vers la droite', sees: 'L’avant qui pivote vers le côté' },
-  { position: 'Trois-quarts avant droit', sees: 'Le meilleur angle — l’avant et le côté ensemble' },
-  { position: 'Trois-quarts avant droit', sees: 'Avant et côté, un pas plus loin' },
-  { position: 'À côté du flanc droit', sees: 'Le côté qui vient en profil' },
-  { position: 'À côté du flanc droit', sees: 'Le profil complet — roues et portes' },
-  { position: 'Derrière le flanc droit', sees: 'Le côté, l’arrière apparaît' },
-  { position: 'Derrière le flanc droit', sees: 'Le côté et l’arrière ensemble' },
-  { position: 'Trois-quarts arrière droit', sees: 'Arrière et côté — le deuxième meilleur angle' },
-  { position: 'Trois-quarts arrière droit', sees: 'Arrière et côté, un pas plus loin' },
-  { position: 'Derrière, en glissant vers la droite', sees: 'L’arrière qui pivote vers vous' },
-  { position: 'Juste derrière', sees: 'L’arrière, de face — feux et hayon' },
-  { position: 'Derrière, en glissant vers la gauche', sees: 'L’arrière, le flanc gauche apparaît' },
-  { position: 'Trois-quarts arrière gauche', sees: 'Arrière et côté gauche ensemble' },
-  { position: 'Trois-quarts arrière gauche', sees: 'Arrière et côté gauche, un pas plus loin' },
-  { position: 'Derrière le flanc gauche', sees: 'Le côté gauche qui se découvre' },
-  { position: 'À côté du flanc gauche', sees: 'Le côté gauche presque en profil' },
-  { position: 'À côté du flanc gauche', sees: 'Le profil gauche complet' },
-  { position: 'Devant le flanc gauche', sees: 'Le côté gauche, l’avant apparaît' },
-  { position: 'Trois-quarts avant gauche', sees: 'Avant et côté gauche ensemble' },
-  { position: 'Trois-quarts avant gauche', sees: 'Avant et côté gauche, en se rapprochant' },
-  { position: 'Devant, en glissant vers la gauche', sees: 'L’avant avec le flanc gauche' },
-  { position: 'Presque revenu devant', sees: 'Un pas avant le point de départ — ce n’est pas la vue 1' },
+  { position: 'Avant', sees: 'L’avant, de face — calandre et phares' },
+  { position: 'Avant droit', sees: 'L’avant et le côté droit ensemble — le meilleur angle' },
+  { position: 'Côté droit', sees: 'Le profil droit complet — roues et portes' },
+  { position: 'Arrière droit', sees: 'L’arrière et le côté droit ensemble' },
+  { position: 'Arrière', sees: 'L’arrière, de face — feux et hayon' },
+  { position: 'Arrière gauche', sees: 'L’arrière et le côté gauche ensemble' },
+  { position: 'Côté gauche', sees: 'Le profil gauche complet — roues et portes' },
+  { position: 'Avant gauche', sees: 'L’avant et le côté gauche ensemble' },
 ];
 
 const POSITIONS_AR: Position[] = [
-  { position: 'أمام السيارة مباشرة', sees: 'الواجهة من الأمام — الشبك والمصابيح' },
-  { position: 'من الأمام مع الانزياح يمينًا', sees: 'الواجهة ويبدأ الجانب الأيمن بالظهور' },
-  { position: 'من الأمام مع الانزياح يمينًا', sees: 'الواجهة وهي تدور نحو الجانب' },
-  { position: 'ثلاثة أرباع أمامية يمين', sees: 'أفضل زاوية — الأمام والجانب معًا' },
-  { position: 'ثلاثة أرباع أمامية يمين', sees: 'الأمام والجانب، خطوة أبعد' },
-  { position: 'بجانب الجهة اليمنى', sees: 'الجانب وهو يقترب من الوضع الجانبي الكامل' },
-  { position: 'بجانب الجهة اليمنى', sees: 'الوضع الجانبي الكامل — العجلات والأبواب' },
-  { position: 'خلف الجهة اليمنى', sees: 'الجانب ويبدأ الخلف بالظهور' },
-  { position: 'خلف الجهة اليمنى', sees: 'الجانب والخلف معًا' },
-  { position: 'ثلاثة أرباع خلفية يمين', sees: 'الخلف والجانب — ثاني أفضل زاوية' },
-  { position: 'ثلاثة أرباع خلفية يمين', sees: 'الخلف والجانب، خطوة أبعد' },
-  { position: 'من الخلف مع الانزياح يمينًا', sees: 'الخلف وهو يدور نحوك' },
-  { position: 'خلف السيارة مباشرة', sees: 'الخلف من الوراء — المصابيح والباب الخلفي' },
-  { position: 'من الخلف مع الانزياح يسارًا', sees: 'الخلف ويبدأ الجانب الأيسر بالظهور' },
-  { position: 'ثلاثة أرباع خلفية يسار', sees: 'الخلف والجانب الأيسر معًا' },
-  { position: 'ثلاثة أرباع خلفية يسار', sees: 'الخلف والجانب الأيسر، خطوة أبعد' },
-  { position: 'خلف الجهة اليسرى', sees: 'الجانب الأيسر وهو ينكشف' },
-  { position: 'بجانب الجهة اليسرى', sees: 'الجانب الأيسر يكاد يكون جانبيًا كاملًا' },
-  { position: 'بجانب الجهة اليسرى', sees: 'الوضع الجانبي الأيسر الكامل' },
-  { position: 'أمام الجهة اليسرى', sees: 'الجانب الأيسر ويبدأ الأمام بالظهور' },
-  { position: 'ثلاثة أرباع أمامية يسار', sees: 'الأمام والجانب الأيسر معًا' },
-  { position: 'ثلاثة أرباع أمامية يسار', sees: 'الأمام والجانب الأيسر، مع الاقتراب' },
-  { position: 'من الأمام مع الانزياح يسارًا', sees: 'الواجهة مع الجانب الأيسر' },
-  { position: 'عدت تقريبًا إلى الأمام', sees: 'خطوة قبل نقطة البداية — وليست الصورة الأولى' },
+  { position: 'الأمام', sees: 'الواجهة من الأمام — الشبك والمصابيح' },
+  { position: 'الأمام يمين', sees: 'الأمام والجانب الأيمن معًا — أفضل زاوية' },
+  { position: 'الجانب الأيمن', sees: 'الوضع الجانبي الأيمن الكامل — العجلات والأبواب' },
+  { position: 'الخلف يمين', sees: 'الخلف والجانب الأيمن معًا' },
+  { position: 'الخلف', sees: 'الخلف من الوراء — المصابيح والباب الخلفي' },
+  { position: 'الخلف يسار', sees: 'الخلف والجانب الأيسر معًا' },
+  { position: 'الجانب الأيسر', sees: 'الوضع الجانبي الأيسر الكامل — العجلات والأبواب' },
+  { position: 'الأمام يسار', sees: 'الأمام والجانب الأيسر معًا' },
 ];
 
 const BY_LOCALE: Record<Locale, Position[]> = {
@@ -122,9 +86,13 @@ const BY_LOCALE: Record<Locale, Position[]> = {
  * way; only the words change.
  */
 export function spinPlan(locale: Locale): SpinSlot[] {
-  return (BY_LOCALE[locale] ?? POSITIONS_EN).map((entry, index) => ({
+  const positions = BY_LOCALE[locale] ?? POSITIONS_EN;
+  // Derived, so changing the number of stops keeps the angles correct.
+  const step = 360 / positions.length;
+
+  return positions.map((entry, index) => ({
     index,
-    angle: index * 15,
+    angle: Math.round(index * step),
     ...entry,
   }));
 }
@@ -132,5 +100,11 @@ export function spinPlan(locale: Locale): SpinSlot[] {
 /** The English plan, for anything that only needs the count or the angles. */
 export const SPIN_PLAN: SpinSlot[] = spinPlan('en');
 
-/** Frames a set must have before it reads as rotation rather than a slideshow. */
-export const SPIN_MINIMUM = 8;
+/**
+ * A set is the whole plan or it is not a turn.
+ *
+ * With twenty-four stops a partial set still read as rotation; with eight, a
+ * missing one is a quarter of the car nobody can see, and the car jumps over
+ * the gap. So the bar is every stop filled.
+ */
+export const SPIN_MINIMUM = POSITIONS_EN.length;
