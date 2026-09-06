@@ -82,8 +82,23 @@ export function CarDetailView({ car }: { car: CarDetail }) {
      */
     const photographs = car.images.filter((image) => image.kind !== 'SPIN');
 
-    // Nothing chosen yet: the car in general, main photograph first.
-    if (!selectedColor) return photographs;
+    /*
+     * The main photograph belongs to the listing card, not to this gallery.
+     *
+     * It is the picture the reader has just clicked on to arrive here, so
+     * opening the page on it shows them the same photograph twice and wastes
+     * the first slot of the gallery on something they have already seen.
+     *
+     * `orElse` keeps it as a last resort: a car whose only photograph is the
+     * main one would otherwise open on an empty gallery, which reads as a
+     * fault rather than as a decision.
+     */
+    const main = photographs.find((image) => image.kind === 'MAIN');
+    const gallery = photographs.filter((image) => image.kind !== 'MAIN');
+    const orElse = (chosen: typeof photographs) => (chosen.length > 0 ? chosen : photographs);
+
+    // Nothing chosen yet: the car in general, without the card's picture.
+    if (!selectedColor) return orElse(gallery);
 
     /*
      * A colour chosen shows that colour, and only that colour.
@@ -108,14 +123,25 @@ export function CarDetailView({ car }: { car: CarDetail }) {
       TRUNK: 5,
       OTHER: 6,
     };
-    const forColour = photographs
+    /*
+     * From `gallery`, not from every photograph: the main picture is often
+     * recorded against a colour — it is a photograph of the car in one
+     * particular paint, after all — and reading it from the full list put it
+     * straight back into the gallery of whichever colour it belongs to.
+     */
+    const forColour = gallery
       .filter((image) => image.colorId === selectedColor.id)
       .sort(
         (a, b) =>
           (ORDER[a.kind] ?? 9) - (ORDER[b.kind] ?? 9) || (a.sortOrder ?? 0) - (b.sortOrder ?? 0),
       );
 
-    const portrait = selectedColor.imageUrl
+    /*
+     * The swatch's own picture, unless it is the card's picture under another
+     * name: an administrator who uploads one photograph as the listing image
+     * and again as the colour's would otherwise see it open the gallery here.
+     */
+    const portrait = selectedColor.imageUrl && selectedColor.imageUrl !== main?.url
       ? [
           photographs.find((image) => image.url === selectedColor.imageUrl) ?? {
             kind: 'GALLERY' as const,
@@ -133,10 +159,15 @@ export function CarDetailView({ car }: { car: CarDetail }) {
      * of one particular colour and would contradict the swatch just chosen.
      * An empty gallery would be worse than a slightly generic one.
      */
+    /*
+     * A colour with no photographs of its own falls back to the car's general
+     * ones, and only to the main picture when there is nothing else at all —
+     * an empty gallery on a car that plainly has a photograph reads as a
+     * fault, which is worse than a picture of the wrong paint beside a swatch
+     * that names the right one.
+     */
     const ordered =
-      chosen.length > 0
-        ? chosen
-        : photographs.filter((image) => image.kind !== 'MAIN' && !image.colorId);
+      chosen.length > 0 ? chosen : orElse(gallery.filter((image) => !image.colorId));
 
     // Same photograph reached two ways — keep the first appearance only.
     return ordered.filter(

@@ -243,6 +243,53 @@ test.describe('Colour selection', () => {
     }).toPass({ timeout: 4000 });
   });
 
+  test('never shows the main photograph, not even on the colour the page opens on', async ({
+    page,
+  }) => {
+    /*
+     * The card's picture, back on the page the card leads to.
+     *
+     * The earlier test clicks a second colour first, which hid two ways the
+     * main photograph reached the gallery anyway: it is often recorded against
+     * a colour — so it arrived with that colour's own photographs — and an
+     * administrator may upload the same file again as the colour's picture.
+     * Both show up on the colour the page opens on, which is the one nearly
+     * every reader sees.
+     */
+    const api = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+    const list = await (await page.request.get(`${api}/cars?pageSize=50`)).json();
+    const slugs = (list.data as { slug: string }[]).map((entry) => entry.slug);
+
+    let checked = 0;
+    for (const slug of slugs) {
+      const car = await (await page.request.get(`${api}/cars/${slug}`)).json();
+      const images = car.images as { kind: string; url: string }[];
+      const main = images.find((image) => image.kind === 'MAIN');
+      // A car whose only photograph is the main one is allowed to show it:
+      // an empty gallery would read as a fault rather than as a decision.
+      if (!main || images.filter((image) => image.kind !== 'SPIN').length < 2) continue;
+
+      await page.goto(`/car/${slug}`);
+      await page.waitForLoadState('load');
+      await page.waitForTimeout(600);
+
+      const shown = await page.locator('main img').evaluateAll((nodes) =>
+        nodes.map((node) => (node as HTMLImageElement).currentSrc || (node as HTMLImageElement).src),
+      );
+
+      // Next serves images through its optimiser, so the original URL appears
+      // inside the query string rather than as the whole of it.
+      const encoded = encodeURIComponent(main.url);
+      const repeated = shown.some(
+        (source) => source.includes(encoded) || source.includes(main.url),
+      );
+      expect(repeated, `${slug} shows its listing photograph again in the gallery`).toBe(false);
+      checked += 1;
+    }
+
+    expect(checked, 'no car in the catalogue had a main photograph and a gallery').toBeGreaterThan(0);
+  });
+
   test('never shows the main photograph once a colour is chosen', async ({ page }) => {
     await page.goto('/car/jetour-x70-plus-2024');
 
