@@ -62,7 +62,29 @@ export function CarSpin({
   const drag = useRef<{ pointerId: number; startX: number; startIndex: number } | null>(null);
 
   const total = frames.length;
-  const angle = total > 0 ? Math.round((index / total) * 360) : 0;
+  /*
+   * `index` is fractional while a finger is down — see the blend below — so
+   * this rounds, and then wraps: an index a hair short of the last frame gives
+   * 359.7°, which rounds to 360, and a slider that reports 360 out of a
+   * maximum of 359 is a broken slider.
+   */
+  const angle = total > 0 ? Math.round((index / total) * 360) % 360 : 0;
+
+  /*
+   * Which two frames are on screen, and how much of the second.
+   *
+   * Eight photographs are 45° apart, and cutting from one to the next at that
+   * spacing does not read as a car turning — it reads as a slideshow, which is
+   * exactly what it looked like. Holding both and fading between them across
+   * the gap gives the eye something continuous to follow.
+   *
+   * The blend only exists mid-drag: releasing snaps to the nearest stop, so
+   * what a reader is left looking at is always one sharp photograph rather
+   * than two ghosted together.
+   */
+  const base = total > 0 ? ((Math.floor(index) % total) + total) % total : 0;
+  const upcoming = total > 0 ? (base + 1) % total : 0;
+  const blend = index - Math.floor(index);
 
   /* Warm the cache so swapping `src` never shows a gap. */
   useEffect(() => {
@@ -95,7 +117,7 @@ export function CarSpin({
     let step = 0;
     const timer = setInterval(() => {
       step += 1;
-      setIndex((current) => (current + 1) % total);
+      setIndex((current) => (Math.round(current) + 1) % total);
       if (step >= 4) {
         clearInterval(timer);
         setNudged(true);
@@ -126,8 +148,14 @@ export function CarSpin({
 
       const travelled = (clientX - state.startX) / width;
       const moved = travelled * TURNS_PER_WIDTH * total;
-      // Dragging left turns the car towards the viewer's left, as if pushing it.
-      const next = Math.round(state.startIndex - moved);
+      /*
+       * Not rounded. The fraction is what the cross-fade needs — rounding here
+       * was what made the car jump from photograph to photograph instead of
+       * travelling between them.
+       *
+       * Dragging left turns the car towards the viewer's left, as if pushing it.
+       */
+      const next = state.startIndex - moved;
       if (!Number.isFinite(next)) return;
 
       setIndex(((next % total) + total) % total);
@@ -165,17 +193,20 @@ export function CarSpin({
           event.currentTarget.releasePointerCapture(event.pointerId);
           drag.current = null;
           setDragging(false);
+          // Settle on a photograph rather than between two of them.
+          setIndex((current) => Math.round(current) % total);
         }}
         onPointerCancel={() => {
           drag.current = null;
           setDragging(false);
+          setIndex((current) => Math.round(current) % total);
         }}
         onKeyDown={(event) => {
           const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
           if (step === 0) return;
           event.preventDefault();
           setHinted(true);
-          setIndex((current) => (current + step + total) % total);
+          setIndex((current) => (Math.round(current) + step + total) % total);
         }}
         className={cn(
           'bg-secondary relative aspect-16/10 touch-pan-y overflow-hidden rounded-xl select-none',
@@ -193,9 +224,18 @@ export function CarSpin({
             the frames are pre-cached and the `src` is swapped many times a
             second, which the image optimiser would defeat rather than help. */}
         <img
-          src={frames[Number.isInteger(index) && frames[index] ? index : 0]}
+          src={frames[base] ?? frames[0]}
           alt={alt}
           draggable={false}
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        />
+        {/* eslint-disable-next-line @next/next/no-img-element -- as above. */}
+        <img
+          src={frames[upcoming] ?? frames[0]}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+          style={{ opacity: blend }}
           className="pointer-events-none absolute inset-0 h-full w-full object-cover"
         />
 

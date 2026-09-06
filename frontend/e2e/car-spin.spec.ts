@@ -153,6 +153,44 @@ test.describe('360° viewer', () => {
     expect(turned).toBeLessThan(330);
   });
 
+  test('fades between frames while dragging, and settles on one when let go', async ({ page }) => {
+    /*
+     * Eight photographs are 45° apart, and cutting from one to the next at that
+     * spacing reads as a slideshow rather than as a car turning. The viewer
+     * holds two frames and fades across the gap.
+     *
+     * Measured on the second layer's opacity: between stops it has to be
+     * somewhere in the middle, and once the hand lets go it has to be back at
+     * nothing — a reader left looking at two ghosted photographs would be worse
+     * than the cut this replaces.
+     */
+    const spin = await openSpin(page);
+    const box = (await spin.boundingBox())!;
+    const y = box.y + box.height / 2;
+    const overlay = spin.locator('img').nth(1);
+
+    await page.waitForTimeout(700);
+    await page.mouse.move(box.x + box.width * 0.8, y);
+    await page.mouse.down();
+
+    const seen: number[] = [];
+    for (const fraction of [0.78, 0.76, 0.74, 0.72, 0.7, 0.68, 0.66, 0.64]) {
+      await page.mouse.move(box.x + box.width * fraction, y);
+      seen.push(Number(await overlay.evaluate((node) => getComputedStyle(node).opacity)));
+    }
+
+    await page.mouse.up();
+    await page.waitForTimeout(200);
+
+    expect(
+      seen.some((value) => value > 0.05 && value < 0.95),
+      `the frames cut rather than fade — opacities seen: ${seen.join(', ')}`,
+    ).toBe(true);
+
+    // Settled on one photograph, not stranded between two.
+    expect(Number(await overlay.evaluate((node) => getComputedStyle(node).opacity))).toBe(0);
+  });
+
   test('never reports a broken angle, however far it is dragged', async ({ page }) => {
     const spin = await openSpin(page);
     const box = (await spin.boundingBox())!;
@@ -169,8 +207,16 @@ test.describe('360° viewer', () => {
     expect(Number.isFinite(value)).toBe(true);
     expect(value).toBeGreaterThanOrEqual(0);
     expect(value).toBeLessThan(360);
-    // The picture is still a picture, not a broken-image icon.
-    await expect(spin.locator('img')).toHaveJSProperty('complete', true);
+    /*
+      * Both layers are still pictures, not broken-image icons. There are two
+      * of them because the viewer fades between the frame it is on and the one
+      * it is heading for, so asking for "the image" would match neither.
+      */
+    const loaded = await spin
+      .locator('img')
+      .evaluateAll((nodes) => nodes.map((node) => (node as HTMLImageElement).complete));
+    expect(loaded.length).toBeGreaterThan(0);
+    expect(loaded.every(Boolean)).toBe(true);
   });
 
   test('turns with the arrow keys, for anyone without a mouse', async ({ page }) => {

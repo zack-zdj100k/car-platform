@@ -22,7 +22,12 @@
  */
 const SHOW_PLACEHOLDER = true;
 
-const PLACEHOLDER_FRAMES = 24;
+/*
+ * Eight, drawn from the twenty-four files on disk by taking every third one,
+ * so the placeholder turns in the same 45° steps a real set does.
+ */
+const PLACEHOLDER_FRAMES = 8;
+const PLACEHOLDER_STRIDE = 3;
 
 /** A frame of a 360° set, as the API returns it. */
 interface SpinImage {
@@ -44,6 +49,7 @@ export function spinFrames(_slug: string, images: SpinImage[] = []): string[] {
 
   return Array.from(
     { length: PLACEHOLDER_FRAMES },
-    (_, index) => `/images/spin/_placeholder/frame-${String(index + 1).padStart(2, '0')}.svg`,
+    (_, index) =>
+      `/images/spin/_placeholder/frame-${String(index * PLACEHOLDER_STRIDE + 1).padStart(2, '0')}.svg`,
   );
 }
