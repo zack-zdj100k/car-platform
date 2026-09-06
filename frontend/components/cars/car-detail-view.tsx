@@ -89,13 +89,21 @@ export function CarDetailView({ car }: { car: CarDetail }) {
      * opening the page on it shows them the same photograph twice and wastes
      * the first slot of the gallery on something they have already seen.
      *
-     * `orElse` keeps it as a last resort: a car whose only photograph is the
-     * main one would otherwise open on an empty gallery, which reads as a
-     * fault rather than as a decision.
+     * `orElse` keeps it as a last resort, and only when there would otherwise
+     * be nothing at all: a car with one photograph and no 360° set would open
+     * on an empty box, which reads as a fault rather than as a decision. A car
+     * that has a set of its own is not in that position — the viewer is the
+     * gallery, and the listing photograph is still not wanted beside it.
+     *
+     * The set has to be the car's own. Cars without one fall back to a shared
+     * placeholder while the catalogue is being built, and a placeholder is not
+     * something to drop a real photograph in favour of.
      */
+    const ownSpin = car.images.filter((image) => image.kind === 'SPIN').length > 1;
     const main = photographs.find((image) => image.kind === 'MAIN');
     const gallery = photographs.filter((image) => image.kind !== 'MAIN');
-    const orElse = (chosen: typeof photographs) => (chosen.length > 0 ? chosen : photographs);
+    const orElse = (chosen: typeof photographs) =>
+      chosen.length > 0 ? chosen : ownSpin ? [] : photographs;
 
     // Nothing chosen yet: the car in general, without the card's picture.
     if (!selectedColor) return orElse(gallery);

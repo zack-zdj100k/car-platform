@@ -265,9 +265,15 @@ test.describe('Colour selection', () => {
       const car = await (await page.request.get(`${api}/cars/${slug}`)).json();
       const images = car.images as { kind: string; url: string }[];
       const main = images.find((image) => image.kind === 'MAIN');
-      // A car whose only photograph is the main one is allowed to show it:
-      // an empty gallery would read as a fault rather than as a decision.
-      if (!main || images.filter((image) => image.kind !== 'SPIN').length < 2) continue;
+      const others = images.filter((image) => image.kind !== 'SPIN').length - 1;
+      const ownSpin = images.filter((image) => image.kind === 'SPIN').length > 1;
+      /*
+       * A car with one photograph and nothing to turn is allowed to show it —
+       * an empty box would read as a fault. Every other car is not: one with a
+       * 360° set of its own has a gallery already, and the listing photograph
+       * is still not wanted beside it.
+       */
+      if (!main || (others === 0 && !ownSpin)) continue;
 
       await page.goto(`/car/${slug}`);
       await page.waitForLoadState('load');
