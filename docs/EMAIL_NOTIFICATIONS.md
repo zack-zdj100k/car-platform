@@ -36,7 +36,7 @@ Administration › Settings › orders › `orders.notificationEmail`. It is alr
 set to **zacktrader100000@gmail.com**. Change it there whenever you like — no
 deploy, no restart.
 
-If that setting is empty the `MAIL_ADMIN_EMAIL` variable is used instead.
+If that setting is empty, `ADMIN_NOTIFICATION_EMAIL` (or `MAIL_ADMIN_EMAIL`) is used, automatically falling back to `MAIL_USER` (`zacktrader100000@gmail.com`).
 
 ## Turning delivery on with Gmail
 

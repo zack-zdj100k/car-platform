@@ -34,16 +34,25 @@ export const authConfig = (env: Env) => ({
   },
 });
 
-export const mailConfig = (env: Env) => ({
-  provider: env.MAIL_PROVIDER,
-  host: env.MAIL_HOST,
-  port: env.MAIL_PORT,
-  secure: env.MAIL_SECURE,
-  user: env.MAIL_USER,
-  password: env.MAIL_PASSWORD,
-  from: env.MAIL_FROM,
-  adminEmail: env.ADMIN_NOTIFICATION_EMAIL,
-});
+export const mailConfig = (env: Env) => {
+  const user = env.MAIL_USER.trim();
+  const password = env.MAIL_PASSWORD.replace(/\s+/g, '');
+  const adminEmail =
+    env.ADMIN_NOTIFICATION_EMAIL && env.ADMIN_NOTIFICATION_EMAIL !== 'admin@example.com'
+      ? env.ADMIN_NOTIFICATION_EMAIL.trim()
+      : (env.MAIL_ADMIN_EMAIL?.trim() || user || env.ADMIN_NOTIFICATION_EMAIL);
+
+  return {
+    provider: env.MAIL_PROVIDER,
+    host: env.MAIL_HOST.trim(),
+    port: env.MAIL_PORT,
+    secure: env.MAIL_SECURE,
+    user,
+    password,
+    from: env.MAIL_FROM.trim(),
+    adminEmail,
+  };
+};
 
 export const ordersConfig = (env: Env) => ({
   requireAuth: env.REQUIRE_AUTH_FOR_ORDERS,
