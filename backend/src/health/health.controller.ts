@@ -2,11 +2,15 @@ import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../common/decorators/public.decorator';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @ApiTags('health')
 @Controller('health')
 export class HealthController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   @Public()
   @Get()
@@ -20,5 +24,12 @@ export class HealthController {
     }
 
     return { status: 'ok', database: true, uptimeSeconds: Math.round(process.uptime()) };
+  }
+
+  @Public()
+  @Get('email-status')
+  @ApiOperation({ summary: 'Public diagnostic endpoint for email notification health' })
+  async emailStatus() {
+    return this.notifications.deliveryStatus();
   }
 }
