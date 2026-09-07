@@ -42,11 +42,13 @@ export const mailConfig = (env: Env) => {
   const rawProvider = env.MAIL_PROVIDER.trim().toLowerCase().replace(/^['"]|['"]$/g, '');
   // Auto-detect provider: resend wins if API key is present; smtp wins if host+user+password are present
   const provider: 'resend' | 'smtp' | 'console' =
-    rawProvider === 'resend' || (resendApiKey.length > 0 && rawProvider !== 'smtp')
-      ? 'resend'
-      : rawProvider === 'smtp' || (host.length > 0 && user.length > 0 && password.length > 0)
-        ? 'smtp'
-        : 'console';
+    rawProvider === 'smtp'
+      ? 'smtp'
+      : rawProvider === 'resend' || (resendApiKey.length > 0 && host.length === 0)
+        ? 'resend'
+        : host.length > 0 && user.length > 0 && password.length > 0
+          ? 'smtp'
+          : 'console';
   const adminEmail =
     env.ADMIN_NOTIFICATION_EMAIL && env.ADMIN_NOTIFICATION_EMAIL !== 'admin@example.com'
       ? env.ADMIN_NOTIFICATION_EMAIL.trim().replace(/^['"]|['"]$/g, '')

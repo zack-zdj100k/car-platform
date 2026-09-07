@@ -94,7 +94,8 @@ export class NotificationsService implements OnModuleInit, OnApplicationShutdown
       port: this.mail.port,
       secure: this.mail.secure,
       auth: { user: this.mail.user, pass: this.mail.password },
-    });
+      family: 4,
+    } as nodemailer.TransportOptions);
 
     this.logger.log(`SMTP transport configured for ${this.mail.host}:${this.mail.port}`);
 
