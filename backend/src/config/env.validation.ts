@@ -62,8 +62,9 @@ export const envSchema = z.object({
   MAIL_PROVIDER: z
     .string()
     .transform((val) => val.trim().toLowerCase().replace(/^['"]|['"]$/g, ''))
-    .pipe(z.enum(['smtp', 'console']))
+    .pipe(z.enum(['smtp', 'console', 'resend']))
     .default('console'),
+  RESEND_API_KEY: z.string().default(''),
   MAIL_HOST: z.string().transform((val) => val.trim().replace(/^['"]|['"]$/g, '')).default(''),
   MAIL_PORT: z.coerce.number().int().default(587),
   MAIL_SECURE: booleanish.default(false),
