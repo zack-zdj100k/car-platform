@@ -67,6 +67,7 @@ export const envSchema = z.object({
   MAIL_PASSWORD: z.string().default(''),
   MAIL_FROM: z.string().default('ZODIC CAR <no-reply@example.com>'),
   ADMIN_NOTIFICATION_EMAIL: z.string().email().default('admin@example.com'),
+  MAIL_ADMIN_EMAIL: z.string().email().optional(),
 
   NEXT_PUBLIC_SITE_URL: z.string().default('http://localhost:3000'),
 

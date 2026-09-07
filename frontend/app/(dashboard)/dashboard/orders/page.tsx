@@ -22,6 +22,7 @@ import { useLocale } from '@/providers/locale-provider';
 import { ordersService } from '@/services/customer.service';
 import { formatDate, formatPrice } from '@/lib/format';
 import { ORDER_STATUS_CLASS } from '@/lib/order-status';
+import { cn } from '@/lib/utils';
 import type { OrderSummary, Paginated } from '@/types/api';
 
 /** Spec §38 — customers may view their own order history and status. */
@@ -116,86 +117,138 @@ export default function MyOrdersPage() {
           {orders.data?.data.map((order) => (
             <li
               key={order.id}
-              className="border-border bg-card flex flex-wrap items-center gap-4 rounded-xl border p-4 shadow-[var(--shadow-card)]"
+              className="group border-border bg-card relative rounded-xl border p-4 shadow-[var(--shadow-card)] transition-all duration-200 hover:border-primary/25 hover:shadow-[var(--shadow-lifted)]"
             >
-              <div className="bg-secondary relative size-20 shrink-0 overflow-hidden rounded-lg">
-                {order.car.images[0] && (
-                  <MediaImage
-                    src={order.car.images[0].url}
-                    alt={order.car.images[0].alt ?? order.car.model}
-                    fill
-                    sizes="80px"
-                    className="object-cover"
-                  />
-                )}
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <p className="text-muted-foreground font-mono text-xs">{order.reference}</p>
-                {/*
-                  To the appointment, not to the vehicle. Once it is confirmed
-                  that page carries the address, and it is the thing the
-                  customer opened this list to find; the car is one click on
-                  from there.
-                */}
-                <h2 className="truncate font-semibold">
-                  <Link
-                    href={`/dashboard/orders/${order.id}`}
-                    className="hover:underline underline-offset-4"
+              {/* Responsive container: cleanly stacks on mobile, horizontal on desktop/tablet */}
+              <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:gap-4">
+                {/* Mobile-only header row: Reference number + Status badge */}
+                <div className="flex items-center justify-between gap-2 sm:hidden">
+                  <span className="text-muted-foreground font-mono text-xs tracking-wider uppercase whitespace-nowrap">
+                    {order.reference}
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className={cn(ORDER_STATUS_CLASS[order.status], 'shrink-0 text-[11px] whitespace-nowrap')}
                   >
-                    {order.car.brand.name} {order.car.model} {order.car.year}
-                  </Link>
-                </h2>
-                <p className="text-muted-foreground mt-0.5 text-sm">
-                  {formatPrice(order.car.price, order.car.currency, locale)}
-                  {order.selectedColorName ? ` · ${order.selectedColorName}` : ''}
-                </p>
-              </div>
+                    {t.orderStatus[order.status] ?? order.status}
+                  </Badge>
+                </div>
 
-              <div className="flex flex-col items-end gap-1.5">
-                <Badge variant="outline" className={ORDER_STATUS_CLASS[order.status]}>
-                  {t.orderStatus[order.status] ?? order.status}
-                </Badge>
-                <p className="text-muted-foreground text-xs">{formatDate(order.createdAt, locale)}</p>
-
-                {/*
-                  Withdrawing is the customer's to do, while the appointment is
-                  still open. Booking the wrong colour late at night should not
-                  mean telephoning a showroom in the morning to undo it — and an
-                  appointment list nobody can correct is a list nobody trusts.
-                */}
-                {order.status === 'CANCELLED' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground hover:text-destructive -me-2 h-7 px-2 text-xs"
-                    disabled={removing === order.id}
-                    onClick={() => setConfirmingRemove(order.id)}
-                  >
-                    {removing === order.id ? (
-                      <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                {/* Main section: Thumbnail + Vehicle details */}
+                <div className="flex items-center gap-3.5 min-w-0 flex-1 sm:gap-4">
+                  <div className="bg-secondary relative size-20 shrink-0 overflow-hidden rounded-lg sm:size-20">
+                    {order.car.images[0] ? (
+                      <MediaImage
+                        src={order.car.images[0].url}
+                        alt={order.car.images[0].alt ?? order.car.model}
+                        fill
+                        sizes="80px"
+                        className="object-cover transition-transform duration-300 motion-safe:group-hover:scale-105"
+                      />
                     ) : (
-                      <Trash2 className="size-3.5" aria-hidden="true" />
+                      <div className="text-muted-foreground grid h-full place-items-center text-xs">
+                        <Package className="size-6 text-muted-foreground/40" aria-hidden="true" />
+                      </div>
                     )}
-                    {t.order.remove}
-                  </Button>
-                )}
+                  </div>
 
-                {order.status !== 'CANCELLED' && order.status !== 'COMPLETED' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-muted-foreground hover:text-destructive -me-2 h-7 px-2 text-xs"
-                    disabled={cancelling === order.id}
-                    onClick={() => setConfirming(order.id)}
+                  <div className="min-w-0 flex-1 space-y-1">
+                    {/* Desktop-only reference number */}
+                    <p className="text-muted-foreground hidden font-mono text-xs sm:block">
+                      {order.reference}
+                    </p>
+
+                    <h2 className="font-semibold text-sm sm:text-base leading-snug group-hover:text-primary transition-colors">
+                      {/* The link covers the entire card, making it effortlessly tappable on mobile */}
+                      <Link
+                        href={`/dashboard/orders/${order.id}`}
+                        className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none"
+                      >
+                        <span className="line-clamp-1">
+                          {order.car.brand.name} {order.car.model} {order.car.year}
+                        </span>
+                      </Link>
+                    </h2>
+
+                    <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs sm:text-sm">
+                      <span className="font-medium text-foreground">
+                        {formatPrice(order.car.price, order.car.currency, locale)}
+                      </span>
+                      {order.selectedColorName && (
+                        <>
+                          <span aria-hidden="true" className="text-muted-foreground/60">·</span>
+                          <span className="truncate max-w-[130px] sm:max-w-none">
+                            {order.selectedColorName}
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Mobile-only date display */}
+                    <p className="text-muted-foreground text-[11px] sm:hidden">
+                      {formatDate(order.createdAt, locale)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Desktop-only status & date column */}
+                <div className="hidden sm:flex sm:flex-col sm:items-end sm:gap-1.5 sm:shrink-0">
+                  <Badge
+                    variant="outline"
+                    className={cn(ORDER_STATUS_CLASS[order.status], 'whitespace-nowrap')}
                   >
-                    {cancelling === order.id ? (
-                      <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                    {t.orderStatus[order.status] ?? order.status}
+                  </Badge>
+                  <p className="text-muted-foreground text-xs whitespace-nowrap">
+                    {formatDate(order.createdAt, locale)}
+                  </p>
+                </div>
+
+                {/* Action buttons (isolated in z-10 with stopPropagation so clicks never navigate) */}
+                {order.status !== 'COMPLETED' && (
+                  <div className="relative z-10 flex items-center justify-end pt-2 border-t border-border/40 sm:border-0 sm:pt-0 sm:self-center">
+                    {order.status === 'CANCELLED' ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-destructive h-8 px-2.5 text-xs"
+                        disabled={removing === order.id}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setConfirmingRemove(order.id);
+                        }}
+                      >
+                        {removing === order.id ? (
+                          <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                        ) : (
+                          <Trash2 className="size-3.5" aria-hidden="true" />
+                        )}
+                        {t.order.remove}
+                      </Button>
                     ) : (
-                      <X className="size-3.5" aria-hidden="true" />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-muted-foreground hover:text-destructive h-8 px-2.5 text-xs"
+                        disabled={cancelling === order.id}
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setConfirming(order.id);
+                        }}
+                      >
+                        {cancelling === order.id ? (
+                          <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                        ) : (
+                          <X className="size-3.5" aria-hidden="true" />
+                        )}
+                        {cancelling === order.id ? t.order.cancelling : t.order.cancel}
+                      </Button>
                     )}
-                    {cancelling === order.id ? t.order.cancelling : t.order.cancel}
-                  </Button>
+                  </div>
                 )}
               </div>
             </li>

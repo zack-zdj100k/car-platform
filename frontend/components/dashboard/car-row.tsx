@@ -2,6 +2,7 @@
 
 import { MediaImage } from '@/components/shared/media-image';
 import Link from 'next/link';
+import { Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Price } from '@/components/shared/price';
 import { useLocale } from '@/providers/locale-provider';
@@ -36,7 +37,7 @@ export function CarRow({
   return (
     <div className="border-border bg-card flex items-center gap-4 rounded-xl border p-3 shadow-[var(--shadow-card)]">
       <div className="bg-secondary relative size-20 shrink-0 overflow-hidden rounded-lg sm:size-24">
-        {image && (
+        {image ? (
           <MediaImage
             src={image.url}
             alt={image.alt ?? `${car.brand.name} ${car.model}`}
@@ -44,6 +45,10 @@ export function CarRow({
             sizes="96px"
             className="object-cover"
           />
+        ) : (
+          <div className="text-muted-foreground grid h-full place-items-center text-xs">
+            <Package className="size-6 text-muted-foreground/40" aria-hidden="true" />
+          </div>
         )}
       </div>
 

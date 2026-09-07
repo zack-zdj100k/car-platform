@@ -81,6 +81,17 @@ export class NotificationsService implements OnModuleInit, OnApplicationShutdown
     });
 
     this.logger.log(`SMTP transport configured for ${this.mail.host}:${this.mail.port}`);
+
+    // Verify transporter in the background to log verification result without blocking startup
+    this.transporter.verify((error) => {
+      if (error) {
+        this.logger.error(
+          `SMTP connection verification failed (${this.mail.host}:${this.mail.port}): ${error.message}`,
+        );
+      } else {
+        this.logger.log(`SMTP transport verified successfully — ready to deliver messages.`);
+      }
+    });
   }
 
   /** Never throws. Returns whether delivery succeeded. */
@@ -246,6 +257,10 @@ export class NotificationsService implements OnModuleInit, OnApplicationShutdown
   private async resolveAdminEmail(): Promise<string> {
     const setting = await this.prisma.setting.findUnique({ where: { key: 'orders.notificationEmail' } });
     const configured = typeof setting?.value === 'string' ? setting.value.trim() : '';
-    return configured || this.mail.adminEmail;
+    const fallback =
+      this.mail.adminEmail && this.mail.adminEmail !== 'admin@example.com'
+        ? this.mail.adminEmail
+        : (this.mail.user || this.mail.adminEmail);
+    return configured || fallback;
   }
 }

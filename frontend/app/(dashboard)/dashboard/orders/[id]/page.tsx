@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { use } from 'react';
-import { ArrowRight, Clock, MapPin } from 'lucide-react';
+import { ArrowRight, Clock, MapPin, Package } from 'lucide-react';
 import { BackLink } from '@/components/shared/back-link';
 import { MediaImage } from '@/components/shared/media-image';
 import { Badge } from '@/components/ui/badge';
@@ -70,33 +70,39 @@ export default function AppointmentPage({ params }: { params: Promise<{ id: stri
       </header>
 
       {/* ---- the vehicle, briefly ---- */}
-      <section className="border-border bg-card flex flex-wrap items-center gap-5 rounded-xl border p-5 shadow-[var(--shadow-card)]">
-        <div className="bg-secondary relative h-24 w-36 shrink-0 overflow-hidden rounded-lg">
-          {car.images[0] && (
-            <MediaImage
-              src={car.images[0].url}
-              alt={car.images[0].alt ?? car.model}
-              fill
-              sizes="144px"
-              className="object-cover"
-            />
-          )}
+      <section className="border-border bg-card flex flex-col gap-4 rounded-xl border p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5 shadow-[var(--shadow-card)]">
+        <div className="flex items-center gap-4 min-w-0 flex-1">
+          <div className="bg-secondary relative h-20 w-28 shrink-0 overflow-hidden rounded-lg sm:h-24 sm:w-36">
+            {car.images[0] ? (
+              <MediaImage
+                src={car.images[0].url}
+                alt={car.images[0].alt ?? car.model}
+                fill
+                sizes="(min-width: 640px) 144px, 112px"
+                className="object-cover"
+              />
+            ) : (
+              <div className="text-muted-foreground grid h-full place-items-center text-xs">
+                <Package className="size-6 text-muted-foreground/40" aria-hidden="true" />
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base font-semibold sm:text-lg">
+              {car.brand.name} {car.model} {car.year}
+            </h2>
+            <p className="text-muted-foreground mt-0.5 text-xs sm:mt-1 sm:text-sm">
+              {formatPrice(car.price, car.currency, locale)}
+              {appointment.selectedColorName ? ` · ${appointment.selectedColorName}` : ''}
+            </p>
+            <p className="text-muted-foreground mt-0.5 text-[11px] sm:mt-1 sm:text-xs">
+              {t.order.requestedOn} {formatDateTime(appointment.createdAt, locale)}
+            </p>
+          </div>
         </div>
 
-        <div className="min-w-0 flex-1">
-          <h2 className="text-lg font-semibold">
-            {car.brand.name} {car.model} {car.year}
-          </h2>
-          <p className="text-muted-foreground mt-1 text-sm">
-            {formatPrice(car.price, car.currency, locale)}
-            {appointment.selectedColorName ? ` · ${appointment.selectedColorName}` : ''}
-          </p>
-          <p className="text-muted-foreground mt-1 text-xs">
-            {t.order.requestedOn} {formatDateTime(appointment.createdAt, locale)}
-          </p>
-        </div>
-
-        <Button asChild variant="outline">
+        <Button asChild variant="outline" className="w-full sm:w-auto">
           <Link href={`/car/${car.slug}`}>
             {t.order.seeTheCar}
             <ArrowRight className="size-4 rtl:rotate-180" aria-hidden="true" />
