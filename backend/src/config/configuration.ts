@@ -35,21 +35,28 @@ export const authConfig = (env: Env) => ({
 });
 
 export const mailConfig = (env: Env) => {
-  const user = env.MAIL_USER.trim();
-  const password = env.MAIL_PASSWORD.replace(/\s+/g, '');
+  const user = env.MAIL_USER.trim().replace(/^['"]|['"]$/g, '');
+  const password = env.MAIL_PASSWORD.replace(/\s+/g, '').replace(/^['"]|['"]$/g, '');
+  const host = env.MAIL_HOST.trim().replace(/^['"]|['"]$/g, '');
+  const rawProvider = env.MAIL_PROVIDER.trim().toLowerCase().replace(/^['"]|['"]$/g, '');
+  // Auto-enable smtp if host, user, and password are provided even if MAIL_PROVIDER was accidentally left as 'console'
+  const provider =
+    rawProvider === 'smtp' || (rawProvider === 'console' && host.length > 0 && user.length > 0 && password.length > 0)
+      ? 'smtp'
+      : 'console';
   const adminEmail =
     env.ADMIN_NOTIFICATION_EMAIL && env.ADMIN_NOTIFICATION_EMAIL !== 'admin@example.com'
-      ? env.ADMIN_NOTIFICATION_EMAIL.trim()
-      : (env.MAIL_ADMIN_EMAIL?.trim() || user || env.ADMIN_NOTIFICATION_EMAIL);
+      ? env.ADMIN_NOTIFICATION_EMAIL.trim().replace(/^['"]|['"]$/g, '')
+      : (env.MAIL_ADMIN_EMAIL?.trim().replace(/^['"]|['"]$/g, '') || user || env.ADMIN_NOTIFICATION_EMAIL);
 
   return {
-    provider: env.MAIL_PROVIDER,
-    host: env.MAIL_HOST.trim(),
+    provider,
+    host,
     port: env.MAIL_PORT,
     secure: env.MAIL_SECURE,
     user,
     password,
-    from: env.MAIL_FROM.trim(),
+    from: env.MAIL_FROM.trim().replace(/^['"]|['"]$/g, ''),
     adminEmail,
   };
 };

@@ -59,15 +59,27 @@ export const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().default(''),
   GOOGLE_CALLBACK_URL: z.string().default(''),
 
-  MAIL_PROVIDER: z.enum(['smtp', 'console']).default('console'),
-  MAIL_HOST: z.string().default(''),
+  MAIL_PROVIDER: z
+    .string()
+    .transform((val) => val.trim().toLowerCase().replace(/^['"]|['"]$/g, ''))
+    .pipe(z.enum(['smtp', 'console']))
+    .default('console'),
+  MAIL_HOST: z.string().transform((val) => val.trim().replace(/^['"]|['"]$/g, '')).default(''),
   MAIL_PORT: z.coerce.number().int().default(587),
   MAIL_SECURE: booleanish.default(false),
-  MAIL_USER: z.string().default(''),
-  MAIL_PASSWORD: z.string().default(''),
-  MAIL_FROM: z.string().default('ZODIC CAR <no-reply@example.com>'),
-  ADMIN_NOTIFICATION_EMAIL: z.string().email().default('admin@example.com'),
-  MAIL_ADMIN_EMAIL: z.string().email().optional(),
+  MAIL_USER: z.string().transform((val) => val.trim().replace(/^['"]|['"]$/g, '')).default(''),
+  MAIL_PASSWORD: z.string().transform((val) => val.trim().replace(/^['"]|['"]$/g, '')).default(''),
+  MAIL_FROM: z.string().transform((val) => val.trim().replace(/^['"]|['"]$/g, '')).default('ZODIC CAR <no-reply@example.com>'),
+  ADMIN_NOTIFICATION_EMAIL: z
+    .string()
+    .transform((val) => val.trim().replace(/^['"]|['"]$/g, ''))
+    .pipe(z.string().email())
+    .default('admin@example.com'),
+  MAIL_ADMIN_EMAIL: z
+    .string()
+    .transform((val) => val.trim().replace(/^['"]|['"]$/g, ''))
+    .pipe(z.string().email())
+    .optional(),
 
   NEXT_PUBLIC_SITE_URL: z.string().default('http://localhost:3000'),
 
