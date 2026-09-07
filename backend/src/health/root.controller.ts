@@ -1,4 +1,4 @@
-import { Controller, Get, Redirect } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 import { Public } from '../common/decorators/public.decorator';
 
@@ -18,8 +18,11 @@ import { Public } from '../common/decorators/public.decorator';
 export class RootController {
   @Public()
   @Get()
-  @Redirect('/api/docs', 302)
-  documentation() {
-    return undefined;
+  status() {
+    return {
+      name: 'ZODIC CAR API',
+      status: 'online',
+      health: '/api/health',
+    };
   }
 }
