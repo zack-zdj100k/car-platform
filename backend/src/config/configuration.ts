@@ -52,6 +52,12 @@ export const mailConfig = (env: Env) => {
       ? env.ADMIN_NOTIFICATION_EMAIL.trim().replace(/^['"]|['"]$/g, '')
       : (env.MAIL_ADMIN_EMAIL?.trim().replace(/^['"]|['"]$/g, '') || user || env.ADMIN_NOTIFICATION_EMAIL);
 
+  const rawFrom = env.MAIL_FROM.trim().replace(/^['"]|['"]$/g, '');
+  const from =
+    provider === 'resend' && (!rawFrom || rawFrom.includes('@example.com') || rawFrom.includes('@gmail.com'))
+      ? 'ZODIC CAR <onboarding@resend.dev>'
+      : rawFrom;
+
   return {
     provider,
     host,
@@ -60,7 +66,7 @@ export const mailConfig = (env: Env) => {
     user,
     password,
     resendApiKey,
-    from: env.MAIL_FROM.trim().replace(/^['"]|['"]$/g, ''),
+    from,
     adminEmail,
   };
 };
