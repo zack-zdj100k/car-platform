@@ -38,16 +38,27 @@ export const mailConfig = (env: Env) => {
   const user = env.MAIL_USER.trim().replace(/^['"]|['"]$/g, '');
   const password = env.MAIL_PASSWORD.replace(/\s+/g, '').replace(/^['"]|['"]$/g, '');
   const host = env.MAIL_HOST.trim().replace(/^['"]|['"]$/g, '');
+  const resendApiKey = (env.RESEND_API_KEY ?? '').trim().replace(/^['"]|['"]$/g, '');
   const rawProvider = env.MAIL_PROVIDER.trim().toLowerCase().replace(/^['"]|['"]$/g, '');
-  // Auto-enable smtp if host, user, and password are provided even if MAIL_PROVIDER was accidentally left as 'console'
-  const provider =
-    rawProvider === 'smtp' || (rawProvider === 'console' && host.length > 0 && user.length > 0 && password.length > 0)
+  // Auto-detect provider: resend wins if API key is present; smtp wins if host+user+password are present
+  const provider: 'resend' | 'smtp' | 'console' =
+    rawProvider === 'smtp'
       ? 'smtp'
-      : 'console';
+      : rawProvider === 'resend' || (resendApiKey.length > 0 && host.length === 0)
+        ? 'resend'
+        : host.length > 0 && user.length > 0 && password.length > 0
+          ? 'smtp'
+          : 'console';
   const adminEmail =
     env.ADMIN_NOTIFICATION_EMAIL && env.ADMIN_NOTIFICATION_EMAIL !== 'admin@example.com'
       ? env.ADMIN_NOTIFICATION_EMAIL.trim().replace(/^['"]|['"]$/g, '')
       : (env.MAIL_ADMIN_EMAIL?.trim().replace(/^['"]|['"]$/g, '') || user || env.ADMIN_NOTIFICATION_EMAIL);
+
+  const rawFrom = env.MAIL_FROM.trim().replace(/^['"]|['"]$/g, '');
+  const from =
+    provider === 'resend' && (!rawFrom || rawFrom.includes('@example.com') || rawFrom.includes('@gmail.com'))
+      ? 'ZODIC CAR <onboarding@resend.dev>'
+      : rawFrom;
 
   return {
     provider,
@@ -56,7 +67,8 @@ export const mailConfig = (env: Env) => {
     secure: env.MAIL_SECURE,
     user,
     password,
-    from: env.MAIL_FROM.trim().replace(/^['"]|['"]$/g, ''),
+    resendApiKey,
+    from,
     adminEmail,
   };
 };

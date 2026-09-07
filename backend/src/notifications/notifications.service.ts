@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { EmailStatus } from '@prisma/client';
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
+import { Resend } from 'resend';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Configuration } from '../config/configuration';
 import {
@@ -37,6 +38,7 @@ interface SendArgs {
 export class NotificationsService implements OnModuleInit, OnApplicationShutdown {
   private readonly logger = new Logger(NotificationsService.name);
   private transporter: Transporter | null = null;
+  private resendClient: Resend | null = null;
 
   /*
    * Sends still in flight.
@@ -63,6 +65,16 @@ export class NotificationsService implements OnModuleInit, OnApplicationShutdown
   }
 
   onModuleInit(): void {
+    if (this.mail.provider === 'resend') {
+      if (!this.mail.resendApiKey) {
+        this.logger.warn('MAIL_PROVIDER is "resend" but RESEND_API_KEY is missing; falling back to logging.');
+        return;
+      }
+      this.resendClient = new Resend(this.mail.resendApiKey);
+      this.logger.log('Resend email client initialized — ready to deliver messages via HTTPS.');
+      return;
+    }
+
     if (this.mail.provider !== 'smtp') {
       this.logger.log(`Mail provider is "${this.mail.provider}" — emails are logged and recorded, not sent.`);
       return;
@@ -82,7 +94,8 @@ export class NotificationsService implements OnModuleInit, OnApplicationShutdown
       port: this.mail.port,
       secure: this.mail.secure,
       auth: { user: this.mail.user, pass: this.mail.password },
-    });
+      family: 4,
+    } as nodemailer.TransportOptions);
 
     this.logger.log(`SMTP transport configured for ${this.mail.host}:${this.mail.port}`);
 
@@ -111,10 +124,23 @@ export class NotificationsService implements OnModuleInit, OnApplicationShutdown
     });
 
     try {
-      const delivered = this.transporter !== null && this.transporter !== undefined;
+      const hasResend = this.resendClient !== null;
+      const hasSmtp = this.transporter !== null;
+      const delivered = hasResend || hasSmtp;
 
       if (!delivered) {
         this.logger.log(`[console mail] to=${args.to} subject="${args.subject}"`);
+      } else if (hasResend) {
+        const result = await this.resendClient!.emails.send({
+          from: this.mail.from,
+          to: args.to,
+          subject: args.subject,
+          text: args.text,
+          html: args.html,
+        });
+        if (result.error) {
+          throw new Error(result.error.message);
+        }
       } else {
         await this.transporter!.sendMail({
           from: this.mail.from,
@@ -252,7 +278,7 @@ export class NotificationsService implements OnModuleInit, OnApplicationShutdown
   async deliveryStatus(): Promise<{ provider: string; delivers: boolean; recipient: string }> {
     return {
       provider: this.mail.provider,
-      delivers: Boolean(this.transporter),
+      delivers: Boolean(this.transporter) || Boolean(this.resendClient),
       recipient: await this.resolveAdminEmail(),
     };
   }
