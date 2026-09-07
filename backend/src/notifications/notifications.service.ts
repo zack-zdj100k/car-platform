@@ -64,12 +64,16 @@ export class NotificationsService implements OnModuleInit, OnApplicationShutdown
 
   onModuleInit(): void {
     if (this.mail.provider !== 'smtp') {
-      this.logger.log('Mail provider is "console" — emails are logged and recorded, not sent.');
+      this.logger.log(`Mail provider is "${this.mail.provider}" — emails are logged and recorded, not sent.`);
       return;
     }
 
-    if (!this.mail.host || !this.mail.user) {
-      this.logger.warn('MAIL_PROVIDER is "smtp" but host or credentials are missing; falling back to logging.');
+    if (!this.mail.host || !this.mail.user || !this.mail.password) {
+      this.logger.warn(
+        `MAIL_PROVIDER is "smtp" but host (${this.mail.host ? 'set' : 'missing'}), user (${
+          this.mail.user ? 'set' : 'missing'
+        }), or password (${this.mail.password ? 'set' : 'missing'}) is missing; falling back to logging.`,
+      );
       return;
     }
 
