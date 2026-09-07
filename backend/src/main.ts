@@ -18,7 +18,7 @@ async function bootstrap(): Promise<void> {
   const config = app.get(ConfigService<Configuration, true>);
   const appConfig = config.get('app', { infer: true });
 
-  app.setGlobalPrefix(appConfig.apiPrefix);
+  app.setGlobalPrefix(appConfig.apiPrefix, { exclude: ['/'] });
 
   /*
    * Who the request came from, when it did not come from here.
