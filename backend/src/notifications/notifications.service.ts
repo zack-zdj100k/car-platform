@@ -94,7 +94,18 @@ export class NotificationsService implements OnModuleInit, OnApplicationShutdown
       port: this.mail.port,
       secure: this.mail.secure,
       auth: { user: this.mail.user, pass: this.mail.password },
-      family: 4,
+      // Nodemailer v9 resolves both IPv4 and IPv6 then picks RANDOMLY.
+      // Render's free tier has no IPv6 routing, so an IPv6 pick fails with
+      // ENETUNREACH. Force the resolver to skip IPv6 entirely.
+      customDns: {
+        resolve4: (hostname: string, cb: (err: Error | null, addrs?: string[]) => void) => {
+          import('node:dns').then(d => d.default.resolve4(hostname, cb)).catch(cb);
+        },
+        resolve6: (_hostname: string, cb: (err: Error | null, addrs?: string[]) => void) => {
+          // Return empty array so nodemailer never gets an IPv6 address
+          cb(null, []);
+        },
+      },
     } as nodemailer.TransportOptions);
 
     this.logger.log(`SMTP transport configured for ${this.mail.host}:${this.mail.port}`);
