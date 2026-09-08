@@ -3,6 +3,7 @@ export interface OrderNotificationData {
   buyerName: string;
   buyerEmail: string;
   buyerPhone: string;
+  message?: string | null;
   carName: string;
   carPrice: string;
   selectedColor: string | null;
@@ -25,47 +26,85 @@ export function renderAdminOrderNotification(data: OrderNotificationData): {
   text: string;
   html: string;
 } {
+  const cleanPhone = data.buyerPhone.replace(/[^0-9]/g, '');
   const rows: [string, string][] = [
-    ['Reference', data.reference],
-    ['Vehicle', data.carName],
-    ['Price', data.carPrice],
-    ['Colour', data.selectedColor ?? 'Not specified'],
-    ['Customer', data.buyerName],
+    ['Référence', data.reference],
+    ['Véhicule', data.carName],
+    ['Prix', data.carPrice],
+    ['Couleur', data.selectedColor ?? 'Non spécifiée'],
+    ['Client', data.buyerName],
+    ['Téléphone / Mobile', data.buyerPhone],
     ['Email', data.buyerEmail],
-    ['Phone', data.buyerPhone],
-    ['Submitted', data.submittedAt.toISOString()],
+    ...(data.message ? [['Message du client', data.message] as [string, string]] : []),
+    ['Date', data.submittedAt.toLocaleString('fr-FR', { timeZone: 'Africa/Algiers' })],
   ];
 
-  const subject = `New order ${data.reference} — ${data.carName}`;
+  const subject = `Nouvelle demande ${data.reference} — ${data.carName} — Tél: ${data.buyerPhone}`;
 
   const text = [
-    'A new order has been submitted.',
+    'NOUVELLE DEMANDE DE RENDEZ-VOUS / COMMANDE',
+    '========================================',
+    `Téléphone client: ${data.buyerPhone}`,
+    `Nom du client: ${data.buyerName}`,
+    `Véhicule: ${data.carName}`,
+    `Référence: ${data.reference}`,
     '',
     ...rows.map(([label, value]) => `${label}: ${value}`),
     '',
-    `Manage it here: ${data.adminUrl}`,
+    `Gérer dans l'administration: ${data.adminUrl}`,
   ].join('\n');
 
   const html = `<!doctype html>
-<html lang="en">
+<html lang="fr">
   <body style="margin:0;padding:24px;background:#f4f5f7;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#15171a">
-    <table role="presentation" style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:12px;padding:28px">
+    <table role="presentation" style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;padding:28px;box-shadow:0 2px 8px rgba(0,0,0,0.06)">
       <tr><td>
-        <h1 style="margin:0 0 4px;font-size:20px">New order received</h1>
-        <p style="margin:0 0 20px;color:#5c6166;font-size:14px">Reference ${escapeHtml(data.reference)}</p>
-        <table role="presentation" style="width:100%;border-collapse:collapse;font-size:14px">
+        <div style="border-bottom:2px solid #6366f1;padding-bottom:16px;margin-bottom:20px">
+          <span style="font-size:12px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:1px">ZODIC CAR — Notification</span>
+          <h1 style="margin:6px 0 2px;font-size:22px;color:#111827">Nouvelle demande de rendez-vous</h1>
+          <p style="margin:0;color:#6b7280;font-size:14px">Référence : <strong>${escapeHtml(data.reference)}</strong></p>
+        </div>
+
+        <!-- PROMINENT MOBILE NUMBER BOX -->
+        <div style="background:#f0fdf4;border:2px solid #86efac;border-radius:10px;padding:18px;margin:20px 0;text-align:center">
+          <span style="font-size:12px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:1px;display:block">
+            NUMÉRO DE TÉLÉPHONE DU CLIENT
+          </span>
+          <a href="tel:${escapeHtml(data.buyerPhone)}" style="font-size:26px;font-weight:800;color:#166534;text-decoration:none;display:inline-block;margin:6px 0">
+            📞 ${escapeHtml(data.buyerPhone)}
+          </a>
+          <div style="margin-top:10px;display:flex;justify-content:center;gap:10px">
+            <a href="tel:${escapeHtml(data.buyerPhone)}" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:600;margin:0 4px">
+              Appeler directement
+            </a>
+            ${
+              cleanPhone
+                ? `<a href="https://wa.me/${cleanPhone}" style="display:inline-block;background:#25D366;color:#ffffff;text-decoration:none;padding:8px 18px;border-radius:6px;font-size:13px;font-weight:600;margin:0 4px">
+              Ouvrir WhatsApp
+            </a>`
+                : ''
+            }
+          </div>
+        </div>
+
+        <!-- ORDER DETAILS TABLE -->
+        <table role="presentation" style="width:100%;border-collapse:collapse;font-size:14px;margin-top:16px">
           ${rows
             .map(
               ([label, value]) => `<tr>
-            <td style="padding:8px 0;color:#5c6166;width:110px">${escapeHtml(label)}</td>
-            <td style="padding:8px 0;font-weight:600">${escapeHtml(value)}</td>
+            <td style="padding:10px 0;color:#6b7280;width:150px;border-bottom:1px solid #f3f4f6">${escapeHtml(label)}</td>
+            <td style="padding:10px 0;font-weight:600;color:#111827;border-bottom:1px solid #f3f4f6">${escapeHtml(value)}</td>
           </tr>`,
             )
             .join('')}
         </table>
-        <p style="margin:24px 0 0">
-          <a href="${escapeHtml(data.adminUrl)}" style="display:inline-block;background:#15171a;color:#ffffff;text-decoration:none;padding:11px 20px;border-radius:8px;font-size:14px;font-weight:600">Open in admin</a>
-        </p>
+
+        <!-- ADMIN LINK -->
+        <div style="margin:28px 0 0;text-align:center">
+          <a href="${escapeHtml(data.adminUrl)}" style="display:inline-block;background:#111827;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600">
+            Voir la commande dans l'administration &rarr;
+          </a>
+        </div>
       </td></tr>
     </table>
   </body>
