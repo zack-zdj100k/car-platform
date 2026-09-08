@@ -23,6 +23,7 @@ import { AuthService, type AuthResult } from './auth.service';
 import type { GoogleProfile } from './strategies/google.strategy';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { RefreshDto } from './dto/refresh.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 
@@ -74,6 +75,7 @@ export class AuthController {
     return {
       user: result.user,
       accessToken: result.tokens.accessToken,
+      refreshToken: result.tokens.refreshToken,
       expiresIn: result.tokens.accessTokenExpiresIn,
     };
   }
@@ -118,9 +120,15 @@ export class AuthController {
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Exchange a refresh cookie for a new access token' })
-  async refresh(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
-    const token = (request.cookies as Record<string, string> | undefined)?.[REFRESH_COOKIE];
+  @ApiOperation({ summary: 'Exchange a refresh cookie or token for a new access token' })
+  async refresh(
+    @Req() request: Request,
+    @Res({ passthrough: true }) response: Response,
+    @Body() dto?: RefreshDto,
+  ) {
+    const token =
+      (request.cookies as Record<string, string> | undefined)?.[REFRESH_COOKIE] ||
+      dto?.refreshToken;
     if (!token) {
       throw new UnauthorizedException('No active session');
     }

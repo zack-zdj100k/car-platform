@@ -44,10 +44,11 @@ export const authService = {
     return apiRequest<AuthResponse>('/auth/login', { ...withCredentials(options), method: 'POST', body });
   },
 
-  refresh(options: RequestOptions = {}) {
+  refresh(body?: { refreshToken?: string }, options: RequestOptions = {}) {
     inFlightRefresh ??= apiRequest<AuthResponse>('/auth/refresh', {
       ...withCredentials(options),
       method: 'POST',
+      body,
     }).finally(() => {
       inFlightRefresh = null;
     });

@@ -28,10 +28,41 @@ const AuthContext = createContext<AuthContextValue | null>(null);
  * load, and shortly before expiry, the provider silently exchanges it for a new
  * access token.
  */
+const STORAGE_KEY = 'zodic_session';
+
+interface StoredSession {
+  user: AuthUser;
+  token: string;
+  refreshToken?: string;
+}
+
+function loadStoredSession(): StoredSession | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as StoredSession) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveStoredSession(session: StoredSession | null): void {
+  if (typeof window === 'undefined') return;
+  try {
+    if (session) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    } else {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  } catch {
+    // ignore storage quota errors
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<AuthUser | null>(() => loadStoredSession()?.user ?? null);
+  const [token, setToken] = useState<string | null>(() => loadStoredSession()?.token ?? null);
+  const [isLoading, setIsLoading] = useState(() => !loadStoredSession());
 
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /**
@@ -61,9 +92,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const silentRefresh = useCallback(async (): Promise<AuthUser | null> => {
     try {
-      const result = await authService.refresh();
+      const stored = loadStoredSession();
+      const result = await authService.refresh(
+        stored?.refreshToken ? { refreshToken: stored.refreshToken } : undefined,
+      );
       setUser(result.user);
       setToken(result.accessToken);
+      saveStoredSession({
+        user: result.user,
+        token: result.accessToken,
+        refreshToken: result.refreshToken ?? stored?.refreshToken,
+      });
       scheduleRefresh(result.expiresIn);
       return result.user;
     } catch (error) {
@@ -72,9 +111,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error instanceof ApiError && !error.isUnauthorised) {
         console.warn('Session refresh failed:', error.message);
       }
-      setUser(null);
-      setToken(null);
-      clearTimer();
+      if (error instanceof ApiError && error.isUnauthorised) {
+        setUser(null);
+        setToken(null);
+        saveStoredSession(null);
+        clearTimer();
+      }
       return null;
     }
   }, [clearTimer, scheduleRefresh]);
@@ -84,12 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   /**
-   * Bootstraps the session from the httpOnly refresh cookie on first load.
-   *
-   * This is the "subscribe to an external system" case effects exist for: the
-   * cookie is outside React, and the state updates land in promise callbacks,
-   * not in the effect body. The lint rule cannot see through the promise, so it
-   * is disabled here deliberately rather than because the warning is correct.
+   * Bootstraps the session on first load.
    */
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -103,6 +140,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await authService.login(payload);
       setUser(result.user);
       setToken(result.accessToken);
+      saveStoredSession({
+        user: result.user,
+        token: result.accessToken,
+        refreshToken: result.refreshToken,
+      });
       scheduleRefresh(result.expiresIn);
       return result.user;
     },
@@ -114,6 +156,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await authService.register(payload);
       setUser(result.user);
       setToken(result.accessToken);
+      saveStoredSession({
+        user: result.user,
+        token: result.accessToken,
+        refreshToken: result.refreshToken,
+      });
       scheduleRefresh(result.expiresIn);
       return result.user;
     },
@@ -126,6 +173,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setUser(null);
       setToken(null);
+      saveStoredSession(null);
       clearTimer();
     }
   }, [clearTimer]);
