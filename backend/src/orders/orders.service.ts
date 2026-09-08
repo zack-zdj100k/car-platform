@@ -183,6 +183,7 @@ export class OrdersService {
       buyerName: order.buyerName,
       buyerEmail: order.buyerEmail,
       buyerPhone: order.buyerPhone,
+      message: order.message,
       carName: `${car.brand.name} ${car.model} ${car.year}`,
       carPrice: `${car.currency} ${car.price.toString()}`,
       selectedColor: selectedColorName,
