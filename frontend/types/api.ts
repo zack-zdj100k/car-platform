@@ -337,6 +337,7 @@ export interface AuthUser {
 export interface AuthResponse {
   user: AuthUser;
   accessToken: string;
+  refreshToken?: string;
   expiresIn: number;
 }
 
