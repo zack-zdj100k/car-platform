@@ -88,6 +88,8 @@ services:
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
+      - key: JWT_ACCESS_TTL
+        value: 7d
 
       # Every origin the browser will call this API from, comma separated.
       # e.g. https://car-platform-zack-zdj100k.vercel.app

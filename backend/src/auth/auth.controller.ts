@@ -127,8 +127,8 @@ export class AuthController {
     @Body() dto?: RefreshDto,
   ) {
     const token =
-      (request.cookies as Record<string, string> | undefined)?.[REFRESH_COOKIE] ||
-      dto?.refreshToken;
+      dto?.refreshToken ||
+      (request.cookies as Record<string, string> | undefined)?.[REFRESH_COOKIE];
     if (!token) {
       throw new UnauthorizedException('No active session');
     }
