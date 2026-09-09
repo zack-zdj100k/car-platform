@@ -93,6 +93,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const silentRefresh = useCallback(async (): Promise<AuthUser | null> => {
     try {
       const stored = loadStoredSession();
+      if (!stored?.refreshToken && !stored?.token) {
+        return null;
+      }
       const result = await authService.refresh(
         stored?.refreshToken ? { refreshToken: stored.refreshToken } : undefined,
       );
@@ -106,10 +109,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       scheduleRefresh(result.expiresIn);
       return result.user;
     } catch (error) {
-      // A missing or expired cookie simply means "not signed in" — expected on
-      // a first visit, so it must not be reported as a failure.
+      // A server error or network issue (e.g. Render waking up) must not log the user out
       if (error instanceof ApiError && !error.isUnauthorised) {
-        console.warn('Session refresh failed:', error.message);
+        console.warn('Session refresh failed (retrying in 30s):', error.message);
+        scheduleRefresh(30);
+        return null;
       }
       if (error instanceof ApiError && error.isUnauthorised) {
         setUser(null);

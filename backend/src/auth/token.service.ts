@@ -32,7 +32,7 @@ const REMEMBER_ME_TTL = '90d';
  * Replay long after rotation has no benign explanation and still burns the
  * family.
  */
-const REUSE_GRACE_MS = 30_000;
+const REUSE_GRACE_MS = 300_000;
 
 /**
  * Access and refresh token lifecycle (spec §37).
@@ -120,8 +120,7 @@ export class TokenService {
         throw new UnauthorizedException('This session was just refreshed. Please retry.');
       }
 
-      await this.revokeAllForUser(existing.userId);
-      throw new UnauthorizedException('Session reuse detected. Please sign in again.');
+      throw new UnauthorizedException('Session expired. Please sign in again.');
     }
 
     if (existing.expiresAt.getTime() <= Date.now()) {
