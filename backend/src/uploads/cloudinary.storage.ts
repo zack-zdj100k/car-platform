@@ -1,7 +1,6 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { UploadApiResponse, v2 as CloudinaryClient } from 'cloudinary';
-import { createReadStream } from 'node:fs';
 import type { Configuration } from '../config/configuration';
 
 /**
@@ -162,25 +161,25 @@ export class CloudinaryStorage {
   /**
    * Sends a file from disk — a video, which is never held in memory because a
    * clip is an order of magnitude larger than a photograph.
+   *
+   * Uses upload_large (chunked upload) instead of upload_stream so that videos
+   * of any size are accepted. upload_stream sends the whole file in a single
+   * HTTP request and Cloudinary rejects anything over its per-request limit
+   * with a 413. upload_large splits the file into 6 MB chunks and sends them
+   * one by one, which works for any file size on any Cloudinary plan.
    */
   async putFile(path: string, publicId: string): Promise<StoredFile> {
     const cloudinary = await this.ensureConfigured();
 
-    const uploaded = await new Promise<UploadApiResponse>((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        { folder: FOLDER, public_id: publicId, resource_type: 'video', overwrite: false },
-        (error, result) => {
-          if (error || !result) {
-            // Cloudinary's error type is not an Error, so it is wrapped rather
-            // than thrown as-is — a rejection has to carry a stack.
-            reject(new Error(error?.message ?? 'Cloudinary returned no result'));
-            return;
-          }
-          resolve(result);
-        },
-      );
-      createReadStream(path).pipe(stream);
-    }).catch((error: unknown) => this.failed(error));
+    const uploaded = await (
+      cloudinary.uploader.upload_large(path, {
+        folder: FOLDER,
+        public_id: publicId,
+        resource_type: 'video',
+        overwrite: false,
+        chunk_size: 6 * 1024 * 1024, // 6 MB chunks
+      }) as Promise<UploadApiResponse>
+    ).catch((error: unknown) => this.failed(error));
 
     this.logger.log(`Stored video ${uploaded.public_id} (${uploaded.bytes} bytes)`);
     return { url: uploaded.secure_url, filename: uploaded.public_id };
