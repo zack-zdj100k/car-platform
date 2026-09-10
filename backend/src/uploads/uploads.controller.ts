@@ -28,7 +28,7 @@ import { UploadsService } from './uploads.service';
  * one in env.validation.ts, and a mismatch would only ever be more permissive
  * at the edge — the service checks the file it actually received.
  */
-const VIDEO_LIMIT_BYTES = Number(process.env.MAX_VIDEO_UPLOAD_MB ?? 80) * 1024 * 1024;
+const VIDEO_LIMIT_BYTES = Number(process.env.MAX_VIDEO_UPLOAD_MB ?? 300) * 1024 * 1024;
 
 /*
  * Written into the upload directory itself, under a temporary name, and never

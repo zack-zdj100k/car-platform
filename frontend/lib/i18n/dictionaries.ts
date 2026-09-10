@@ -512,7 +512,7 @@ const en: {
     videoProgress: '{name} — {size} MB. Keep this page open until it finishes.',
     videoAttached: '{size} MB. Save the car to attach it.',
     videoHint:
-      'MP4, MOV or WebM, up to 80 MB. It plays on the car’s page and puts the car on the Videos page with a “watch video” button on its card. Leave it empty and none of that appears.',
+      'MP4, MOV or WebM, up to 300 MB. It plays on the car’s page and puts the car on the Videos page with a “watch video” button on its card. Leave it empty and none of that appears.',
     uploading: 'Uploading…',
     replace: 'Replace',
     remove: 'Remove',
