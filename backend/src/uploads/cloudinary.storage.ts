@@ -167,19 +167,32 @@ export class CloudinaryStorage {
    * HTTP request and Cloudinary rejects anything over its per-request limit
    * with a 413. upload_large splits the file into 6 MB chunks and sends them
    * one by one, which works for any file size on any Cloudinary plan.
+   *
+   * upload_large does not return a Promise in SDK v2 — it is callback-only,
+   * so we wrap it ourselves.
    */
   async putFile(path: string, publicId: string): Promise<StoredFile> {
     const cloudinary = await this.ensureConfigured();
 
-    const uploaded = await (
-      cloudinary.uploader.upload_large(path, {
-        folder: FOLDER,
-        public_id: publicId,
-        resource_type: 'video',
-        overwrite: false,
-        chunk_size: 6 * 1024 * 1024, // 6 MB chunks
-      }) as Promise<UploadApiResponse>
-    ).catch((error: unknown) => this.failed(error));
+    const uploaded = await new Promise<UploadApiResponse>((resolve, reject) => {
+      cloudinary.uploader.upload_large(
+        path,
+        {
+          folder: FOLDER,
+          public_id: publicId,
+          resource_type: 'video',
+          overwrite: false,
+          chunk_size: 6 * 1024 * 1024, // 6 MB chunks
+        },
+        (error, result) => {
+          if (error || !result) {
+            reject(new Error(error?.message ?? 'Cloudinary returned no result'));
+            return;
+          }
+          resolve(result);
+        },
+      );
+    }).catch((error: unknown) => this.failed(error));
 
     this.logger.log(`Stored video ${uploaded.public_id} (${uploaded.bytes} bytes)`);
     return { url: uploaded.secure_url, filename: uploaded.public_id };
